@@ -697,20 +697,25 @@ function updateTeamScore(teamId, points, reason = "Chỉnh sửa thủ công") {
     }
 }
 
-function updateTurnOrder(lockActive = true) {
-    let rule = gameState.settings.turnOrderRule || 'mode_asc';
-    let teamsToSort = gameState.teams;
-    if (gameState.turnOrder && gameState.turnOrder.length > 0 && gameState.turnOrder.length < gameState.settings.teamCount) {
-        teamsToSort = gameState.teams.filter(t => gameState.turnOrder.includes(t.id));
+function updateTurnOrder(targetState = gameState, lockActive = true) {
+    if (typeof targetState === 'boolean') {
+        lockActive = targetState;
+        targetState = gameState;
+    }
+    targetState = targetState || gameState;
+    let rule = (targetState.settings && targetState.settings.turnOrderRule) || 'mode_asc';
+    let teamsToSort = targetState.teams || [];
+    if (targetState.turnOrder && targetState.turnOrder.length > 0 && targetState.settings && targetState.turnOrder.length < targetState.settings.teamCount) {
+        teamsToSort = targetState.teams.filter(t => targetState.turnOrder.includes(t.id));
     }
     
     let lockedTeamId = null;
-    if (lockActive && gameState.turnOrder && gameState.turnOrder.length > 0) {
-        let candidate = gameState.turnOrder[0];
-        let hasStarted = (gameState.turnStats[candidate] && gameState.turnStats[candidate] > 0);
-        let isActive = (gameState.currentQuestion && gameState.currentQuestion.active && gameState.currentQuestion.mainTeamId === candidate);
-        let hasLocked = (gameState.lockedPackage && gameState.lockedPackage.mainTeamId === candidate);
-        let isForced = (gameState.forcedTeamId === candidate);
+    if (lockActive && targetState.turnOrder && targetState.turnOrder.length > 0) {
+        let candidate = targetState.turnOrder[0];
+        let hasStarted = (targetState.turnStats && targetState.turnStats[candidate] && targetState.turnStats[candidate] > 0);
+        let isActive = (targetState.currentQuestion && targetState.currentQuestion.active && targetState.currentQuestion.mainTeamId === candidate);
+        let hasLocked = (targetState.lockedPackage && targetState.lockedPackage.mainTeamId === candidate);
+        let isForced = (targetState.forcedTeamId === candidate);
         
         if (hasStarted || isActive || hasLocked || isForced) {
             lockedTeamId = candidate;
@@ -719,11 +724,11 @@ function updateTurnOrder(lockActive = true) {
     
     let others = teamsToSort.filter(t => t.id !== lockedTeamId);
     others.sort((a, b) => {
-        let aStats = gameState.turnStats[a.id] || 0;
-        let bStats = gameState.turnStats[b.id] || 0;
+        let aStats = (targetState.turnStats && targetState.turnStats[a.id]) || 0;
+        let bStats = (targetState.turnStats && targetState.turnStats[b.id]) || 0;
         if (aStats > 0 && bStats === 0) return -1;
         if (bStats > 0 && aStats === 0) return 1;
-        if (aStats > 0 && bStats > 0) return gameState.turnOrder.indexOf(a.id) - gameState.turnOrder.indexOf(b.id);
+        if (aStats > 0 && bStats > 0) return targetState.turnOrder.indexOf(a.id) - targetState.turnOrder.indexOf(b.id);
         
         if (rule === 'mode_order') return a.id - b.id;
         if (rule === 'mode_desc') {
@@ -738,7 +743,7 @@ function updateTurnOrder(lockActive = true) {
     if (lockedTeamId !== null) {
         finalOrder.unshift(lockedTeamId);
     }
-    gameState.turnOrder = finalOrder;
+    targetState.turnOrder = finalOrder;
 }
 
 // Khởi tạo lượt chơi nếu mảng trống (ví dụ: lần đầu chạy server)
@@ -806,6 +811,87 @@ function broadcastDeviceStatus(roomPin) {
     if (!roomPin) return;
     const info = getRoomClientsList(roomPin);
     io.to(roomPin).emit('deviceStatusUpdate', info);
+}
+
+
+// =============================================
+// MULTI-ROOM STATE ROUTING & BROADCASTING
+// =============================================
+function getActiveState(socket) {
+    if (socket && socket.currentRoomPin) {
+        const room = roomManager.getRoom(socket.currentRoomPin);
+        if (room && room.gameState) return room.gameState;
+    }
+    return gameState;
+}
+
+function emitToSocketFiltered(targetSocket, event, data) {
+    if (event === 'updateState' && data) {
+        const referer = targetSocket.handshake.headers.referer || '';
+        const isFullStateClient = targetSocket.isAdmin 
+            || referer.includes('screen') 
+            || referer.includes('display') 
+            || referer.includes('overlay') 
+            || referer.includes('scoreboard');
+        const isMcClient = targetSocket.isMC || referer.includes('/mc');
+
+        if (isFullStateClient) {
+            targetSocket.emit(event, data);
+        } else if (isMcClient) {
+            let mcPayload = JSON.parse(JSON.stringify(data));
+            delete mcPayload.questionBank;
+            delete mcPayload.questions;
+            if (mcPayload.lockedPackage && mcPayload.lockedPackage.questions) {
+                mcPayload.lockedPackage.questions.forEach((q, idx) => {
+                    if (idx !== mcPayload.lockedPackage.currentIndex) {
+                        delete q.text; delete q.answer; delete q.vid;
+                    }
+                });
+            }
+            if (mcPayload.pendingPackage && mcPayload.pendingPackage.questions) {
+                mcPayload.pendingPackage.questions.forEach(q => {
+                    delete q.text; delete q.answer; delete q.vid;
+                });
+            }
+            targetSocket.emit(event, mcPayload);
+        } else {
+            // Thí sinh: Scrub questionBank và đáp án để bảo mật và giảm dung lượng
+            let safeState = JSON.parse(JSON.stringify(data));
+            delete safeState.questionBank;
+            delete safeState.questions;
+            if (safeState.currentQuestion) safeState.currentQuestion.answer = "";
+            if (safeState.lockedPackage && safeState.lockedPackage.questions) {
+                safeState.lockedPackage.questions.forEach(q => { delete q.answer; delete q.vid; });
+            }
+            if (safeState.pendingPackage && safeState.pendingPackage.questions) {
+                safeState.pendingPackage.questions.forEach(q => { delete q.answer; delete q.vid; });
+            }
+            targetSocket.emit(event, safeState);
+        }
+        return;
+    }
+    targetSocket.emit(event, data);
+}
+
+function broadcastState(socket, customEvent = 'updateState', customData = null) {
+    const pin = (socket && socket.currentRoomPin) ? socket.currentRoomPin : null;
+    const targetState = customData || getActiveState(socket);
+    
+    if (pin) {
+        saveRooms().catch(e => console.error('[RoomPersist] save error:', e));
+        const socketsInRoom = io.sockets.adapter.rooms.get(pin);
+        if (socketsInRoom) {
+            socketsInRoom.forEach(sid => {
+                const s = io.sockets.sockets.get(sid);
+                if (s) emitToSocketFiltered(s, customEvent, targetState);
+            });
+        }
+        broadcastDeviceStatus(pin);
+    } else {
+        io.sockets.sockets.forEach(s => {
+            emitToSocketFiltered(s, customEvent, targetState);
+        });
+    }
 }
 
 io.on('connection', (socket) => {
@@ -1042,15 +1128,16 @@ io.on('connection', (socket) => {
 
     // --- ADMIN: Đặt tên đội & trường ---
     socket.on('setTeamNames', (data) => {
+        const state = getActiveState(socket);
         data.forEach((item, idx) => {
-            if (gameState.teams[idx]) {
-                if (item.name && item.name.trim()) gameState.teams[idx].name = item.name.trim();
-                if (item.school !== undefined) gameState.teams[idx].school = item.school.trim();
+            if (state.teams[idx]) {
+                if (item.name && item.name.trim()) state.teams[idx].name = item.name.trim();
+                if (item.school !== undefined) state.teams[idx].school = item.school.trim();
             }
         });
-        gameState.claimedTeams = {};
-        updateTurnOrder();
-        io.emit('updateState', gameState);
+        state.claimedTeams = {};
+        updateTurnOrder(state);
+        broadcastState(socket);
     });
 
     // --- ADMIN: Bật/Tắt Ngôi sao hy vọng ---
