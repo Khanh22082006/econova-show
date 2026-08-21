@@ -690,6 +690,17 @@
         }
 
         socket.on('updateState', handleUpdateState);
+        
+        socket.on('teamReleased', (data) => {
+            alert('Quản trị viên đã giải phóng thiết bị của đội bạn. Vui lòng chọn lại đội.');
+            isSelected = false;
+            myTeamId = null;
+            sessionStorage.removeItem('claimedTeamId');
+            selectScreen.style.display = 'flex';
+            buzzScreen.style.display = 'none';
+            if (window.currentState) renderSelect(window.currentState.teams || [], window.currentState.claimedTeams || {});
+        });
+
         function handleUpdateState(state) {
             if (!state) return;
             window.currentState = state;

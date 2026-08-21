@@ -72,6 +72,21 @@
         .turn-item { background: #576574; padding: 10px 15px; border-radius: 6px; display: flex; align-items: center; gap: 10px; font-weight: bold;}
         .turn-item.active { background: #10ac84; border: 2px solid #fff; box-shadow: 0 0 10px #10ac84;}
         .turn-item.played { opacity: 0.5; text-decoration: line-through; }
+    
+        /* Device Management Styling */
+        .device-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; }
+        .dev-item { background: #2f3542; padding: 10px 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid #576574; font-size: 13px; }
+        .dev-item.online { border-left-color: #10ac84; }
+        .dev-item.claimed { border-left-color: #3742fa; }
+        .dev-badge { padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+        .badge-online { background: rgba(16, 172, 132, 0.2); color: #10ac84; border: 1px solid #10ac84; }
+        .badge-offline { background: rgba(87, 101, 116, 0.2); color: #a4b0be; border: 1px solid #576574; }
+        .badge-claimed { background: rgba(55, 66, 250, 0.2); color: #70a1ff; border: 1px solid #3742fa; }
+        .btn-release { background: #ff4757; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: bold; margin-left: 6px; }
+        .btn-release:hover { background: #ff6b81; }
+        .role-badges-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #3d4556; }
+        .role-badge-box { background: #2f3542; padding: 8px; border-radius: 6px; text-align: center; font-size: 12px; }
+
     </style>
 </head>
 <body>
@@ -490,16 +505,27 @@
                     </div>
                     <div id="serverErrorArea" style="color: #ff4757; margin-top: 10px; font-size: 14px; text-align: center; display: none; font-weight: bold;"></div>
                 </div>
-                <div style="flex: 1; background: #1e1e2f; padding: 15px; border-radius: 8px;">
-                    <strong style="color: #ff9f43;" data-i18n="adm_room_title">3. TRẠNG THÁI PHÒNG THI</strong>
-                    <p style="font-size: 14px; color: #a4b0be; margin-top: 5px;" data-i18n="adm_room_desc">Thí sinh cần nhập Mã PIN để tham gia thi đấu.</p>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <span style="font-size: 18px;"><span id="lblPinLabel">Mã PIN:</span> <b id="lblRoomPIN" style="color: #ff4757; font-size: 24px; letter-spacing: 2px;">ĐÃ ĐÓNG</b></span>
+                <div style="flex: 1; background: #1e1e2f; padding: 15px; border-radius: 8px; display: flex; flex-direction: column;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #3d4556; padding-bottom: 10px; margin-bottom: 10px;">
+                        <div>
+                            <strong style="color: #ff9f43; font-size: 16px;">3. QUẢN LÝ PHÒNG & THIẾT BỊ TRUY CẬP</strong>
+                            <div style="font-size: 13px; color: #a4b0be; margin-top: 3px;">Mã PIN: <b id="lblRoomPIN" style="color: #10ac84; font-size: 18px; letter-spacing: 1px;">-</b></div>
+                        </div>
+                        <button class="btn-red" id="btnDeleteRoom" onclick="deleteCurrentRoom()" style="padding: 7px 12px; font-size: 12px;" title="Xóa và kết thúc phòng">🗑️ KẾT THÚC & GỠ PHÒNG</button>
                     </div>
-                    <div style="display: flex; gap: 10px;">
-                        <button class="btn-green" id="btnOpenRoom" onclick="toggleRoom(true)" style="flex: 1;" data-i18n="adm_room_open">🟢 MỞ PHÒNG</button>
-                        <button class="btn-red" id="btnCloseRoom" onclick="toggleRoom(false)" style="flex: 1;" data-i18n="adm_room_close">🔴 ĐÓNG PHÒNG</button>
-                        <button class="btn-purple" id="btnDeleteRoom" onclick="deleteCurrentRoom()" style="flex: 1;" title="Gỡ và xóa vĩnh viễn phòng này">🗑️ GỠ PHÒNG</button>
+
+                    <!-- THIẾT BỊ THÍ SINH (4 ĐỘI) -->
+                    <div style="font-size: 13px; font-weight: bold; color: #feca57; margin-bottom: 4px;">👥 Thiết bị Thí sinh (Mỗi máy chọn 1 đội):</div>
+                    <div id="teamDevicesGrid" class="device-grid">
+                        <!-- Dynamically filled by renderDevicesList -->
+                    </div>
+
+                    <!-- CÁC THIẾT BỊ MÀN HÌNH KHÁC -->
+                    <div class="role-badges-row">
+                        <div class="role-badge-box" id="devMC">🎙️ MC: <span class="dev-badge badge-offline">Offline</span></div>
+                        <div class="role-badge-box" id="devScreen">📺 LED: <span class="dev-badge badge-offline">Offline</span></div>
+                        <div class="role-badge-box" id="devOverlay">🎬 OBS: <span class="dev-badge badge-offline">Offline</span></div>
+                        <div class="role-badge-box" id="devScoreboard">📊 Bảng: <span class="dev-badge badge-offline">Offline</span></div>
                     </div>
                 </div>
             </div>
@@ -685,6 +711,70 @@
             }
             socket.on('connect', doAdminLogin);
         }
+        
+        // === DEVICE MANAGEMENT LOGIC ===
+        function releaseTeam(teamId) {
+            if (confirm(`Bạn có chắc chắn muốn ngắt kết nối và cho phép Đổi Máy cho Đội ${teamId} không?`)) {
+                socket.emit('releaseTeam', teamId);
+            }
+        }
+
+        function renderDevicesList(info) {
+            if (!info) return;
+            const container = document.getElementById('teamDevicesGrid');
+            if (container && info.teams) {
+                container.innerHTML = '';
+                for (let tid in info.teams) {
+                    const t = info.teams[tid];
+                    let statusBadge = '';
+                    let releaseBtn = '';
+                    
+                    if (t.online) {
+                        statusBadge = '<span class="dev-badge badge-online">🟢 Đang online</span>';
+                        releaseBtn = `<button class="btn-release" onclick="releaseTeam(${t.id})" title="Ngắt máy hiện tại để thí sinh vào máy khác">🔄 Đổi máy</button>`;
+                    } else if (t.claimed) {
+                        statusBadge = '<span class="dev-badge badge-claimed">🟡 Đã nhận (mất mạng)</span>';
+                        releaseBtn = `<button class="btn-release" onclick="releaseTeam(${t.id})" title="Giải phóng đội để vào lại">🔄 Reset</button>`;
+                    } else {
+                        statusBadge = '<span class="dev-badge badge-offline">⚪ Chưa vào</span>';
+                    }
+
+                    container.innerHTML += `
+                        <div class="dev-item ${t.online ? 'online' : (t.claimed ? 'claimed' : '')}">
+                            <div>
+                                <b>${t.name}</b>
+                                <div style="font-size: 11px; color: #a4b0be;">${t.school || 'Đội ' + t.id}</div>
+                            </div>
+                            <div style="display: flex; align-items: center;">
+                                ${statusBadge}
+                                ${releaseBtn}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            // Other screen roles
+            const setRoleBadge = (elId, isOnline, label) => {
+                const el = document.getElementById(elId);
+                if (el) {
+                    el.innerHTML = `${label}: <span class="dev-badge ${isOnline ? 'badge-online' : 'badge-offline'}">${isOnline ? '🟢 Online' : 'Offline'}</span>`;
+                }
+            };
+            setRoleBadge('devMC', info.mc, '🎙️ MC');
+            setRoleBadge('devScreen', info.screen, '📺 LED');
+            setRoleBadge('devOverlay', info.overlay, '🎬 OBS');
+            setRoleBadge('devScoreboard', info.scoreboard, '📊 Bảng');
+        }
+
+        socket.on('deviceStatusUpdate', (info) => {
+            renderDevicesList(info);
+        });
+
+        // Request device status on connect
+        if (socket.connected) socket.emit('getDeviceStatus');
+        socket.on('connect', () => { socket.emit('getDeviceStatus'); });
+
         function switchTab(tab) {
             const tabIds = ['round1', 'main', 'settings'];
             tabIds.forEach(id => {

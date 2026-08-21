@@ -749,6 +749,65 @@ if (gameState.turnOrder.length === 0) {
 // =============================================
 // SOCKET.IO
 // =============================================
+
+// =============================================
+// QUẢN LÝ THIẾT BỊ & TRẠNG THÁI KẾT NỐI THEO PHÒNG
+// =============================================
+function getRoomClientsList(roomPin) {
+    const list = {
+        teams: {},
+        mc: false,
+        screen: false,
+        overlay: false,
+        scoreboard: false,
+        totalConnected: 0
+    };
+    
+    const teamCount = (gameState.teams && gameState.teams.length) ? gameState.teams.length : 4;
+    for (let tid = 1; tid <= teamCount; tid++) {
+        const claim = gameState.claimedTeams ? gameState.claimedTeams[tid] : null;
+        const teamObj = gameState.teams ? gameState.teams.find(t => t.id === tid) : null;
+        list.teams[tid] = {
+            id: tid,
+            name: teamObj ? teamObj.name : `Đội ${tid}`,
+            school: teamObj ? (teamObj.school || '') : '',
+            claimed: !!claim,
+            socketId: claim ? claim.socketId : null,
+            online: false
+        };
+    }
+
+    const pin = roomPin || 'DEFAULT';
+    const socketsInRoom = io.sockets.adapter.rooms.get(pin);
+    if (socketsInRoom) {
+        list.totalConnected = socketsInRoom.size;
+        socketsInRoom.forEach(socketId => {
+            const s = io.sockets.sockets.get(socketId);
+            if (s) {
+                const ref = s.handshake.headers.referer || '';
+                if (s.isMC || ref.includes('/mc')) list.mc = true;
+                if (ref.includes('screen') || ref.includes('display')) list.screen = true;
+                if (ref.includes('overlay')) list.overlay = true;
+                if (ref.includes('scoreboard')) list.scoreboard = true;
+                
+                for (let tid in list.teams) {
+                    if (list.teams[tid].socketId === socketId) {
+                        list.teams[tid].online = true;
+                    }
+                }
+            }
+        });
+    }
+
+    return list;
+}
+
+function broadcastDeviceStatus(roomPin) {
+    if (!roomPin) return;
+    const info = getRoomClientsList(roomPin);
+    io.to(roomPin).emit('deviceStatusUpdate', info);
+}
+
 io.on('connection', (socket) => {
 
     // --- MULTI-ROOM SOCKET JOIN & AUTH HANDLERS ---
@@ -788,6 +847,27 @@ io.on('connection', (socket) => {
             result.room.connectedClients.add(socket.id);
         }
         if (typeof callback === 'function') callback(result);
+    });
+
+        // --- QUẢN LÝ THIẾT BỊ ---
+    socket.on('getDeviceStatus', () => {
+        const pin = socket.currentRoomPin || 'DEFAULT';
+        socket.emit('deviceStatusUpdate', getRoomClientsList(pin));
+    });
+
+    socket.on('releaseTeam', (teamId) => {
+        if (!socket.isAdmin) return;
+        teamId = parseInt(teamId);
+        if (gameState.claimedTeams && gameState.claimedTeams[teamId]) {
+            const socketId = gameState.claimedTeams[teamId].socketId;
+            delete gameState.claimedTeams[teamId];
+            if (socketId) {
+                io.to(socketId).emit('teamReleased', { teamId });
+            }
+            io.emit('updateState', gameState);
+            broadcastDeviceStatus(socket.currentRoomPin);
+            console.log(`[DeviceManager] Admin đã giải phóng máy cho Đội ${teamId}`);
+        }
     });
 
     socket.on('deleteRoom', (pin, callback) => {
