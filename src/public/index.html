@@ -688,5 +688,15 @@
             window.location.href = `./admin.html?pin=${encodeURIComponent(lastCreatedRoom.pin)}`;
         }
     </script>
+
+    <script>
+        // Ping server every 30 seconds to prevent Render cold start
+        (function keepAlive() {
+            setInterval(() => {
+                fetch('/api/ping').catch(() => {});
+            }, 30000);
+        })();
+    </script>
+
 </body>
 </html>

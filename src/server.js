@@ -258,7 +258,8 @@ let saveRoomsTimer = null;
 function scheduleSaveRooms(delayMs = 2000) {
     if (saveRoomsTimer) clearTimeout(saveRoomsTimer);
     saveRoomsTimer = setTimeout(() => {
-        scheduleSaveRooms(2000);
+        saveRoomsTimer = null;
+        saveRooms().catch(e => console.error('[RoomPersist] Scheduled save error:', e));
     }, delayMs);
 }
 
@@ -317,6 +318,18 @@ app.post('/api/room/create', (req, res) => {
     }
 });
 
+
+// Liveness probe — keeps Render from sleeping AND forces room reload if needed
+app.get('/api/ping', async (req, res) => {
+    const roomCount = roomManager.rooms ? roomManager.rooms.size : 0;
+    if (roomCount === 0) {
+        // No rooms in memory — try to restore from cloud
+        try {
+            await loadRoomsFromCloud();
+        } catch(e) {}
+    }
+    res.json({ ok: true, rooms: roomCount, ts: Date.now() });
+});
 app.get('/api/room/list', (req, res) => {
     res.json({ success: true, rooms: roomManager.listPublicRooms() });
 });
@@ -920,9 +933,19 @@ function playSoundInRoom(socket, sound) {
 io.on('connection', (socket) => {
 
     // --- MULTI-ROOM SOCKET JOIN & AUTH HANDLERS ---
-    socket.on('joinRoom', (pin, callback) => {
+    socket.on('joinRoom', async (pin, callback) => {
         const roomPin = (pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0');
-        const room = roomManager.getRoom(roomPin);
+        let room = roomManager.getRoom(roomPin);
+        if (!room) {
+            // Try cloud restore before failing
+            try {
+                await loadRoomsFromCloud();
+                room = roomManager.getRoom(roomPin);
+                if (room) console.log('[JoinRoom] Room', roomPin, 'restored from cloud on join');
+            } catch(e) {
+                console.error('[JoinRoom] Cloud restore error:', e.message);
+            }
+        }
         if (room) {
             socket.join(roomPin);
             socket.currentRoomPin = roomPin;

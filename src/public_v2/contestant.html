@@ -385,9 +385,9 @@
                         handleUpdateState(data.gameState);
                         if (typeof armSkeletonTimeout === 'function') armSkeletonTimeout(); // reset timer after state received
                     } else if (data && !data.success) {
-                        // Room gone - redirect immediately
-                        alert(data.message || 'Phòng không tồn tại hoặc đã đóng!');
-                        window.location.href = './index.html';
+                        // Room not found on initial fetch - server might be restoring from cloud
+                        // The skeleton timeout failsafe will handle retry and redirect if needed
+                        console.log('[HTTP Prefetch] Room not found, will retry via failsafe:', data.message);
                     }
                 })
                 .catch(e => console.log('HTTP state fetch note:', e.message));
@@ -433,8 +433,18 @@
                 socket.on('connect', () => {
             socket.emit('joinRoom', roomPin, (res) => {
                 if (!res || !res.success) {
-                    alert(res && res.message ? res.message : 'Phòng không tồn tại hoặc đã đóng!');
-                    window.location.href = './index.html';
+                    // Give the server a chance to restore from cloud, retry once after 3s
+                    console.log('[JoinRoom] Failed:', res && res.message);
+                    setTimeout(() => {
+                        socket.emit('joinRoom', roomPin, (res2) => {
+                            if (!res2 || !res2.success) {
+                                alert((res2 && res2.message) || 'Phòng không tồn tại hoặc đã đóng! Vui lòng liên hệ Admin.');
+                                window.location.href = './index.html';
+                            } else {
+                                if (res2.gameState) handleUpdateState(res2.gameState);
+                            }
+                        });
+                    }, 3000);
                 } else {
                     if (res.gameState) {
                         // Nếu trước đó tab này từng chọn đội, kiểm tra xem đội đó có thuộc về client này không
