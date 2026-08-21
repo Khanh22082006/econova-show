@@ -1,0 +1,78 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Econova Show - Lower Third V3</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0a1929; font-family: Segoe UI, Arial, sans-serif; }
+:root { --navy: #0d2c54; --navy-deep: #08203f; --cyan: #1fd1ff; --cyan-bright: #2ee6ff; --text-light: #ffffff; }
+.lower-third { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: row; align-items: stretch; height: 150px; }
+.arrow-cluster { position: relative; width: 220px; height: 100%; flex: 0 0 auto; }
+.arrow-cluster svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; }
+.arrow-cluster .layer-L1 { z-index: 1; opacity: 0.3; }
+.arrow-cluster .layer-L2 { z-index: 2; opacity: 0.6; }
+.arrow-cluster .layer-L3 { z-index: 3; opacity: 1.0; }
+.question-box { background: var(--navy); height: 100%; width: 0; overflow: hidden; white-space: nowrap; display: flex; flex-direction: column; position: relative; z-index: 5; }
+.scoreboard { display: flex; flex-direction: row; align-items: stretch; height: 34px; width: 1200px; background: var(--navy-deep); flex: 0 0 auto; }
+.team { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; color: var(--text-light); font-size: 14px; font-weight: 600; letter-spacing: 0.5px; }
+.team:not(:last-child)::after { content: ""; position: absolute; right: 0; top: -6px; bottom: -6px; width: 2px; background: var(--cyan); transform: skewX(-20deg); }
+.team.active { background: var(--cyan-bright); color: var(--navy-deep); font-weight: 800; }
+.center-area { flex: 1; display: flex; flex-direction: row; align-items: center; width: 1200px; padding: 0 24px; position: relative; }
+.question-text { flex: 1; color: var(--text-light); font-size: 26px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 24px; }
+.divider { width: 3px; height: 70px; background: var(--cyan); transform: skewX(-12deg); margin: 0 24px; flex: 0 0 auto; }
+.score-block { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.big-score { color: var(--cyan-bright); font-size: 52px; font-weight: 900; line-height: 1; }
+.sub-scores { display: flex; flex-direction: row; gap: 6px; margin-top: 6px; }
+.sub-scores span { background: var(--navy-deep); color: var(--cyan); font-size: 13px; font-weight: 700; padding: 2px 8px; border-radius: 3px; border: 1px solid var(--cyan); }
+.time-bar { height: 8px; width: 1200px; background: var(--navy-deep); flex: 0 0 auto; position: relative; overflow: hidden; }
+.time-bar .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 65%; background: linear-gradient(90deg, var(--cyan), var(--cyan-bright)); }
+@keyframes boxOpen { 0% { width: 0; } 40% { width: 0; } 80% { width: 1200px; } 100% { width: 1200px; } }
+.question-box { animation: boxOpen 3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+@keyframes flyLeftCluster { 0% { transform: translateX(700px); } 40% { transform: translateX(0); } 100% { transform: translateX(0); } }
+@keyframes flyRightCluster { 0% { transform: translateX(-700px); } 40% { transform: translateX(0); } 100% { transform: translateX(0); } }
+.cluster-left { animation: flyLeftCluster 3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.cluster-right { animation: flyRightCluster 3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+@keyframes whipL2_left { 0%, 40% { transform: translateX(0); } 65% { transform: translateX(-90px); } 100% { transform: translateX(0); } }
+@keyframes whipL1_left { 0%, 40% { transform: translateX(0); } 60% { transform: translateX(-170px); } 100% { transform: translateX(0); } }
+@keyframes whipL2_right { 0%, 40% { transform: translateX(0); } 65% { transform: translateX(90px); } 100% { transform: translateX(0); } }
+@keyframes whipL1_right { 0%, 40% { transform: translateX(0); } 60% { transform: translateX(170px); } 100% { transform: translateX(0); } }
+.cluster-left .layer-L2 { animation: whipL2_left 3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.cluster-left .layer-L1 { animation: whipL1_left 3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.cluster-right .layer-L2 { animation: whipL2_right 3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.cluster-right .layer-L1 { animation: whipL1_right 3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.cluster-left .layer-L3, .cluster-right .layer-L3 { transform: translateX(0); }
+</style>
+</head>
+<body>
+<div class="lower-third">
+<div class="arrow-cluster cluster-left">
+<svg class="layer-L1" viewBox="0 0 220 150" preserveAspectRatio="none"><polygon points="0,75 100,0 220,0 220,150 100,150" fill="#0d2c54"/><polygon points="40,75 118,18.75 220,18.75 220,131.25 118,131.25" fill="#2ee6ff"/></svg>
+<svg class="layer-L2" viewBox="0 0 220 150" preserveAspectRatio="none"><polygon points="0,75 100,0 220,0 220,150 100,150" fill="#0d2c54"/><polygon points="40,75 118,18.75 220,18.75 220,131.25 118,131.25" fill="#2ee6ff"/></svg>
+<svg class="layer-L3" viewBox="0 0 220 150" preserveAspectRatio="none"><polygon points="0,75 100,0 220,0 220,150 100,150" fill="#0d2c54"/><polygon points="40,75 118,18.75 220,18.75 220,131.25 118,131.25" fill="#2ee6ff"/></svg>
+</div>
+<div class="question-box">
+<div class="scoreboard">
+<div class="team">ĐỘI XANH</div>
+<div class="team active">ĐỘI ĐỎ</div>
+<div class="team">ĐỘI VÀNG</div>
+<div class="team">ĐỘI TÍM</div>
+</div>
+<div class="center-area">
+<div class="question-text">Câu hỏi: Năng lượng tái tạo nào phổ biến nhất tại Việt Nam?</div>
+<div class="divider"></div>
+<div class="score-block">
+<div class="big-score">120</div>
+<div class="sub-scores"><span>10</span><span>20</span><span>30</span></div>
+</div>
+</div>
+<div class="time-bar"><div class="fill"></div></div>
+</div>
+<div class="arrow-cluster cluster-right">
+<svg class="layer-L1" viewBox="0 0 220 150" preserveAspectRatio="none"><polygon points="220,75 120,0 0,0 0,150 120,150" fill="#0d2c54"/><polygon points="180,75 102,18.75 0,18.75 0,131.25 102,131.25" fill="#2ee6ff"/></svg>
+<svg class="layer-L2" viewBox="0 0 220 150" preserveAspectRatio="none"><polygon points="220,75 120,0 0,0 0,150 120,150" fill="#0d2c54"/><polygon points="180,75 102,18.75 0,18.75 0,131.25 102,131.25" fill="#2ee6ff"/></svg>
+<svg class="layer-L3" viewBox="0 0 220 150" preserveAspectRatio="none"><polygon points="220,75 120,0 0,0 0,150 120,150" fill="#0d2c54"/><polygon points="180,75 102,18.75 0,18.75 0,131.25 102,131.25" fill="#2ee6ff"/></svg>
+</div>
+</div>
+</body>
+</html>

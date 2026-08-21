@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  econova-show:
+    build: .
+    container_name: econova_show_web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    volumes:
+      - ./src/gameState.json:/app/src/gameState.json
+      - ./src/questions:/app/src/questions

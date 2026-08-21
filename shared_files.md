@@ -1,0 +1,3 @@
+- C:\Users\khanh\Videos\Econova Show\econova_v3.html: Self-contained HTML+inline CSS for Econova Show V3 Lower-third graphic (Flexbox layout, double-pentagon SVG arrows with 3-layer elastic whip animation, navy/cyan theme, 1920x1080). Verified visually via Playwright.
+- C:\Users\khanh\Videos\Econova Show\v3_final.png: Screenshot of final static state (verified).
+- C:\Users\khanh\Videos\Econova Show\shot_v3.py: Playwright screenshot verification script.

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <script src="/lang.js"></script>
+    <title data-i18n="sb_page_title">Econova Show - Bảng Điểm</title>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        let authParam = urlParams.get('auth');
+        if (authParam) {
+            sessionStorage.setItem('adminAuth', authParam);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (!sessionStorage.getItem('adminAuth') && urlParams.get('pass') !== 'obs_score') {
+            document.write(`<h1 style="color:white;text-align:center;margin-top:20%;font-family:\\'SF Pro Display Bold\\', \\'SF Pro Text\\', -apple-system, BlinkMacSystemFont, sans-serif">${t('sb_access_denied', currentGlobalLang)}</h1>`);
+            window.stop();
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-primary: #030a1c;
+            --team1: #10ac84;
+            --team2: #f39c12;
+            --team3: #6c5ce7;
+            --team4: #e17055;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif);
+            background: var(--bg-primary);
+            color: #fff;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            background-image:
+                radial-gradient(ellipse at 10% 80%, rgba(16, 172, 132, 0.07) 0%, transparent 50%),
+                radial-gradient(ellipse at 35% 20%, rgba(243, 156, 18, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 65% 80%, rgba(108, 92, 231, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 90% 20%, rgba(225, 112, 85, 0.06) 0%, transparent 50%);
+        }
+
+        /* ─── Animated Grid Background ─── */
+        .bg-grid {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background-image:
+                linear-gradient(rgba(0, 210, 211, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 210, 211, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            animation: grid-drift 20s linear infinite;
+        }
+        @keyframes grid-drift { 0% { transform: translate(0, 0); } 100% { transform: translate(60px, 60px); } }
+
+        #main-container {
+            width: 1920px; height: 1080px; position: absolute; top: 50%; left: 50%;
+            margin-top: -540px; margin-left: -960px; transform-origin: center center;
+            display: flex; flex-direction: column; overflow: hidden; z-index: 10;
+        }
+
+        /* ===== SCREEN 1: CHỌN ĐỘI ===== */
+        #selectScreen {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100%; padding: 20px; z-index: 20; position: relative;
+        }
+        #selectScreen h1 {
+            font-size: 80px; font-weight: 700; color: #fff; margin-bottom: 60px;
+            text-transform: uppercase; letter-spacing: 3px; text-align: center;
+            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif);
+            text-shadow: 0 0 15px rgba(0,210,211,0.5);
+        }
+        #teamBtns {
+            display: grid; grid-template-columns: 1fr; gap: 30px; width: 100%; max-width: 800px;
+        }
+        .team-btn {
+            width: 100%; min-height: 150px; border: none; border-radius: 24px;
+            font-size: 40px; font-weight: 700; color: #fff; cursor: pointer;
+            transition: transform 0.15s, opacity 0.3s; letter-spacing: 1px; text-transform: uppercase;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif);
+        }
+        .team-btn span.school { font-size: 26px; color: rgba(255,255,255,0.7); font-weight: 400; text-transform: none; letter-spacing: 0; margin-top: 10px;}
+        .team-btn:active:not(:disabled) { transform: scale(0.96); }
+        .team-btn:disabled { background: rgba(58, 58, 80, 0.5) !important; box-shadow: none !important; color: #6b6b80; cursor: not-allowed; opacity: 0.6; }
+        .team-btn[data-t="1"] { background: var(--team1); box-shadow: 0 4px 20px rgba(16,172,132,0.35); }
+        .team-btn[data-t="2"] { background: var(--team2); box-shadow: 0 4px 20px rgba(243,156,18,0.35); }
+        .team-btn[data-t="3"] { background: var(--team3); box-shadow: 0 4px 20px rgba(108,92,231,0.35); }
+        .team-btn[data-t="4"] { background: var(--team4); box-shadow: 0 4px 20px rgba(225,112,85,0.35); }
+
+        /* ===== SCREEN 2: BẢNG ĐIỂM CHÍNH ===== */
+        #scoreScreen {
+            display: none; flex-direction: column; height: 100%; position: relative; z-index: 10;
+        }
+        .title-area { display: none; }
+        .title-text {
+            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif); font-size: 42px; font-weight: 900;
+            letter-spacing: 10px; text-transform: uppercase;
+            background: linear-gradient(135deg, #00d2d3, #ffffff, #00d2d3); background-size: 300% auto;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            animation: title-shimmer 5s ease-in-out infinite; position: relative;
+        }
+        .title-sub {
+            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif); font-size: 16px; color: rgba(200, 214, 229, 0.4);
+            letter-spacing: 6px; margin-top: 10px; text-transform: uppercase;
+        }
+
+        .cards-area {
+            flex: 1; display: flex; align-items: center; justify-content: center; padding: 0; min-height: 0;
+        }
+
+        .team-card {
+            background: rgba(16, 38, 74, 0.45); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 2px solid rgba(255, 255, 255, 0.06); border-radius: 28px; padding: 0;
+            text-align: center; position: relative; overflow: hidden; width: 90%; height: 90%; max-width: none;
+            display: flex; flex-direction: column; box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        .team-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 8px;
+        }
+        .team-card[data-team="1"]::before { background: linear-gradient(90deg, transparent, var(--team1), transparent); }
+        .team-card[data-team="2"]::before { background: linear-gradient(90deg, transparent, var(--team2), transparent); }
+        .team-card[data-team="3"]::before { background: linear-gradient(90deg, transparent, var(--team3), transparent); }
+        .team-card[data-team="4"]::before { background: linear-gradient(90deg, transparent, var(--team4), transparent); }
+
+
+        .team-header {
+            padding: 30px 20px;
+            background: rgba(0, 210, 211, 0.2); border-bottom: 2px solid #00d2d3;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+        }
+        .team-name { font-family: var(--font-team-name, 'SF Pro Display Bold', sans-serif); font-size: 80px; font-weight: 700; color: #fff;
+            text-transform: uppercase; letter-spacing: 4px; margin-bottom: 5px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .team-school {
+            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif); font-size: 40px; color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+
+        .score-container {
+            padding: 50px 20px; flex: 1; display: flex; align-items: center; justify-content: center;
+        }
+        .team-score { font-family: var(--font-score, 'Orbitron', sans-serif); font-size: 400px; font-weight: 900; line-height: 1;
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.3s;
+        }
+        .team-card[data-team="1"] .team-score { color: #fff; text-shadow: 0 0 30px rgba(16, 172, 132, 0.4); }
+        .team-card[data-team="2"] .team-score { color: #fff; text-shadow: 0 0 30px rgba(243, 156, 18, 0.4); }
+        .team-card[data-team="3"] .team-score { color: #fff; text-shadow: 0 0 30px rgba(108, 92, 231, 0.4); }
+        .team-card[data-team="4"] .team-score { color: #fff; text-shadow: 0 0 30px rgba(225, 112, 85, 0.4); }
+        
+        .team-card.buzzed {
+            animation: card-buzz 0.6s ease-in-out 3;
+        }
+        .team-card[data-team="1"].buzzed { border-color: var(--team1); box-shadow: 0 0 40px rgba(16, 172, 132, 0.35); }
+        .team-card[data-team="2"].buzzed { border-color: var(--team2); box-shadow: 0 0 40px rgba(243, 156, 18, 0.35); }
+        .team-card[data-team="3"].buzzed { border-color: var(--team3); box-shadow: 0 0 40px rgba(108, 92, 231, 0.35); }
+        .team-card[data-team="4"].buzzed { border-color: var(--team4); box-shadow: 0 0 40px rgba(225, 112, 85, 0.35); }
+
+        @keyframes card-buzz {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.04); }
+        }
+        
+        .team-score.score-up { animation: score-bounce-up 0.7s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .team-score.score-down { animation: score-bounce-down 0.7s ease; }
+        @keyframes score-bounce-up { 0% { transform: scale(1); } 40% { transform: scale(1.2); } 70% { transform: scale(0.95); } 100% { transform: scale(1); } }
+        @keyframes score-bounce-down { 0% { transform: scale(1); } 30% { transform: scale(0.85); } 60% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+        body { user-select: none; -webkit-user-select: none; }
+        input, textarea { user-select: text; -webkit-user-select: text; }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+
+    <div id="main-container">
+        <!-- SCREEN 1: CHỌN ĐỘI -->
+        <div id="selectScreen">
+            <h1 data-i18n="sb_choose">CHỌN ĐỘI BẢNG ĐIỂM</h1>
+            <div id="teamBtns"></div>
+        </div>
+
+        <!-- SCREEN 2: SCOREBOARD -->
+        <div id="scoreScreen">
+            <div class="title-area">
+                <div class="title-text" data-i18n="sb_title">BẢNG ĐIỂM CÁ NHÂN</div>
+                <div class="title-sub" data-i18n="idx_title">Econova Show 2026</div>
+            </div>
+            <div class="cards-area" id="cardsArea">
+                <!-- Single card rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function autoScale() {
+            const container = document.getElementById('main-container');
+            const targetRatio = 1920 / 1080;
+            const windowRatio = window.innerWidth / window.innerHeight;
+            let scale;
+            if (windowRatio < targetRatio) {
+                scale = window.innerWidth / 1920;
+            } else {
+                scale = window.innerHeight / 1080;
+            }
+            container.style.transform = `scale(${scale})`;
+        }
+        window.addEventListener('resize', autoScale);
+        autoScale();
+
+        const TEAM_ICONS = ['🌿', '🔥', '💎', '⚡'];
+        const socket = io();
+        let myTeamId = null;
+        let previousScore = 0;
+        let isSelected = false;
+        let currentTeamCount = null;
+
+        const selectScreen = document.getElementById('selectScreen');
+        const scoreScreen = document.getElementById('scoreScreen');
+        const teamBtns = document.getElementById('teamBtns');
+        const cardsArea = document.getElementById('cardsArea');
+
+        function renderSelect(teams) {
+            teamBtns.innerHTML = '';
+            teams.forEach(t => {
+                let btn = document.createElement('button');
+                btn.className = 'team-btn';
+                btn.dataset.t = t.id;
+                btn.innerHTML = `${t.name}<span class="school">${t.school || ''}</span>`;
+                btn.addEventListener('click', () => { 
+                    myTeamId = t.id;
+                    isSelected = true;
+                    selectScreen.style.display = 'none';
+                    scoreScreen.style.display = 'flex';
+                    renderScoreCard(teams);
+                });
+                teamBtns.appendChild(btn);
+            });
+        }
+
+        function renderScoreCard(teams) {
+            const team = teams.find(t => t.id === myTeamId);
+            if (!team) return;
+            const teamNum = team.id;
+            
+            cardsArea.innerHTML = `
+                <div class="team-card" data-team="${teamNum}" id="myCard">
+                    <div class="team-header">
+                        <div class="team-name" id="myName">${team.name}</div>
+                        <div class="team-school" id="mySchool">${team.school || ''}</div>
+                    </div>
+                    <div class="score-container">
+                        <div class="team-score" id="myScore">${team.score}</div>
+                    </div>
+                </div>
+            `;
+            previousScore = team.score;
+        }
+
+
+
+        socket.on('updateState', (state) => {
+            // ================= FONT LOGIC =================
+            if (state.settings) {
+                let s = state.settings;
+                let globalEnabled = s.globalFontEnabled || false;
+                let fGlobal = s.fontGlobal || 'SF Pro Display Bold';
+                let fGeneral = s.fontGeneral || 'SF Pro Display Bold';
+                let fQuestion = s.fontQuestion || 'SF Pro Display Bold';
+                let fTeam = s.fontTeamName || 'SF Pro Display Bold';
+                let fScore = s.fontScore || 'Orbitron';
+                
+                let styleEl = document.getElementById('dynamic-font-styles-global');
+                if (!styleEl) {
+                    styleEl = document.createElement('style');
+                    styleEl.id = 'dynamic-font-styles-global';
+                    document.head.appendChild(styleEl);
+                }
+                
+                let rules = '';
+                if (globalEnabled) {
+                    rules += `@font-face { font-family: 'CustomFontGlobal'; src: url('/font/${encodeURIComponent(fGlobal)}') format('truetype'); }\n`;
+                    rules += `:root { 
+                        --font-general: 'CustomFontGlobal', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-team-name: 'CustomFontGlobal', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-score: 'CustomFontGlobal', 'Orbitron', sans-serif;
+                        --font-question: 'CustomFontGlobal', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                    }`;
+                } else {
+                    rules += `@font-face { font-family: 'CustomFontGeneral'; src: url('/font/${encodeURIComponent(fGeneral)}') format('truetype'); }\n`;
+                    rules += `@font-face { font-family: 'CustomFontQuestion'; src: url('/font/${encodeURIComponent(fQuestion)}') format('truetype'); }\n`;
+                    rules += `@font-face { font-family: 'CustomFontTeamName'; src: url('/font/${encodeURIComponent(fTeam)}') format('truetype'); }\n`;
+                    rules += `@font-face { font-family: 'CustomFontScore'; src: url('/font/${encodeURIComponent(fScore)}') format('truetype'); }\n`;
+                    
+                    rules += `:root { 
+                        --font-general: 'CustomFontGeneral', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-team-name: 'CustomFontTeamName', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-score: 'CustomFontScore', 'Orbitron', sans-serif;
+                        --font-question: 'CustomFontQuestion', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                    }`;
+                }
+                
+                if (styleEl.innerHTML !== rules) {
+                    styleEl.innerHTML = rules;
+                }
+            }
+            // ===============================================
+
+            if (state.settings && state.settings.language) {
+                currentGlobalLang = state.settings.language;
+            }
+            if (!state.teams) return;
+
+            if (currentTeamCount !== null && currentTeamCount !== state.teams.length) {
+                myTeamId = null;
+                isSelected = false;
+                selectScreen.style.display = 'flex';
+                scoreScreen.style.display = 'none';
+                alert(t('sb_team_count_changed', currentGlobalLang));
+            }
+            currentTeamCount = state.teams.length;
+
+            if (!isSelected) {
+                // Update selection buttons if we haven't selected yet
+                renderSelect(state.teams);
+            } else {
+                // Update score card
+                const team = state.teams.find(t => t.id === myTeamId);
+                if (!team) return;
+
+                const scoreEl = document.getElementById('myScore');
+                const nameEl = document.getElementById('myName');
+                const schoolEl = document.getElementById('mySchool');
+                const card = document.getElementById('myCard');
+                
+                if (nameEl) nameEl.textContent = team.name;
+                if (schoolEl) schoolEl.textContent = team.school || '';
+
+                if (scoreEl) {
+                    if (previousScore !== team.score) {
+                        scoreEl.classList.remove('score-up', 'score-down');
+                        void scoreEl.offsetWidth;
+                        scoreEl.classList.add(team.score > previousScore ? 'score-up' : 'score-down');
+                    }
+                    scoreEl.textContent = team.score;
+                    previousScore = team.score;
+                }
+
+                if (card) {
+                    card.classList.toggle('buzzed', state.buzzedTeam === myTeamId);
+                }
+
+
+            }
+            if (state.settings && state.settings.language) {
+                applyTranslations(state.settings.language);
+            }
+        });
+
+        document.addEventListener("DOMContentLoaded", () => {
+            document.title = t('sb_page_title', currentGlobalLang);
+            applyTranslations(currentGlobalLang);
+        });
+    </script>
+</body>
+</html>
+

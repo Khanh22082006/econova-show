@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Econova Show - Cổng Thi Đấu</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body {
+            margin: 0; min-height: 100vh; display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            background: linear-gradient(135deg, #0a0a1a, #1a1a3a);
+            font-family: 'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: white;
+            overflow: hidden;
+        }
+        .container {
+            text-align: center;
+            z-index: 10;
+        }
+        h1 { font-size: 54px; color: #fff; margin-bottom: 10px; text-shadow: 0 0 20px rgba(0, 210, 211, 0.5); }
+        .subtitle { color: #8395a7; margin-bottom: 50px; font-size: 20px; font-weight: 600; }
+        
+        .card-container { display: flex; gap: 30px; justify-content: center; flex-wrap: wrap; }
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px; padding: 40px; width: 280px;
+            cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            backdrop-filter: blur(10px);
+        }
+        .card:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(0, 210, 211, 0.5);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 210, 211, 0.2);
+        }
+        .card-icon { font-size: 50px; margin-bottom: 20px; }
+        .card-title { font-size: 24px; font-weight: 800; margin-bottom: 10px; color: #fff; }
+        .card-desc { font-size: 15px; color: #a4b0be; line-height: 1.5; }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+            display: none; justify-content: center; align-items: center; z-index: 100;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .modal {
+            background: #1e1e2f; border-radius: 20px; padding: 40px;
+            width: 90%; max-width: 400px; text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+            transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal.active { transform: scale(1); }
+        .modal-title { font-size: 28px; font-weight: 800; margin-bottom: 10px; }
+        .modal-desc { color: #a4b0be; margin-bottom: 30px; }
+        
+        .input-group { position: relative; margin-bottom: 25px; }
+        .input-group input {
+            width: 100%; padding: 15px 20px; box-sizing: border-box;
+            background: rgba(0,0,0,0.2); border: 2px solid #576574;
+            border-radius: 12px; color: white; font-size: 18px; font-weight: 600;
+            text-align: center; outline: none; transition: border-color 0.2s;
+        }
+        .input-group input:focus { border-color: #00d2d3; }
+        
+        .btn-submit {
+            width: 100%; padding: 15px; border-radius: 12px; border: none;
+            background: linear-gradient(135deg, #00d2d3, #0984e3);
+            color: white; font-size: 18px; font-weight: bold; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-submit:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0, 210, 211, 0.3); }
+        .error-msg { color: #ff6b81; font-size: 14px; margin-top: -15px; margin-bottom: 15px; display: none; font-weight: 600;}
+        .close-btn {
+            position: absolute; top: 15px; right: 20px; font-size: 24px; color: #a4b0be;
+            cursor: pointer; transition: color 0.2s;
+        }
+        .close-btn:hover { color: white; }
+
+        /* Other links at bottom */
+        .footer-links { margin-top: 50px; display: flex; gap: 20px; }
+        .footer-links a { color: #a4b0be; text-decoration: none; font-size: 14px; transition: color 0.2s; }
+        .footer-links a:hover { color: #00d2d3; }
+        body { user-select: none; -webkit-user-select: none; }
+        input, textarea { user-select: text; -webkit-user-select: text; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 ECONOVA SHOW 2026</h1>
+        <div class="subtitle">Hệ Thống Thi Đấu Trực Tuyến Chuyên Nghiệp - Econova Show</div>
+
+        <div class="card-container">
+            <div class="card" onclick="openModal('contestantModal')">
+                <div class="card-icon">🚀</div>
+                <div class="card-title">Vào Phòng Thi</div>
+                <div class="card-desc">Dành cho các đội thi tham gia trực tiếp. Cần có Mã Phòng (PIN) do ban tổ chức cung cấp.</div>
+            </div>
+
+            <!-- Nút Quản Trị Viên đã bị ẩn để tránh học sinh bấm nhầm -->
+            <div class="card" onclick="openModal('adminModal')">
+                <div class="card-icon">⚙️</div>
+                <div class="card-title">Quản Trị Viên</div>
+                <div class="card-desc">Khu vực điều khiển trò chơi, bảng điểm, và mạng ngoài. Yêu cầu mật khẩu Admin.</div>
+            </div>
+        </div>
+
+        <div class="footer-links">
+            <a href="#" onclick="openSecurePage('./screen.html'); return false;">📺 Mở Màn hình hiển thị (Đồ họa)</a>
+            <a href="#" onclick="openSecurePage('./scoreboard.html'); return false;">📊 Mở Bảng điểm (Scoreboard)</a>
+            <a href="#" onclick="openSecurePage('./overlay.html'); return false;">🎥 Mở Overlay (Cho Livestream)</a>
+        </div>
+    </div>
+
+    <!-- Modal Thí Sinh -->
+    <div class="modal-overlay" id="contestantModal" onclick="closeModal(event, 'contestantModal')">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="close-btn" onclick="document.getElementById('contestantModal').style.opacity = 0; setTimeout(() => document.getElementById('contestantModal').style.display = 'none', 300)">&times;</div>
+            <div class="modal-title">Tham Gia Thi Đấu</div>
+            <div class="modal-desc">Vui lòng nhập Mã Phòng (PIN) hiển thị trên màn hình chính.</div>
+            
+            <div class="input-group">
+                <input type="text" id="pinInput" placeholder="Nhập PIN (VD: 1234)" maxlength="8" autocomplete="off" onkeypress="if(event.key === 'Enter') verifyPIN()">
+            </div>
+            <div class="error-msg" id="pinError">Mã PIN không chính xác!</div>
+            <button class="btn-submit" onclick="verifyPIN()">Xác Nhận</button>
+        </div>
+    </div>
+
+    <!-- Modal Admin -->
+    <div class="modal-overlay" id="adminModal" onclick="closeModal(event, 'adminModal')">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="close-btn" onclick="document.getElementById('adminModal').style.opacity = 0; setTimeout(() => document.getElementById('adminModal').style.display = 'none', 300)">&times;</div>
+    <div class="modal-overlay" id="adminModal" onclick="closeModal('adminModal')">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="close-btn" onclick="closeModal('adminModal')">&times;</div>
+            <div class="modal-title">Xác Thực Quản Trị</div>
+            <div class="modal-desc">Hệ thống yêu cầu mật khẩu để truy cập bảng điều khiển.</div>
+            
+            <div class="input-group">
+                <input type="password" id="passInput" placeholder="Nhập Mật khẩu" autocomplete="off" onkeypress="if(event.key === 'Enter') verifyAdmin()">
+            </div>
+            <div class="error-msg" id="passError">Mật khẩu không chính xác!</div>
+            <button class="btn-submit" onclick="verifyAdmin()" style="background: linear-gradient(135deg, #ff6b81, #ff4757);">Đăng Nhập Admin</button>
+        </div>
+    </div>
+
+    <script>
+        const socket = io({ transports: ['websocket'] });
+
+        function openModal(id) {
+            if (id === 'adminModal' && window.autoAdminPin) {
+                document.getElementById('passInput').value = window.autoAdminPin;
+                verifyAdmin();
+                return;
+            }
+            document.getElementById(id).style.display = 'flex';
+            setTimeout(() => {
+                document.getElementById(id).classList.add('show');
+                if(id === 'contestantModal') document.getElementById('pinInput').focus();
+                if(id === 'adminModal') document.getElementById('passInput').focus();
+            }, 10);
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+            setTimeout(() => {
+                document.getElementById(id).style.display = 'none';
+            }, 300);
+            
+            document.getElementById('pinError').style.display = 'none';
+            document.getElementById('passError').style.display = 'none';
+            document.getElementById('pinInput').value = '';
+            document.getElementById('passInput').value = '';
+            
+            // Reset button states
+            let conBtn = document.querySelector('#contestantModal .btn-submit');
+            if(conBtn) { conBtn.innerText = 'Xác Nhận'; conBtn.disabled = false; }
+        }
+
+        function verifyPIN() {
+            const pin = document.getElementById('pinInput').value.trim();
+            if (!pin) return;
+            
+            const btn = document.querySelector('#contestantModal .btn-submit');
+            if (btn) {
+                btn.innerText = 'Đang kết nối...';
+                btn.disabled = true;
+            }
+
+            socket.emit('verifyRoomPIN', pin, (response) => {
+                if (response.success) {
+                    sessionStorage.setItem('contestantAuth', pin);
+                    window.location.href = './contestant.html';
+                } else {
+                    const err = document.getElementById('pinError');
+                    err.innerText = response.message || 'Mã PIN không chính xác!';
+                    err.style.display = 'block';
+                    if (btn) {
+                        btn.innerText = 'Xác Nhận';
+                        btn.disabled = false;
+                    }
+                }
+            });
+        }
+
+        function openSecurePage(url) {
+            if (sessionStorage.getItem('adminAuth')) {
+                window.open(url, '_blank');
+            } else {
+                window.adminTargetUrl = url;
+                openModal('adminModal');
+            }
+        }
+
+        function verifyAdmin() {
+            const pass = document.getElementById('passInput').value;
+            if (!pass) return;
+            
+            socket.emit('adminLogin', pass, (response) => {
+                if (response.success) {
+                    sessionStorage.setItem('adminAuth', pass);
+                    if (window.adminTargetUrl) {
+                        window.open(window.adminTargetUrl, '_blank');
+                        window.adminTargetUrl = null;
+                        closeModal({target: document.getElementById('adminModal')}, 'adminModal');
+                    } else {
+                        window.location.href = './admin.html';
+                    }
+                } else {
+                    const err = document.getElementById('passError');
+                    err.innerText = response.message || 'Mật khẩu không chính xác!';
+                    err.style.display = 'block';
+                }
+            });
+        }
+
+        // Lấy mã PIN Admin nếu mở ở máy chủ gốc
+        fetch('/api/admin_pin')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    window.autoAdminPin = data.pin;
+                    let div = document.createElement('div');
+                    div.style.position = 'absolute';
+                    div.style.bottom = '20px';
+                    div.style.right = '20px';
+                    div.style.background = 'rgba(0,0,0,0.5)';
+                    div.style.padding = '10px 15px';
+                    div.style.borderRadius = '8px';
+                    div.style.fontSize = '14px';
+                    div.style.color = '#a4b0be';
+                    div.innerHTML = `Mã Admin từ xa: <b style="color:#00d2d3; font-size:18px; margin-left:5px;">${data.pin}</b>`;
+                    document.body.appendChild(div);
+                }
+            })
+            .catch(() => {});
+    </script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+{
+  "name": "econova-show",
+  "version": "1.0.0",
+  "description": "Econova Show Game",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "electron:start": "electron .",
+    "electron:build": "electron-builder",
+    "dev": "nodemon --watch server.js --watch main.js --watch pptController.js --exec \"electron .\""
+  },
+  "keywords": [],
+  "author": "Econova",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "chokidar": "^3.6.0",
+    "express": "^5.2.1",
+    "jsdom": "^29.1.1",
+    "puppeteer": "^25.1.0",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3",
+    "electron-packager": "^17.1.2",
+    "electron-reload": "^2.0.0-alpha.1",
+    "nodemon": "^3.1.14"
+  },
+  "build": {
+    "appId": "com.econova.show",
+    "productName": "Econova Show",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "dir"
+    },
+    "files": [
+      "**/*",
+      "!dist",
+      "!SourceCodeForUpload"
+    ],
+    "extraResources": [
+      "gameState.json",
+      "sounds/**/*",
+      "questions/**/*"
+    ]
+  }
+}

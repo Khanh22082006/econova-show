@@ -1,0 +1,227 @@
+{
+  "name": "Đề test",
+  "questions": {
+    "10": [
+      {
+        "stt": 1,
+        "q": "A newly opened bar on the ground floor of your apartment building plays loud music until 2:00 a.m. and disposes of waste indiscriminately, causing a decline in the market value of your residential unit. In economic terms, what phenomenon describes the impact of this bar on the building's residents?",
+        "a": "A negative externality",
+        "vid": ""
+      },
+      {
+        "stt": 2,
+        "q": "Why are New Year’s Eve fireworks at a city square considered a public good?",
+        "a": "Because they are non-excludable and non-rivalrous.",
+        "vid": ""
+      },
+      {
+        "stt": 3,
+        "q": "What is the situation occurring in the given video?\r\n",
+        "a": "(Hyper)Inflation",
+        "vid": "C:\\Users\\khanh\\Downloads\\Video\\DỄ 3.mp4"
+      },
+      {
+        "stt": 4,
+        "q": "What can legally tie two people together in marriage but can also be bought and sold on Wall Street?",
+        "a": "A bond",
+        "vid": ""
+      },
+      {
+        "stt": 5,
+        "q": "Taylor Swift's concert tour in Singapore generated hundreds of millions of USD in revenue across various sectors (hospitality, accommodation and ticketing sectors). Even though Taylor Swift is an American citizen and will eventually bring her earnings home, the value of these concert services is produced within Singapore's borders. Therefore, this income will be counted toward the GDP of which country? Explain shortly why.",
+        "a": "Singapore because GDP measures the total value created within a country's territory, regardless of who produces it.",
+        "vid": ""
+      },
+      {
+        "stt": 6,
+        "q": "A rich and healthy 25-year-old male, voluntarily chooses not to seek employment and instead remains at home leisure spending his parents' money. Would he be classified as \"unemployed\" in macroeconomic reports? Explain shortly why.",
+        "a": "No, because he is not in the labour force / to be considered \"unemployed,\" an individual must meet two criteria: be of working age and be unemployed or actively seeking employment.",
+        "vid": ""
+      },
+      {
+        "stt": 7,
+        "q": "If the price of hand sanitizer increase dramatically, what will happen to the demand curve of hand soap?",
+        "a": "Shift to the right",
+        "vid": ""
+      },
+      {
+        "stt": 8,
+        "q": "Supposed there is a worker loses his job because the factory closed down due to an economic recession. He is actively looking for a new job but hasn't found one yet. What type of unemployment is he experiencing?",
+        "a": "Cyclical unemployment",
+        "vid": ""
+      },
+      {
+        "stt": 9,
+        "q": "Mr. A hires Ms. B as a house worker. One year later, they fall in love and get married. Ms. B continues to perform the same house work but Mr. A no longer pay her a wage. In your assessment, will the country's GDP increase, decrease or remain unchanged? Explain shortly why.",
+        "a": "Decrease because GDP only measures legal transactions that take place in the market. When a couple gets married, domestic work becomes self-funded housework, with no cash flow and is therefore excluded from GDP.",
+        "vid": ""
+      },
+      {
+        "stt": 10,
+        "q": "Brands such as Gillette razors and Canon printers commonly sell the core unit (the handle or printer body) at an extremely low price. However, when consumers need to purchase replacement components such as razor blade cartridges or printer ink, the prices are substantially higher. What is this strategy called?",
+        "a": "Complementary goods business model/Pricing strategy based on complementary goods",
+        "vid": ""
+      },
+      {
+        "stt": 11,
+        "q": "A student has 2 free hours in the evening, which can be used to study for an exam or to work part-time earning 200,000 VND. If he chooses to study, what is the 200,000 VND that he gives up called?",
+        "a": "Opportunity cost",
+        "vid": ""
+      },
+      {
+        "stt": 12,
+        "q": "At the end of the year, your boss announces a routine salary increase of 5%. However, reports for the same year indicate that the overall economic inflation rate has reached 8%. What will be the actual outcome regarding your standard of living in the coming year?",
+        "a": "Your real standard of living decreases (by approximately 3%)",
+        "vid": ""
+      }
+    ],
+    "20": [
+      {
+        "stt": 1,
+        "q": "Mobile game publishers typically release their games free of charge and monetise them through in-game advertising rather than charging an upfront purchase price. Give out at least 1 explanation.",
+        "a": "Because mobile entertainment applications exhibit an exceptionally high price elasticity of demand. / Because marginal costs are nearly zero. Free pricing maximizes the user base to boost ad revenue.",
+        "vid": ""
+      },
+      {
+        "stt": 2,
+        "q": "Which economic concept is illustrated in this situation?",
+        "a": "Sunk Cost Fallacy",
+        "vid": "C:\\Users\\khanh\\Downloads\\Video\\TRUNG BÌNH 2.mp4"
+      },
+      {
+        "stt": 3,
+        "q": "A city is suffering from severe air pollution caused by a large local factory. The City Council is debating two options: \r\n(1) Setting a strict legal limit on the amount of pollutants the factory can emit (Regulation)\r\n(2) Charging the factory a specific fee for every unit of pollutant it releases (Corrective Tax). If this factory has access to advanced technology that allows it to reduce emissions at a much lower cost than the industry average, which policy would be more economically efficient for society?",
+        "a": "The Corrective Tax (Pigovian Tax) would be more efficient",
+        "vid": ""
+      },
+      {
+        "stt": 4,
+        "q": "Since 2010, Greece has received three relief packages worth a total of over 350 billion euros. After the first two packages, Athens still failed to meet the repayment deadline to the International Monetary Fund (IMF). This implies that after receiving bailouts, Greece fell into a problem of not actively recovering after being rescued. What problem does this illustrate?",
+        "a": "Moral hazard",
+        "vid": ""
+      },
+      {
+        "stt": 5,
+        "q": "I am a concept in public economics. I have the characteristic of non-rivalry, which can lead to market failure, and am a phenomenon related to public goods, along with the inability to exclude users. What problem am I?",
+        "a": "Free rider problem",
+        "vid": ""
+      },
+      {
+        "stt": 6,
+        "q": "A study indicates that adults aged 65 often face sky-high health insurance premiums in the US. In addition, there is a comment that ‘When economic costs rise, healthy individuals are the first to leave the market or not buy insurance.’ So, what problem in the US health insurance industry do the above pieces of evidence point to?",
+        "a": "Adverse Selection",
+        "vid": ""
+      },
+      {
+        "stt": 7,
+        "q": "A business report for a coffee chain shows that coffee bean prices have surged suddenly due to crop damage caused by storms. However, the chain's customer base has grown significantly thanks to a viral social media trend. To welcome these new customers, the owner decides to keep selling prices unchanged for one month. After one month, how will the store's total revenue and the profit per cup of coffee change?",
+        "a": "Total revenue will increase while the profit per cup of coffee will decrease",
+        "vid": ""
+      },
+      {
+        "stt": 8,
+        "q": "Supposed you are the Regional HR Director of a multinational tech conglomerate in Toronto, you are informed that the Canadian government has raised the mandatory minimum wage. A senior executive states: \"Raising the minimum wage will always increase the overall income of low-wage workers.\" Do you agree or disagree? Explain shortly why.",
+        "a": "Disagree. When the minimum wage increases above the equilibrium level, labor demand may decrease due to layoffs. The more severe the layoffs are, the lower the total income for low-wage workers becomes.",
+        "vid": ""
+      },
+      {
+        "stt": 9,
+        "q": "A technology company is seeing strong sales of its Phone A model, priced at $1,000 per unit. To expand its market share, the company launches Phone B, which has similar features to Phone A but with a more outdated design, priced at $600. After a while, what will be the result of the company's total revenue? Why?",
+        "a": "Total revenue will decrease because customers will switch to buying Phone B, as its features are similar to Phone A and its price is much cheaper.",
+        "vid": ""
+      },
+      {
+        "stt": 10,
+        "q": "CBRE data shows that after 10 years, the average house price in Ho Chi Minh City increased about 2.9 times (from 30 million to 86 million VND/m²). Meanwhile, the average income of workers increased about 1.5 times over a decade (according to the Statistics Office). Thus, the rate of house price increase is nearly double the rate of income increase. What phenomenon does this sign warn about?",
+        "a": "Housing bubble/Real estate bubble/A phenomenon where property prices rise far above their actual value",
+        "vid": ""
+      },
+      {
+        "stt": 11,
+        "q": "A market analysis report shows that: When the market price of pork unexpectedly increases by 20%, the sales volume of beef immediately rises by 15%, but the sales volume of fish sauce decreases by 5%. Based on the report, identify the relationships between pork and beef and between pork and fish sauce.",
+        "a": "Pork Beef are substitute goods while Pork Fish Sauce are complementary goods",
+        "vid": ""
+      },
+      {
+        "stt": 12,
+        "q": "A premium coffee chain is struggling with a very high turnover rate among its baristas. Therefore, the CEO decides to increase the base salary to 50% above the market average. What will be the outcome regarding the turnover rate? Give out at least 1 reason.",
+        "a": "The turnover rate will decrease because\r\n1. Employees find the job much more appealing with higher salary\r\n2. If they switch jobs, they will have to accept a lower wage than their former job",
+        "vid": ""
+      }
+    ],
+    "40": [
+      {
+        "stt": 1,
+        "q": "Based on these pictures, what economic historical event is being depicted?",
+        "a": "The 2008 (Global) Financial Crisis",
+        "vid": "C:\\Users\\khanh\\Downloads\\Video\\KHÓ 1.mp4"
+      },
+      {
+        "stt": 2,
+        "q": "During an economic recession, the government decides to increase spending on national infrastructure projects by $500 million to stimulate aggregate demand. The \"Marginal Propensity to Consume\" (MPC) of the households in this economy is 0.8. However, at the same time, the increased government borrowing leads to a significant rise in interest rates, causing private firms to cancel their plans for new factory equipment. How will the final shift in aggregate demand compare to the initial $500 million and what is the name of the phenomenon that reduces the effectiveness of this fiscal policy?\r\n",
+        "a": "The final shift in aggregate demand will be larger than $500 million, but the phenomenon reducing its effectiveness is the \"Crowding-out effect\"",
+        "vid": ""
+      },
+      {
+        "stt": 3,
+        "q": "A technology company holds a patent for a key smartphone algorithm. Before the patent expires, the company continuously issues minor updates, files additional patents around the original technology, and sues competitors. This strategy is called “evergreening.” What is the target of this strategy? \r\n",
+        "a": "It is a strategy to artificially extend monopoly power.",
+        "vid": ""
+      },
+      {
+        "stt": 4,
+        "q": "Country X has much higher productivity than Country Y in both cloth and steel, yet X still imports some cloth from Y and focuses on exporting steel. A commentator argues this is irrational and must be due to protectionism or corruption. Is this view correct? Use the concepts of comparative advantage and opportunity cost to describe the whole picture.\r\n",
+        "a": "The commentator’s view is incorrect.\r\nCountry Y has a comparative advantage in cloth. Then X should specialize in steel and import cloth from Y. Both countries gain from trade. ",
+        "vid": ""
+      },
+      {
+        "stt": 5,
+        "q": "In 2024, Vietnam's GINI coefficient is 0.372, indicating that the country's income is still relatively equal. But why is there a rich-poor divide shown by the income of group 5 (top 20% highest earners) being 7.4 times higher than that of group 1 (bottom 20% lowest earners)? Does this prove that the GINI coefficient is inaccurately reflecting income equality? Why or why not?",
+        "a": "The GINI reflects the correct pattern as it provides a more accurate reflection because the GINI coefficient captures inequality across the entire distribution, including differences among the middle groups (Groups 2, 3, and 4).",
+        "vid": ""
+      },
+      {
+        "stt": 6,
+        "q": "The Central Bank injects a massive amount of money to rescue a stagnant economy, but manufacturing enterprises resolutely refuse to borrow capital. A few months later, real estate and stock prices suddenly surge while the real economy remains stagnant. Identify the reasons why enterprises do not borrow capital? ",
+        "a": "Reason why enterprises do not borrow: They perceive that investments will be unprofitable due to the stagnant economy, which reduces household income and leads to a significant shortage of customers ",
+        "vid": ""
+      },
+      {
+        "stt": 7,
+        "q": "A nation consistently achieves record trade surpluses by attracting FDI corporations to establish export-processing plants. However, the actual foreign currency retained within the country is minimal, foreign exchange reserves grow slowly, and the domestic currency remains under depreciation pressure. Excluding statistical discrepancies, identify at least 2 causes of this paradox?",
+        "a": "Causes:\r\n+ Profit repatriation by FDI corporations to their parent companies abroad \r\n+ High import content of production inputs \r\n+ FDI corporations retaining their foreign currency earnings  \r\n…",
+        "vid": ""
+      },
+      {
+        "stt": 8,
+        "q": "A cinema sells popcorn at two price points: 50,000 VND and 100,000 VND for the Small and Large sizes, respectively. Data shows that 80% of customers opt for the Small size because they perceive the Large size as too expensive. To maximize profit without lowering prices, the cinema manager introduces a third option: a Medium size priced at 95,000 VND. What is the ultimate outcome of this strategy? ",
+        "a": "Customers shift to purchasing the Large size because the price difference between the Medium and Large options is marginal, thereby significantly boosting the cinema's total revenue ",
+        "vid": ""
+      },
+      {
+        "stt": 9,
+        "q": "In April 2024, the yen/USD exchange rate was 160.03, the lowest since April 1990. However, Toyota announced that its operating profit skyrocketed to 5.35 trillion yen, nearly double that of the same period last year. Yet, Japanese households were severely affected, with real wages declining for 25 consecutive months. Why is this so? (Connection between trade advantage and income effect of a weaker yen)",
+        "a": "A weak Yen boosts business revenues and export competitiveness. Conversely, it harms households by raising import costs, fueling inflation, and eroding real wages and purchasing power.",
+        "vid": ""
+      },
+      {
+        "stt": 10,
+        "q": "Two e-commerce businesses, A and B, are planning for a Mega Sale.\r\n(1) If neither discounts their prices, each makes 100 billion in profit \r\n(2) If one keeps the price, while the other heavily undercuts it, the one who undercuts will steal all the customers and make 150 billion, while the one who kept the price is left with just 20 billion \r\n(3) If both decide to undercut, they drain their cash flow and only make 50 billion \r\nThe directors of both sides know this perfectly well, but every year on the Mega Sale day, both platforms choose to cut prices and bitterly walk away with 50 billion in profit.\r\nExplain why the two directors don't choose to hold their prices and both decide to cut them instead. ",
+        "a": "This is a famous situation in Game Theory: The Prisoner's Dilemma \r\nBecause undercutting brings a better result for each business itself.",
+        "vid": ""
+      },
+      {
+        "stt": 11,
+        "q": "A pharmaceutical company holds a patent on a new vaccine, is the sole supplier, and sets a very high price. It licenses a manufacturer in a developing country to sell at a much lower price, but imposes conditions: only for domestic distribution, different packaging, and proof of residence required. What economic problem is it trying to prevent? ",
+        "a": "Arbitrage",
+        "vid": ""
+      },
+      {
+        "stt": 12,
+        "q": "To mitigate the greenhouse effect, the government implements an emission allowance trading system. However, instead of auctioning the allowances, the government allocates the initial permits for free to factories based on their historical emissions. Name at least 1 negative consequence of this allocation method on the market structure.\r\n",
+        "a": "It creates big barriers to entry for new firms\r\nIt fosters unfair competition within the industry",
+        "vid": ""
+      }
+    ]
+  }
+}

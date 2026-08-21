@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>MC Dashboard - Econova Show</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        let authParam = urlParams.get('auth');
+        if (authParam) {
+            sessionStorage.setItem('mcAuth', authParam);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (!sessionStorage.getItem('mcAuth')) {
+            window.location.href = './index.html';
+        }
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif);
+            background: #0a0a1a;
+            color: #e8e8f0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* === HEADER === */
+        .mc-header {
+            background: linear-gradient(135deg, #1a1a3e 0%, #0d0d2b 100%);
+            border-bottom: 2px solid rgba(99, 102, 241, 0.3);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+        .mc-header h1 {
+            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif);
+            font-size: 18px;
+            background: linear-gradient(135deg, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 2px;
+        }
+        .connection-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .connection-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+            transition: background 0.3s;
+        }
+        .connection-dot.online { background: #22c55e; box-shadow: 0 0 8px rgba(34,197,94,0.5); }
+
+        /* === MAIN LAYOUT === */
+        .mc-body {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            grid-template-rows: auto auto;
+            gap: 16px;
+            padding: 16px 24px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* === PANELS === */
+        .panel {
+            background: linear-gradient(145deg, #12122e 0%, #0e0e24 100%);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #818cf8, transparent);
+        }
+        .panel-title {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #818cf8;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* === QUESTION AREA === */
+        .question-area {
+            grid-column: 1 / 2;
+            grid-row: 1 / 2;
+        }
+        .q-status-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .q-badge {
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .q-badge.points { background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+        .q-badge.hope-star { background: rgba(236, 72, 153, 0.15); color: #ec4899; border: 1px solid rgba(236,72,153,0.3); }
+        .q-badge.team { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+        .q-badge.round { background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+
+        .question-text {
+            font-size: 22px;
+            font-weight: 600;
+            line-height: 1.6;
+            color: #f1f5f9;
+            margin-bottom: 20px;
+            padding: 16px 20px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 10px;
+            border-left: 3px solid #818cf8;
+            min-height: 80px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .question-text.empty {
+            color: #4a4a6a;
+            font-style: italic;
+            font-size: 18px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .answer-section {
+            background: rgba(16, 185, 129, 0.06);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 10px;
+            padding: 16px 20px;
+        }
+        .answer-label {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #10b981;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .answer-text {
+            font-size: 20px;
+            font-weight: 700;
+            color: #34d399;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .answer-text.empty { color: #2a4a3a; font-style: italic; }
+
+        /* === ACTION AREA === */
+        .action-area {
+            grid-column: 1 / 2;
+            grid-row: 2 / 3;
+        }
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .action-btn {
+            padding: 16px 20px;
+            border: none;
+            border-radius: 10px;
+            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif);
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: relative;
+            overflow: hidden;
+        }
+        .action-btn:hover { transform: translateY(-2px); filter: brightness(1.15); }
+        .action-btn:active { transform: translateY(0); filter: brightness(0.95); }
+        .action-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            transform: none !important;
+            filter: none !important;
+        }
+
+        .btn-correct {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: white;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+        .btn-wrong {
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+            color: white;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        }
+        .btn-countdown {
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            color: white;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+        .btn-close-q {
+            display: none !important;
+        }
+
+        /* Buzzer section */
+        .buzzer-section {
+            margin-top: 16px;
+            padding: 16px;
+            background: rgba(251, 191, 36, 0.06);
+            border: 1px solid rgba(251, 191, 36, 0.2);
+            border-radius: 10px;
+        }
+        .buzzer-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #fbbf24;
+            margin-bottom: 12px;
+        }
+        .buzzed-team-name {
+            font-size: 24px;
+            font-weight: 800;
+            color: #f59e0b;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .buzzer-btn-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        /* Buzz Times Table */
+        .buzz-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            font-size: 13px;
+        }
+        .buzz-table th {
+            background: rgba(255,255,255,0.05);
+            padding: 8px 12px;
+            text-align: left;
+            color: #a1a1b5;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+        .buzz-table td {
+            padding: 8px 12px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        .buzz-table tr:first-child td { color: #fbbf24; font-weight: 700; }
+
+        /* Countdown overlay */
+        .countdown-display {
+            display: none;
+            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif);
+            font-size: 48px;
+            font-weight: 900;
+            color: #ef4444;
+            text-align: center;
+            padding: 10px;
+            text-shadow: 0 0 20px rgba(239,68,68,0.5);
+            animation: pulse-glow 1s ease-in-out infinite;
+        }
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* === SIDEBAR === */
+        .sidebar {
+            grid-column: 2 / 3;
+            grid-row: 1 / 3;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Score cards */
+        .score-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: all 0.2s;
+        }
+        .score-card.active {
+            border-color: rgba(99, 102, 241, 0.4);
+            background: rgba(99, 102, 241, 0.08);
+        }
+        .score-card .team-name {
+            font-weight: 600;
+            font-size: 14px;
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .score-card .team-score { font-family: var(--font-score, 'Orbitron', sans-serif);
+            font-size: 20px;
+            font-weight: 700;
+            color: #fbbf24;
+        }
+
+        /* Anti-cheat */
+        .ac-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            background: rgba(255,255,255,0.02);
+            margin-bottom: 4px;
+        }
+        .ac-item .ac-count { font-weight: 700; }
+        .ac-item .ac-count.warn { color: #f59e0b; }
+        .ac-item .ac-count.danger { color: #ef4444; }
+        .ac-item .ac-banned {
+            background: #dc2626;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        /* Status indicator */
+        .status-indicator {
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+
+        /* No question state */
+        .no-question-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            color: #4a4a6a;
+        }
+        .no-question-state .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        .no-question-state .text {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        /* Responsive */
+        @media (max-width: 1100px) {
+            .mc-body {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto auto;
+            }
+            .sidebar {
+                grid-column: 1 / 2;
+                grid-row: 3 / 4;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- HEADER -->
+    <div class="mc-header">
+        <h1>🎤 MC DASHBOARD</h1>
+        <div class="connection-badge">
+            <div class="connection-dot" id="connDot"></div>
+            <span id="connText">Đang kết nối...</span>
+        </div>
+    </div>
+
+    <!-- MAIN BODY -->
+    <div class="mc-body">
+        <!-- LEFT: Question Area -->
+        <div class="panel question-area">
+            <div class="panel-title">📝 Câu hỏi & Đáp án</div>
+            
+            <div id="questionContent">
+                <div class="no-question-state" id="noQuestionState">
+                    <div class="icon">⏳</div>
+                    <div class="text">Chờ Admin mở câu hỏi...</div>
+                </div>
+            </div>
+
+            <div id="activeQuestionContent" style="display: none;">
+                <div class="q-status-bar" id="qStatusBar"></div>
+                <div class="question-text" id="qText"></div>
+                <div class="answer-section">
+                    <div class="answer-label">💡 Đáp án</div>
+                    <div class="answer-text" id="aText"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LEFT BOTTOM: Action Area -->
+        <div class="panel action-area">
+            <div class="panel-title">⚡ Bảng điều khiển</div>
+            
+            <div class="countdown-display" id="countdownDisplay">00</div>
+            
+            <div id="noActionState" class="no-question-state" style="padding: 20px;">
+                <div class="text" style="color: #4a4a6a;">Chờ câu hỏi để điều khiển...</div>
+            </div>
+
+            <div id="activeActions" style="display: none;">
+                <div class="action-grid" id="mainActions">
+                    <button class="action-btn btn-correct" id="btnCorrectMain" onclick="correctMainTeam()">✅ ĐÚNG</button>
+                    <button class="action-btn btn-wrong" id="btnWrongMain" onclick="startBuzzer()">🚨 SAI → CHUÔNG 5S</button>
+                    <button class="action-btn btn-countdown" onclick="startCountdown(15)">⏱️ 15 GIÂY</button>
+                    <button class="action-btn btn-countdown" onclick="startCountdown(10)">⏱️ 10 GIÂY</button>
+                    <button class="action-btn btn-close-q" onclick="closeQuestion()">🔙 ĐÓNG CÂU HỎI</button>
+                </div>
+
+                <!-- Buzzer Section -->
+                <div class="buzzer-section" id="buzzerSection" style="display: none;">
+                    <div class="buzzer-title">🔔 Bấm chuông</div>
+                    <div class="buzzed-team-name" id="mcBuzzedTeamName">Đang chờ...</div>
+                    <div class="buzzer-btn-row" id="buzzerBtnRow" style="display: none;">
+                        <button class="action-btn btn-correct" onclick="correctBuzzedTeam()">✅ ĐÚNG</button>
+                        <button class="action-btn btn-wrong" onclick="wrongBuzzedTeam()">❌ SAI</button>
+                    </div>
+                    <div id="mcBuzzTimeTable"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: Sidebar -->
+        <div class="sidebar">
+            <!-- Scores -->
+            <div class="panel">
+                <div class="panel-title">🏆 Điểm số</div>
+                <div id="scoreCards"></div>
+            </div>
+
+            <!-- Anti-Cheat -->
+            <div class="panel">
+                <div class="panel-title">🛡️ Chống gian lận</div>
+                <div id="acList">
+                    <div style="color: #4a4a6a; font-size: 13px; text-align: center;">Chưa có dữ liệu</div>
+                </div>
+            </div>
+
+            <!-- Status -->
+            <div class="panel">
+                <div class="panel-title">📡 Trạng thái</div>
+                <div class="status-indicator" id="statusIndicator" style="background: #374151; color: #9ca3af;">
+                    ĐANG CHỜ...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let currentState = null;
+        let countdownInterval = null;
+
+        // === AUTH ===
+        const mcPin = sessionStorage.getItem('mcAuth');
+        if (mcPin) {
+            socket.emit('mcLogin', mcPin, (res) => {
+                if (!res.success) {
+                    alert('Sai mã PIN quản trị! Đang chuyển về trang đăng nhập...');
+                    sessionStorage.removeItem('mcAuth');
+                    window.location.href = './index.html';
+                }
+            });
+        }
+
+        // === CONNECTION STATUS ===
+        socket.on('connect', () => {
+            document.getElementById('connDot').classList.add('online');
+            document.getElementById('connText').innerText = 'Đã kết nối';
+            // Auto re-authenticate on socket reconnect if PIN is available in sessionStorage
+            const mcPin = sessionStorage.getItem('mcAuth');
+            if (mcPin) {
+                socket.emit('mcLogin', mcPin, (res) => {
+                    if (!res.success) {
+                        sessionStorage.removeItem('mcAuth');
+                        window.location.href = './index.html';
+                    }
+                });
+            }
+        });
+        socket.on('disconnect', () => {
+            document.getElementById('connDot').classList.remove('online');
+            document.getElementById('connText').innerText = 'Mất kết nối!';
+        });
+
+        // === ACTION FUNCTIONS ===
+        function correctMainTeam() { socket.emit('correctMainTeam'); }
+        function startBuzzer() { socket.emit('startBuzzer'); }
+        function correctBuzzedTeam() { socket.emit('correctBuzzedTeam'); }
+        function wrongBuzzedTeam() { socket.emit('wrongBuzzedTeam'); }
+        function closeQuestion() { socket.emit('closeQuestion'); }
+        function startCountdown(secs) { socket.emit('startCountdown', secs); }
+
+        // === STATE UPDATE ===
+        socket.on('updateState', (state) => {
+            // ================= FONT LOGIC =================
+            if (state.settings) {
+                let s = state.settings;
+                let globalEnabled = s.globalFontEnabled || false;
+                let fGlobal = s.fontGlobal || 'SF Pro Display Bold';
+                let fGeneral = s.fontGeneral || 'SF Pro Display Bold';
+                let fQuestion = s.fontQuestion || 'SF Pro Display Bold';
+                let fTeam = s.fontTeamName || 'SF Pro Display Bold';
+                let fScore = s.fontScore || 'Orbitron';
+                
+                let styleEl = document.getElementById('dynamic-font-styles-global');
+                if (!styleEl) {
+                    styleEl = document.createElement('style');
+                    styleEl.id = 'dynamic-font-styles-global';
+                    document.head.appendChild(styleEl);
+                }
+                
+                let rules = '';
+                if (globalEnabled) {
+                    rules += `@font-face { font-family: 'CustomFontGlobal'; src: url('/font/${encodeURIComponent(fGlobal)}') format('truetype'); }\n`;
+                    rules += `:root { 
+                        --font-general: 'CustomFontGlobal', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-team-name: 'CustomFontGlobal', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-score: 'CustomFontGlobal', 'Orbitron', sans-serif;
+                        --font-question: 'CustomFontGlobal', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                    }`;
+                } else {
+                    rules += `@font-face { font-family: 'CustomFontGeneral'; src: url('/font/${encodeURIComponent(fGeneral)}') format('truetype'); }\n`;
+                    rules += `@font-face { font-family: 'CustomFontQuestion'; src: url('/font/${encodeURIComponent(fQuestion)}') format('truetype'); }\n`;
+                    rules += `@font-face { font-family: 'CustomFontTeamName'; src: url('/font/${encodeURIComponent(fTeam)}') format('truetype'); }\n`;
+                    rules += `@font-face { font-family: 'CustomFontScore'; src: url('/font/${encodeURIComponent(fScore)}') format('truetype'); }\n`;
+                    
+                    rules += `:root { 
+                        --font-general: 'CustomFontGeneral', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-team-name: 'CustomFontTeamName', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-score: 'CustomFontScore', 'Orbitron', sans-serif;
+                        --font-question: 'CustomFontQuestion', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                    }`;
+                }
+                
+                if (styleEl.innerHTML !== rules) {
+                    styleEl.innerHTML = rules;
+                }
+            }
+            // ===============================================
+
+            currentState = state;
+            renderQuestion(state);
+            renderScores(state);
+            renderAntiCheat(state);
+            renderStatus(state);
+        });
+
+        // === COUNTDOWN ===
+        socket.on('startCountdown', (seconds) => {
+            let remaining = parseInt(seconds, 10);
+            if (isNaN(remaining) || remaining <= 0) return;
+            
+            const el = document.getElementById('countdownDisplay');
+            el.style.display = 'block';
+            el.innerText = remaining;
+            
+            if (countdownInterval) clearInterval(countdownInterval);
+            countdownInterval = setInterval(() => {
+                remaining--;
+                if (remaining <= 0) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                    el.innerText = '0';
+                    setTimeout(() => { el.style.display = 'none'; }, 2000);
+                } else {
+                    el.innerText = remaining;
+                }
+            }, 1000);
+        });
+
+        // === RENDER: Question ===
+        function renderQuestion(state) {
+            const q = state.currentQuestion;
+            const pkg = state.lockedPackage;
+            const noQ = document.getElementById('noQuestionState');
+            const activeQ = document.getElementById('activeQuestionContent');
+            const noAction = document.getElementById('noActionState');
+            const activeAction = document.getElementById('activeActions');
+
+            // Determine if there's an active question
+            let hasQuestion = false;
+            let questionText = '';
+            let answerText = '';
+            let pointsVal = 0;
+            let isHopeStar = false;
+            let mainTeamId = null;
+
+            if (pkg && pkg.questions && pkg.questions.length > 0) {
+                // Package mode (Mode 2/3)
+                let currentIdx = pkg.currentIndex || 0;
+                let currentQ = pkg.questions[currentIdx];
+                if (currentQ) {
+                    hasQuestion = true;
+                    questionText = (q && q.text) || '';
+                    answerText = (q && q.answer) || '';
+                    pointsVal = currentQ.points || 0;
+                    isHopeStar = q ? !!q.isHopeStar : false;
+                    mainTeamId = pkg.mainTeamId || (q && q.mainTeamId);
+                }
+            } else if (q && q.active) {
+                // Single question mode
+                hasQuestion = true;
+                // Defensively guard properties read from q / currentQuestion
+                questionText = (q && q.text) || '';
+                answerText = (q && q.answer) || '';
+                pointsVal = (q && q.points) || 0;
+                isHopeStar = q ? !!q.isHopeStar : false;
+                mainTeamId = q && q.mainTeamId;
+            }
+
+            if (hasQuestion) {
+                noQ.style.display = 'none';
+                activeQ.style.display = 'block';
+                noAction.style.display = 'none';
+                activeAction.style.display = 'block';
+
+                // Status bar
+                const statusBar = document.getElementById('qStatusBar');
+                let badges = '';
+                if (questionText) badges += `<span class="q-badge points">💰 ${pointsVal} điểm</span>`;
+                if (isHopeStar) badges += `<span class="q-badge hope-star">⭐ Ngôi sao Hy vọng</span>`;
+                if (mainTeamId && state.teams) {
+                    let team = state.teams.find(t => t.id == mainTeamId);
+                    if (team) badges += `<span class="q-badge team">🎯 ${team.name}</span>`;
+                }
+                badges += `<span class="q-badge round">📢 Vòng ${state.activeRound || 2}</span>`;
+                statusBar.innerHTML = badges;
+
+                // Question & Answer
+                document.getElementById('qText').innerText = questionText || '(Câu hỏi trống)';
+                document.getElementById('qText').classList.toggle('empty', !questionText);
+                document.getElementById('aText').innerText = answerText || '(Chưa có đáp án)';
+                document.getElementById('aText').classList.toggle('empty', !answerText);
+
+                // Buzzer state
+                renderBuzzer(state);
+
+                // Disable main buttons if question is resolved
+                const isResolved = q && q.resolved;
+                document.getElementById('btnCorrectMain').disabled = isResolved;
+                document.getElementById('btnWrongMain').disabled = isResolved || (state.buzzedTeam != null);
+            } else {
+                noQ.style.display = 'flex';
+                activeQ.style.display = 'none';
+                noAction.style.display = 'flex';
+                activeAction.style.display = 'none';
+            }
+        }
+
+        // === RENDER: Buzzer ===
+        function renderBuzzer(state) {
+            const section = document.getElementById('buzzerSection');
+            const buzzedName = document.getElementById('mcBuzzedTeamName');
+            const btnRow = document.getElementById('buzzerBtnRow');
+            const tableContainer = document.getElementById('mcBuzzTimeTable');
+
+            if (state.buzzedTeam || (state.buzzTimes && Object.keys(state.buzzTimes).length > 0) || !state.isBuzzerLocked) {
+                section.style.display = 'block';
+
+                if (state.buzzedTeam) {
+                    let team = state.teams.find(t => t.id == state.buzzedTeam);
+                    buzzedName.innerText = team ? team.name : `Đội ${state.buzzedTeam}`;
+                    btnRow.style.display = 'grid';
+                } else if (!state.isBuzzerLocked) {
+                    buzzedName.innerText = '⏳ Đang chờ bấm chuông...';
+                    btnRow.style.display = 'none';
+                } else {
+                    buzzedName.innerText = 'Không ai bấm chuông';
+                    btnRow.style.display = 'none';
+                }
+
+                // Buzz times table
+                if (state.buzzTimes && Object.keys(state.buzzTimes).length > 0) {
+                    let sorted = Object.entries(state.buzzTimes)
+                        .sort((a, b) => a[1] - b[1]);
+                    let rows = sorted.map((entry, i) => {
+                        let team = state.teams.find(t => t.id == entry[0]);
+                        let name = team ? team.name : `Đội ${entry[0]}`;
+                        let timeStr = entry[1] < 1000 
+                            ? `${entry[1]}ms` 
+                            : `${(entry[1] / 1000).toFixed(2)}s`;
+                        let isWrong = state.wrongBuzzes && state.wrongBuzzes.includes(parseInt(entry[0]));
+                        return `<tr${isWrong ? ' style="opacity:0.4; text-decoration: line-through;"' : ''}>
+                            <td>${i + 1}</td>
+                            <td>${name}</td>
+                            <td>${timeStr}</td>
+                        </tr>`;
+                    }).join('');
+                    tableContainer.innerHTML = `
+                        <table class="buzz-table">
+                            <thead><tr><th>Hạng</th><th>Đội</th><th>Thời gian</th></tr></thead>
+                            <tbody>${rows}</tbody>
+                        </table>`;
+                } else {
+                    tableContainer.innerHTML = '';
+                }
+            } else {
+                section.style.display = 'none';
+            }
+        }
+
+        // === RENDER: Scores ===
+        function renderScores(state) {
+            if (!state.teams) return;
+            const container = document.getElementById('scoreCards');
+            const history = state.teamQuestionHistory || {};
+            
+            container.innerHTML = state.teams.map(t => {
+                let isMain = state.currentQuestion && state.currentQuestion.mainTeamId == t.id;
+                
+                // Build history HTML
+                let historyHtml = '';
+                let teamHist = history[t.id] || [];
+                if (teamHist.length > 0) {
+                    // Group by points
+                    let grouped = {};
+                    teamHist.forEach(h => {
+                        if (!grouped[h.points]) grouped[h.points] = [];
+                        grouped[h.points].push(h);
+                    });
+                    
+                    historyHtml = '<div style="margin-top: 10px; font-size: 11px; color: #a1a1aa; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;">';
+                    Object.keys(grouped).sort((a,b)=>a-b).forEach(pts => {
+                        let items = grouped[pts];
+                        let count = items.length;
+                        let details = items.map(h => {
+                            if (h.mode === 3) return 'Ngẫu nhiên';
+                            return `Câu ${h.idx + 1}`; // 0-indexed to 1-indexed
+                        }).join(', ');
+                        historyHtml += `<div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                            <span>${pts} điểm (${count} câu)</span>
+                            <span style="color: #60a5fa;">${details}</span>
+                        </div>`;
+                    });
+                    historyHtml += '</div>';
+                }
+
+                return `<div class="score-card${isMain ? ' active' : ''}" style="flex-direction: column; align-items: stretch; padding: 12px 14px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span class="team-name" style="font-size: 15px;">${isMain ? '🎯 ' : ''}${t.name}</span>
+                        <span class="team-score" style="font-size: 22px;">${t.score}</span>
+                    </div>
+                    ${historyHtml}
+                </div>`;
+            }).join('');
+        }
+
+        // === RENDER: Anti-Cheat ===
+        function renderAntiCheat(state) {
+            if (!state.teams) return;
+            const container = document.getElementById('acList');
+            const violations = state.antiCheatViolations || {};
+            const banned = state.bannedTeams || [];
+            const acEnabled = state.settings && state.settings.antiCheat;
+
+            if (!acEnabled) {
+                container.innerHTML = '<div style="color: #4a4a6a; font-size: 13px; text-align: center;">Tắt</div>';
+                return;
+            }
+
+            container.innerHTML = state.teams.map(t => {
+                let count = violations[t.id] || 0;
+                let isBanned = banned.includes(t.id);
+                let countClass = count >= 3 ? 'danger' : (count > 0 ? 'warn' : '');
+                return `<div class="ac-item">
+                    <span>${t.name}</span>
+                    ${isBanned 
+                        ? '<span class="ac-banned">⛔ CẤM THI</span>' 
+                        : `<span class="ac-count ${countClass}">${count > 0 ? '⚠️ ' + count + ' vi phạm' : '✅ OK'}</span>`
+                    }
+                </div>`;
+            }).join('');
+        }
+
+        // === RENDER: Status ===
+        function renderStatus(state) {
+            const el = document.getElementById('statusIndicator');
+            const q = state.currentQuestion;
+
+            if (q && q.active && !q.resolved) {
+                if (state.buzzedTeam) {
+                    let team = state.teams.find(t => t.id == state.buzzedTeam);
+                    el.style.background = 'rgba(251,191,36,0.15)';
+                    el.style.color = '#fbbf24';
+                    el.style.border = '1px solid rgba(251,191,36,0.3)';
+                    el.innerText = `🔔 ${team ? team.name : 'Đội'} ĐÃ BẤM CHUÔNG`;
+                } else if (!state.isBuzzerLocked) {
+                    el.style.background = 'rgba(239,68,68,0.15)';
+                    el.style.color = '#ef4444';
+                    el.style.border = '1px solid rgba(239,68,68,0.3)';
+                    el.innerText = '🚨 CHUÔNG ĐANG MỞ — 5 GIÂY';
+                } else {
+                    el.style.background = 'rgba(59,130,246,0.15)';
+                    el.style.color = '#60a5fa';
+                    el.style.border = '1px solid rgba(59,130,246,0.3)';
+                    el.innerText = '📝 CÂU HỎI ĐANG MỞ';
+                }
+            } else if (q && q.resolved) {
+                el.style.background = 'rgba(16,185,129,0.15)';
+                el.style.color = '#34d399';
+                el.style.border = '1px solid rgba(16,185,129,0.3)';
+                el.innerText = '✅ ĐÃ TRẢ LỜI';
+            } else {
+                el.style.background = '#1f2937';
+                el.style.color = '#6b7280';
+                el.style.border = '1px solid #374151';
+                el.innerText = 'ĐANG CHỜ...';
+            }
+        }
+    </script>
+</body>
+</html>

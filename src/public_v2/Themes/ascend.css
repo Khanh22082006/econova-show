@@ -1,0 +1,329 @@
+/* Theme: Ascend 2026 - Honeycomb theme */
+[data-theme="ascend_2026"] {
+    background: url('/Themes/Background/B1.png') center/cover no-repeat !important;
+    background-color: #040f21 !important;
+}
+
+[data-theme="ascend_2026"] .default-only { display: none !important; }
+
+[data-theme="ascend_2026"] .ascend-frame {
+    width: 90%;
+    max-width: 1600px;
+    height: auto;
+    min-height: 550px;
+    margin: auto;
+    border: 2px solid rgba(84, 160, 255, 0.8);
+    border-radius: 15px;
+    background: rgba(4, 15, 33, 0.85);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 40px rgba(84, 160, 255, 0.4), inset 0 0 30px rgba(84, 160, 255, 0.2);
+}
+
+[data-theme="ascend_2026"] .ascend-top-bar {
+    display: flex;
+    height: 90px;
+    min-height: 90px;
+    border-bottom: 1px solid rgba(84, 160, 255, 0.5);
+    border-radius: 12px 12px 0 0;
+    align-items: stretch;
+    overflow: hidden;
+}
+
+[data-theme="ascend_2026"] .ascend-pts-box .ascend-pts-chip {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
+[data-theme="ascend_2026"] .ascend-pts-box {
+    flex: 0 0 15%;
+    min-width: 160px;
+    height: 100%;
+    background: linear-gradient(135deg, #f5f6fa, #dcdde1);
+    color: #2f3640;
+    font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif);
+    font-weight: 900;
+    font-size: 30px;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    box-shadow: inset 0 0 20px rgba(255,255,255,1);
+    border-right: 2px solid rgba(84, 160, 255, 0.8);
+    border-radius: 12px 0 0 0;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+@keyframes starSpinScale {
+    0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+[data-theme="ascend_2026"] .hope-star-badge.active {
+    animation: starSpinScale 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    display: block !important;
+}
+
+[data-theme="ascend_2026"] .ascend-scoreboard {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: stretch;
+}
+
+[data-theme="ascend_2026"] .team-card {
+    height: 100%;
+    min-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 10px;
+    border-right: 1px solid rgba(84, 160, 255, 0.3);
+    background: transparent;
+    transition: all 0.3s;
+    position: relative;
+    box-sizing: border-box;
+}
+
+[data-theme="ascend_2026"] .team-card:last-child {
+    border-right: none;
+}
+
+[data-theme="ascend_2026"] .team-school {
+    display: none;
+}
+
+[data-theme="ascend_2026"] .team-name {
+    font-size: 26px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.8);
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    line-height: 1;
+    margin-top: 0px;
+}
+
+[data-theme="ascend_2026"] .name-inner {
+    display: inline-block;
+    white-space: nowrap;
+    transform-origin: left center;
+}
+
+[data-theme="ascend_2026"] .team-score {
+    font-family: var(--font-score, 'Orbitron', sans-serif);
+    font-size: 32px;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 0 15px rgba(255,255,255,0.5);
+}
+
+[data-theme="ascend_2026"] .team-card.is-main {
+    background: rgba(255, 255, 255, 0.85);
+    box-shadow: inset 0 0 30px rgba(255,255,255,1), 0 0 20px rgba(255,255,255,0.8);
+}
+
+[data-theme="ascend_2026"] .team-card.is-main .team-name,
+[data-theme="ascend_2026"] .team-card.is-main .team-score {
+    color: #012a5e;
+    text-shadow: none;
+    font-weight: 900;
+}
+
+[data-theme="ascend_2026"] .team-card.buzzed {
+    background: rgba(0, 255, 170, 0.7);
+    animation: highlight-buzz-ascend 0.4s infinite alternate;
+}
+
+[data-theme="ascend_2026"] .team-card.buzzed .team-name,
+[data-theme="ascend_2026"] .team-card.buzzed .team-score {
+    color: #fff;
+    text-shadow: 0 0 10px #000;
+}
+
+@keyframes highlight-buzz-ascend {
+    from { box-shadow: inset 0 0 20px rgba(0,255,170,0.8), 0 0 20px rgba(0,255,170,0.6); }
+    to { box-shadow: inset 0 0 60px rgba(0,255,170,1), 0 0 50px rgba(0,255,170,1); }
+}
+
+[data-theme="ascend_2026"] #timerContainerAscend {
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    height: 26px;
+    background: linear-gradient(to bottom, #d1d5db, #6b7280);
+    clip-path: polygon(0 0, 100% 0, calc(100% - 15px) 100%, 15px 100%);
+    display: none;
+    z-index: 100;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+
+[data-theme="ascend_2026"] .timer-track-ascend {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: calc(100% - 60px);
+    height: 8px;
+    background: #000;
+    border-radius: 4px;
+}
+
+[data-theme="ascend_2026"] #timerBarAscend {
+    height: 100%;
+    width: 0%;
+    background: #ff0000;
+    transition: width 0.05s linear;
+    position: absolute;
+    left: 0;
+    top: 0;
+    border-radius: 4px;
+}
+
+[data-theme="ascend_2026"] #timerBarAscend::after {
+    content: '';
+    position: absolute;
+    right: -8px;
+    top: -4px;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 5px rgba(255,0,0,0.8);
+    animation: pulse-timer 0.6s infinite alternate;
+}
+
+[data-theme="ascend_2026"] .question-area {
+    padding: 10px 20px 0;
+}
+
+[data-theme="ascend_2026"] .grid-col {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+[data-theme="ascend_2026"] .q-cell {
+    border-color: rgba(84, 160, 255, 0.6);
+}
+
+[data-theme="ascend_2026"] .q-cell.inactive-tab {
+    background: transparent;
+    border-color: rgba(84, 160, 255, 0.3);
+    color: rgba(255,255,255,0.5);
+}
+
+[data-theme="ascend_2026"] .q-cell.active-tab {
+    background: rgba(255,255,255,0.9);
+    color: #000;
+    border-color: #fff;
+    text-shadow: none;
+}
+
+[data-theme="ascend_2026"] .question-box {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    flex: 1;
+    width: 100%;
+    max-width: none;
+    min-height: 180px;
+    padding: 20px 40px;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+[data-theme="ascend_2026"] .question-box::before {
+    display: none;
+}
+
+[data-theme="ascend_2026"] .q-meta {
+    display: none;
+}
+
+[data-theme="ascend_2026"] #qGrid {
+    background: rgba(4, 15, 33, 0.98) !important;
+    backdrop-filter: blur(15px) !important;
+    -webkit-backdrop-filter: blur(15px) !important;
+    border-radius: 20px !important;
+    border: 2px solid rgba(255, 255, 255, 0.15) !important;
+    padding: 30px !important;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5) !important;
+    margin: auto !important;
+    width: 90% !important;
+    max-width: 1600px !important;
+    animation: flip3D 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    transform-origin: center center;
+}
+
+[data-theme="ascend_2026"] #qBoxContainer .q-scoreboard {
+    display: none !important;
+}
+
+[data-theme="ascend_2026"] .hope-star-badge {
+    position: absolute;
+    top: -30px;
+    right: -30px;
+    width: 100px;
+    height: 100px;
+    background: url('/Star_1.gif') no-repeat center center;
+    background-size: contain;
+    display: none;
+    z-index: 100;
+}
+
+[data-theme="ascend_2026"] .hope-star-badge.active {
+    display: block;
+    animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+[data-theme="ascend_2026"] #timerContainerAscend {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 8px;
+    background: rgba(120, 120, 120, 0.3);
+    display: none;
+    border-radius: 0 0 15px 15px;
+    overflow: hidden;
+}
+
+[data-theme="ascend_2026"] #timerBarAscend {
+    height: 100%;
+    width: 100%;
+    background: #00d2d3;
+    transition: width 0.05s linear, background-color 0.3s ease;
+}
+
+[data-theme="ascend_2026"] #timerBarAscend.warning {
+    background: #ff4757 !important;
+}
+
+@keyframes flip3D {
+    0% { transform: perspective(1200px) rotateX(-90deg); opacity: 0; }
+    100% { transform: perspective(1200px) rotateX(0deg); opacity: 1; }
+}
+
+@keyframes popIn {
+    0% { opacity: 0; transform: scale(0.8); }
+    70% { opacity: 1; transform: scale(1.02); }
+    100% { opacity: 1; transform: scale(1); }
+}

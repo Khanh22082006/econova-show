@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <script>
+    window.onerror = function(message, source, lineno, colno, error) {
+        if (message === 'Script error.' && (!source || source === '')) {
+            console.warn('Ignored generic CORS Script error.');
+            return false;
+        }
+        var errBox = document.getElementById('debug-error-box');
+        if (!errBox) {
+            errBox = document.createElement('div');
+            errBox.id = 'debug-error-box';
+            errBox.style.position = 'fixed';
+            errBox.style.top = '10px';
+            errBox.style.left = '10px';
+            errBox.style.backgroundColor = 'rgba(255, 0, 0, 0.9)';
+            errBox.style.color = 'white';
+            errBox.style.padding = '20px';
+            errBox.style.zIndex = '999999';
+            errBox.style.fontSize = '20px';
+            errBox.style.maxWidth = '80%';
+            errBox.style.wordWrap = 'break-word';
+            const mountTarget = document.body || document.documentElement;
+            if (mountTarget) {
+                mountTarget.appendChild(errBox);
+            }
+        }
+        errBox.innerHTML += `<b>ERROR:</b> ${message} at ${source}:${lineno}:${colno}<br>`;
+    };
+    window.addEventListener('unhandledrejection', function(event) {
+        window.onerror(event.reason, 'Promise', 0, 0, event.reason);
+    });
+    </script>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="scr_title">Econova Show - Màn Hình Chính</title>
+    
+    <script src="/lang.js"></script>
+    <script>
+        var urlParams = new URLSearchParams(window.location.search);
+        var authParam = urlParams.get('auth');
+        if (authParam) {
+            sessionStorage.setItem('adminAuth', authParam);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (!sessionStorage.getItem('adminAuth') && urlParams.get('pass') !== 'obs_screen') {
+            const l = localStorage.getItem('econova_lang') || 'vi';
+            const message = (typeof I18N !== 'undefined' && I18N[l] && I18N[l].con_access_denied) ? I18N[l].con_access_denied : 'Access denied';
+            document.write('<h1 style="color:white;text-align:center;margin-top:20%;font-family: \'SF Pro Display Bold\', \'SF Pro Text\', -apple-system, BlinkMacSystemFont, sans-serif">' + message + '</h1>');
+            window.stop();
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <!-- Dynamic theme link -->
+    <link id="econova-theme-styles" rel="stylesheet" href="/public_v2/Themes/default.css">
+    
+    <script src="qrcode.min.js"></script>
+    <script src="/shared.js"></script>
+    <script src="/app.js"></script>
+    <script src="/public_v2/core-logic.js"></script>
+</head>
+<body class="default main-screen">
+    <div id="qrCodeOverlay" onclick="this.style.display='none'">
+        <div class="qr-title">QUÉT MÃ ĐỂ VÀO PHÒNG THI</div>
+        <div id="qrCodeContainer"></div>
+        <div class="qr-subtitle">Hoặc truy cập bằng địa chỉ web:</div>
+        <div class="qr-ip" id="qrIpText">Đang tải IP...</div>
+    </div>
+    
+    <div id="videoOverlay">
+        <video id="mainVideo" src=""></video>
+    </div>
+
+    <div id="overallScoreboardOverlay" style="position: fixed; inset: 0; background: #040f21 url('/Themes/Background/B1.png') center/cover no-repeat; z-index: 6000; display: none; flex-direction: column; align-items: center; justify-content: center;">
+        <div id="overallScoreboardGrid" style="display: flex; gap: 40px; width: 90%; max-width: 1600px; justify-content: space-around; align-items: flex-end;"></div>
+    </div>
+
+    <div id="main-container">
+        <div class="bg-grid default-only"></div>
+        <div class="header default-only" style="display: none !important;">
+            <div class="round-title" data-i18n="scr_round">ROUND 3.2: MYSTERY BOX</div>
+        </div>
+
+        <div class="ascend-frame" id="ascendFrame" style="display: none;">
+            <div class="ascend-top-bar ascend-only">
+                <div class="ascend-pts-box" id="ascendPtsBox"></div>
+                <div class="ascend-scoreboard" id="ascendScoreboard"></div>
+            </div>
+
+            <div class="question-area ascend-only" id="ascendQuestionArea">
+                <div id="ascendPackagePointsContainer"></div>
+
+                <div class="question-box" id="ascendQBox">
+                    <div class="q-meta" id="ascendQPoints"></div>
+                    <div id="ascendHopeStarBadge" class="hope-star-badge" style="display: none;"></div>
+                    <div class="question-text" id="ascendQText"></div>
+                </div>
+                
+                <div id="timerContainerAscend" class="ascend-only">
+                    <div class="timer-track-ascend">
+                        <div id="timerBarAscend"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="question-area default-only" id="defaultQuestionArea" style="display: none;">
+            <div id="defaultPackagePointsContainer"></div>
+
+            <div class="question-box" id="defaultQBox">
+                <div class="q-meta" id="defaultQPoints"></div>
+                <div id="defaultHopeStarBadge" class="hope-star-badge" style="display: none;"></div>
+                <div class="question-text" id="defaultQText"></div>
+                
+                <div id="timerContainerDefault" class="default-only timer-olympia-style" style="display: none;">
+                    <div class="timer-trap">
+                        <div class="timer-black-bar">
+                            <div id="timerBarDefault" class="timer-red-fill"></div>
+                            <div id="timerIndicatorDefault" class="timer-circle"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-container" id="qGrid" style="display: none;">
+            <div class="grid-col"><div class="grid-header" id="gh10" style="color: #10ac84" data-i18n="scr_pts_10">10 ĐIỂM</div><div class="grid-cells" id="grid10"></div></div>
+            <div class="grid-col"><div class="grid-header" id="gh20" style="color: #f39c12" data-i18n="scr_pts_20">20 ĐIỂM</div><div class="grid-cells" id="grid20"></div></div>
+            <div class="grid-col"><div class="grid-header" id="gh40" style="color: #e17055" data-i18n="scr_pts_40">40 ĐIỂM</div><div class="grid-cells" id="grid40"></div></div>
+        </div>
+
+        <div class="scoreboard-area default-only" id="defaultScoreboard" style="display: none;"></div>
+    </div>
+
+    <div id="round1-timer-container" style="display: none; position: absolute; background-color: transparent !important; z-index: 1000; transition: all 0.3s; pointer-events: none; text-align: center;">
+        <span id="round1-timer-text">00:00</span>
+    </div>
+
+    <div id="v3-wrapper" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 1920px; height: 1080px; z-index: 5000; overflow: hidden;">
+        <div id="v3MasterContainer" class="v3-new-root screen-mode" style="display: none; width: 1600px; height: 100%; position: absolute; left: 50%; transform: translateX(-50%);">
+            <div class="shape-container anim-container" id="cont-screen" style="width: 1600px; height: 360px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                <!-- Cyan Arrows -->
+                <div class="shape-layer cyan-color a-alc layer-1 anim-element" style="z-index: 10;"></div>
+                <div class="shape-layer cyan-color a-alc layer-2 anim-element" style="z-index: 11;"></div>
+                <div class="shape-layer cyan-color a-alc layer-3 anim-element" style="z-index: 12;"></div>
+                
+                <div class="shape-layer cyan-color a-arc layer-1 anim-element" style="z-index: 10;"></div>
+                <div class="shape-layer cyan-color a-arc layer-2 anim-element" style="z-index: 11;"></div>
+                <div class="shape-layer cyan-color a-arc layer-3 anim-element" style="z-index: 12;"></div>
+                
+                <!-- Grid Group -->
+                <div class="anim-grid-group anim-element" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index: 20; opacity: 0; pointer-events: none;">
+                    <div class="shape-layer grid-bg a-grid-bg" style="z-index: 1;"></div>
+                    <div class="shape-layer a-grid-content" style="z-index: 2; pointer-events: auto;"></div>
+                    <svg class="svg-strokes s-g-svg" preserveAspectRatio="none" style="z-index: 3; overflow: visible;">
+                        <path class="s-g-bg" fill="none" stroke="white" stroke-width="2" />
+                        <g class="s-g-cells" fill="none" stroke="white" stroke-width="2"></g>
+                    </svg>
+                </div>
+                
+                <!-- Question Group -->
+                <div class="anim-question-group anim-element" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index: 25; opacity: 0; pointer-events: none;">
+                    <div class="o-bg a-q-bg" style="z-index: 1;">
+                        <div class="ov-left-content">
+                            <div class="ov-top-bar o-top-bar a-q-top" style="display: flex; flex-direction: row; height: 72px; width: 100%;"></div>
+                            <div class="ov-question-wrapper o-question a-q-wrap" style="position: absolute; top: 72px; left: 180px; bottom: 0; width: 999px; box-sizing: border-box; display: flex; align-items: flex-start; justify-content: flex-start; padding: 20px 40px 20px 0px;">
+                                <div class="ov-question" id="qTextV3" style="color: white; font-weight: 700; text-align: left; line-height: 1.4; font-size: 34px; text-shadow: 0 4px 10px rgba(0,0,0,0.5);"></div>
+                            </div>
+                            <!-- Timer Bar -->
+                            <div id="timerContainerV3" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); width: 80%; height: 26px; background: linear-gradient(to bottom, #d1d5db, #6b7280); z-index: 30; clip-path: polygon(0 0, 100% 0, calc(100% - 15px) 100%, 15px 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
+                                <div style="position: relative; width: calc(100% - 60px); height: 8px; background: #000; border-radius: 4px; overflow: visible;">
+                                    <div id="timerBarV3" style="position: absolute; top: 0; left: 0; width: 0%; height: 100%; background: #ff0000; transition: width 0.05s linear; border-radius: 4px;">
+                                        <div id="timerHandleV3" style="display: none; position: absolute; right: -8px; top: -4px; width: 16px; height: 16px; background: #fff; border-radius: 50%; box-shadow: 0 0 5px rgba(255,0,0,0.8); animation: pulse-timer 0.6s infinite alternate;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ov-score-panel o-score a-q-score" style="z-index: 2; position: absolute; right: 0; top: 0; height: 100%; display: flex; flex-direction: column;">
+                        <div class="ov-score-main" id="v3ActiveScore" style="height: 85%; display: flex; align-items: center; justify-content: center; font-size: 130px; font-weight: 800; color: white; text-shadow: 0 4px 15px rgba(0,0,0,0.6);"></div>
+                        <div class="ov-score-pack o-pack-container a-q-pack" id="v3PointsArea" style="height: 15%; display: flex; position: absolute; bottom: 0; left: 0; padding: 0; margin: 0; width: 100%;"></div>
+                    </div>
+                    <div class="o-separator a-q-sep" style="z-index: 3;"></div>
+                    <svg class="svg-strokes s-o-svg" preserveAspectRatio="none" style="z-index: 4; overflow: visible;">
+                        <path class="s-o-bg" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2" />
+                        <path class="s-o-score" fill="none" stroke="white" stroke-width="2" />
+                    </svg>
+                </div>
+
+                <!-- Navy Arrows -->
+                <div class="shape-layer navy-color a-aln layer-1 anim-element" style="z-index: 50;"></div>
+                <div class="shape-layer navy-color a-aln layer-2 anim-element" style="z-index: 51;"></div>
+                <div class="shape-layer navy-color a-aln layer-3 anim-element" style="z-index: 52;"></div>
+                
+                <div class="shape-layer navy-color a-arn layer-1 anim-element" style="z-index: 50;"></div>
+                <div class="shape-layer navy-color a-arn layer-2 anim-element" style="z-index: 51;"></div>
+                <div class="shape-layer navy-color a-arn layer-3 anim-element" style="z-index: 52;"></div>
+
+                <!-- Top SVG strokes for arrows -->
+                <svg class="svg-strokes s-g-svg-arrows layer-1" preserveAspectRatio="none" style="z-index: 60; overflow: visible;">
+                    <path class="s-g-alc anim-element" fill="none" stroke="white" stroke-width="2" />
+                    <path class="s-g-aln anim-element" fill="none" stroke="white" stroke-width="2" />
+                    <path class="s-g-arc anim-element" fill="none" stroke="white" stroke-width="2" />
+                    <path class="s-g-arn anim-element" fill="none" stroke="white" stroke-width="2" />
+                </svg>
+                <svg class="svg-strokes s-g-svg-arrows layer-2" preserveAspectRatio="none" style="z-index: 61; overflow: visible;">
+                    <path class="s-g-alc anim-element" fill="none" stroke="white" stroke-width="2" />
+                    <path class="s-g-aln anim-element" fill="none" stroke="white" stroke-width="2" />
+                    <path class="s-g-arc anim-element" fill="none" stroke="white" stroke-width="2" />
+                    <path class="s-g-arn anim-element" fill="none" stroke="white" stroke-width="2" />
+                </svg>
+                <svg class="svg-strokes s-g-svg-arrows layer-3" preserveAspectRatio="none" style="z-index: 62; overflow: visible;">
+                    <path class="s-g-alc anim-element" fill="none" stroke="white" stroke-width="2" />
+                    <path class="s-g-aln anim-element" fill="none" stroke="white" stroke-width="2" />
+                    <path class="s-g-arc anim-element" fill="none" stroke="white" stroke-width="2" />
+                    <path class="s-g-arn anim-element" fill="none" stroke="white" stroke-width="2" />
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <audio id="snd_choose_each_question" src="/sounds/choose_each_question.mp3" preload="auto"></audio>
+    <audio id="snd_question_open" src="/sounds/open_question.mp3" preload="auto"></audio>
+    <audio id="snd_question_open_mode1" src="/sounds/question_open.mp3" preload="auto"></audio>
+    <audio id="snd_buzzer_5s" src="/sounds/buzzer_5s.mp3" preload="auto"></audio>
+    <audio id="snd_buzzed" src="/sounds/buzzed.mp3" preload="auto"></audio>
+    <audio id="snd_correct" src="/sounds/correct.mp3" preload="auto"></audio>
+    <audio id="snd_wrong" src="/sounds/wrong.mp3" preload="auto"></audio>
+    <audio id="snd_hope_star" src="/sounds/hope_star.mp3" preload="auto"></audio>
+    <audio id="snd_countdown_10s" src="/sounds/countdown_10s.mp3" preload="auto"></audio>
+    <audio id="snd_countdown_15s" src="/sounds/countdown_15s.mp3" preload="auto"></audio>
+    <audio id="snd_finish_turn" src="/sounds/finish_turn.mp3" preload="auto"></audio>
+    <audio id="snd_on_stage" src="/sounds/on_stage.mp3" preload="auto"></audio>
+    <audio id="snd_choose_package" src="/sounds/choose_package.mp3" preload="auto"></audio>
+
+    <script id="v3-script">
+        window.V3_CONFIGS = {"tv1": {"graphicWidth": 1600, "gridWidth": 1080, "height": 360, "shapes": {"bgPts": [[324.2857142857143, 0], [1275.7142857142858, 0], [1340.0, 180.0], [1275.7142857142858, 360], [324.2857142857143, 360], [260.0, 180.0]], "alnPts": [[284.2857142857143, 0], [324.2857142857143, 0], [260.0, 180.0], [324.2857142857143, 360], [284.2857142857143, 360], [220.0, 180.0]], "arnPts": [[1275.7142857142858, 0], [1315.7142857142858, 0], [1380.0, 180.0], [1315.7142857142858, 360], [1275.7142857142858, 360], [1340.0, 180.0]], "alcPts": [[238.21428571428572, 45.0], [268.2142857142857, 45.0], [220.0, 180.0], [268.2142857142857, 315.0], [238.21428571428572, 315.0], [190.0, 180.0]], "arcPts": [[1331.7857142857142, 45.0], [1361.7857142857142, 45.0], [1410.0, 180.0], [1361.7857142857142, 315.0], [1331.7857142857142, 315.0], [1380.0, 180.0]]}, "gridCells": [[[324.2857142857143, 0.0], [684.2857142857143, 0.0], [620.0, 180.0], [260.0, 180.0]], [[684.2857142857143, 0.0], [1044.2857142857142, 0.0], [980.0, 180.0], [620.0, 180.0]], [[1044.2857142857142, 0.0], [1404.2857142857142, 0.0], [1340.0, 180.0], [980.0, 180.0]], [[260.0, 180.0], [620.0, 180.0], [555.7142857142857, 360.0], [195.71428571428572, 360.0]], [[620.0, 180.0], [980.0, 180.0], [915.7142857142857, 360.0], [555.7142857142857, 360.0]], [[980.0, 180.0], [1340.0, 180.0], [1275.7142857142858, 360.0], [915.7142857142857, 360.0]]]}, "tv2": {"graphicWidth": 1600, "gridWidth": 1020, "height": 250, "shapes": {"bgPts": [[334.64285714285717, 0], [1265.357142857143, 0], [1310.0, 125.0], [1265.357142857143, 250], [334.64285714285717, 250], [290.0, 125.0]], "alnPts": [[294.64285714285717, 0], [334.64285714285717, 0], [290.0, 125.0], [334.64285714285717, 250], [294.64285714285717, 250], [250.0, 125.0]], "arnPts": [[1265.357142857143, 0], [1305.357142857143, 0], [1350.0, 125.0], [1305.357142857143, 250], [1265.357142857143, 250], [1310.0, 125.0]], "alcPts": [[253.48214285714286, 31.25], [283.4821428571429, 31.25], [250.0, 125.0], [283.4821428571429, 218.75], [253.48214285714286, 218.75], [220.0, 125.0]], "arcPts": [[1316.517857142857, 31.25], [1346.517857142857, 31.25], [1380.0, 125.0], [1346.517857142857, 218.75], [1316.517857142857, 218.75], [1350.0, 125.0]]}, "gridCells": [[[334.64285714285717, 0.0], [674.6428571428571, 0.0], [630.0, 125.0], [290.0, 125.0]], [[674.6428571428571, 0.0], [1014.6428571428571, 0.0], [970.0, 125.0], [630.0, 125.0]], [[1014.6428571428571, 0.0], [1354.642857142857, 0.0], [1310.0, 125.0], [970.0, 125.0]], [[290.0, 125.0], [630.0, 125.0], [585.3571428571429, 250.0], [245.35714285714286, 250.0]], [[630.0, 125.0], [970.0, 125.0], [925.3571428571429, 250.0], [585.3571428571429, 250.0]], [[970.0, 125.0], [1310.0, 125.0], [1265.357142857143, 250.0], [925.3571428571429, 250.0]]]}, "tv3": {"width": 1600, "height": 360, "shapes": {"bgPts": [[164.28571428571428, 0], [1435.7142857142858, 0], [1500, 180.0], [1435.7142857142858, 360], [164.28571428571428, 360], [100, 180.0]], "alnPts": [[124.28571428571428, 0], [164.28571428571428, 0], [100, 180.0], [164.28571428571428, 360], [124.28571428571428, 360], [60, 180.0]], "arnPts": [[1435.7142857142858, 0], [1475.7142857142858, 0], [1540, 180.0], [1475.7142857142858, 360], [1435.7142857142858, 360], [1500, 180.0]], "alcPts": [[78.21428571428572, 45.0], [108.21428571428572, 45.0], [60, 180.0], [108.21428571428572, 315.0], [78.21428571428572, 315.0], [30, 180.0]], "arcPts": [[1491.7857142857142, 45.0], [1521.7857142857142, 45.0], [1570, 180.0], [1521.7857142857142, 315.0], [1491.7857142857142, 315.0], [1540, 180.0]]}, "bgPts": [[164.28571428571428, 0], [1164.2857142857142, 0], [1035.7142857142858, 360], [164.28571428571428, 360], [100, 180.0]], "scorePts": [[50.00571428571429, 0], [314.28999999999996, 0], [400, 180.0], [314.28999999999996, 360], [0, 360]], "separator": {"angle": 19.65, "height": 509.69, "left": 1100}, "topBarWidth": 1171}, "tv4": {"width": 1600, "height": 250, "shapes": {"bgPts": [[144.64285714285714, 0], [1455.357142857143, 0], [1500, 125.0], [1455.357142857143, 250], [144.64285714285714, 250], [100, 125.0]], "alnPts": [[104.64285714285714, 0], [144.64285714285714, 0], [100, 125.0], [144.64285714285714, 250], [104.64285714285714, 250], [60, 125.0]], "arnPts": [[1455.357142857143, 0], [1495.357142857143, 0], [1540, 125.0], [1495.357142857143, 250], [1455.357142857143, 250], [1500, 125.0]], "alcPts": [[63.48214285714286, 31.25], [93.48214285714286, 31.25], [60, 125.0], [93.48214285714286, 218.75], [63.48214285714286, 218.75], [30, 125.0]], "arcPts": [[1506.517857142857, 31.25], [1536.517857142857, 31.25], [1570, 125.0], [1536.517857142857, 218.75], [1506.517857142857, 218.75], [1540, 125.0]]}, "bgPts": [[144.64285714285714, 0], [1244.642857142857, 0], [1155.357142857143, 250], [144.64285714285714, 250], [100, 125.0]], "scorePts": [[30.362857142857145, 0], [250, 0], [300, 125.0], [250, 250], [0, 250]], "separator": {"angle": 19.65, "height": 297.32, "left": 1200}, "topBarWidth": 1200}, "tv5": {"width": 1600, "height": 360, "shapes": {"bgPts": [[164.28571428571428, 0], [1435.7142857142858, 0], [1500, 180.0], [1435.7142857142858, 360], [164.28571428571428, 360], [100, 180.0]], "alnPts": [[124.28571428571428, 0], [164.28571428571428, 0], [100, 180.0], [164.28571428571428, 360], [124.28571428571428, 360], [60, 180.0]], "arnPts": [[1435.7142857142858, 0], [1475.7142857142858, 0], [1540, 180.0], [1475.7142857142858, 360], [1435.7142857142858, 360], [1500, 180.0]], "alcPts": [[78.21428571428572, 45.0], [108.21428571428572, 45.0], [60, 180.0], [108.21428571428572, 315.0], [78.21428571428572, 315.0], [30, 180.0]], "arcPts": [[1491.7857142857142, 45.0], [1521.7857142857142, 45.0], [1570, 180.0], [1521.7857142857142, 315.0], [1491.7857142857142, 315.0], [1540, 180.0]]}, "bgPts": [[164.28571428571428, 0], [1164.2857142857142, 0], [1035.7142857142858, 360], [164.28571428571428, 360], [100, 180.0]], "scorePts": [[50.00571428571429, 0], [314.28999999999996, 0], [400, 180.0], [314.28999999999996, 360], [0, 360]], "separator": {"angle": 19.65, "height": 509.69, "left": 1100}, "topBarWidth": 1171}, "tv6": {"width": 1600, "height": 250, "shapes": {"bgPts": [[144.64285714285714, 0], [1455.357142857143, 0], [1500, 125.0], [1455.357142857143, 250], [144.64285714285714, 250], [100, 125.0]], "alnPts": [[104.64285714285714, 0], [144.64285714285714, 0], [100, 125.0], [144.64285714285714, 250], [104.64285714285714, 250], [60, 125.0]], "arnPts": [[1455.357142857143, 0], [1495.357142857143, 0], [1540, 125.0], [1495.357142857143, 250], [1455.357142857143, 250], [1500, 125.0]], "alcPts": [[63.48214285714286, 31.25], [93.48214285714286, 31.25], [60, 125.0], [93.48214285714286, 218.75], [63.48214285714286, 218.75], [30, 125.0]], "arcPts": [[1506.517857142857, 31.25], [1536.517857142857, 31.25], [1570, 125.0], [1536.517857142857, 218.75], [1506.517857142857, 218.75], [1540, 125.0]]}, "bgPts": [[144.64285714285714, 0], [1244.642857142857, 0], [1155.357142857143, 250], [144.64285714285714, 250], [100, 125.0]], "scorePts": [[30.362857142857145, 0], [250, 0], [300, 125.0], [250, 250], [0, 250]], "separator": {"angle": 19.65, "height": 297.32, "left": 1200}, "topBarWidth": 1200}};
+        
+        const displayController = new EconovaDisplayController(true);
+        displayController.init();
+    </script>
+</body>
+</html>

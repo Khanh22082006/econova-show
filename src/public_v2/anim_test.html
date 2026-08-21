@@ -1,0 +1,1920 @@
+<!DOCTYPE html><html lang="vi"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="scr_title">Econova Show - Màn Hình Chính</title>
+    <script src="/lang.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        let authParam = urlParams.get('auth');
+        if (authParam) {
+            sessionStorage.setItem('adminAuth', authParam);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (!sessionStorage.getItem('adminAuth') && urlParams.get('pass') !== 'obs_screen') {
+            let l = localStorage.getItem('econova_lang') || 'vi';
+            document.write('<h1 style="color:white;text-align:center;margin-top:20%;font-family: \'SF Pro Display Bold\', \'SF Pro Text\', -apple-system, BlinkMacSystemFont, sans-serif">' + t('con_access_denied', l) + '</h1>');
+            window.stop();
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --bg-primary: #030a1c; --bg-secondary: #0a1936; --accent: #00d2d3;
+            --team1: #10ac84; --team2: #f39c12; --team3: #6c5ce7; --team4: #e17055;
+        }
+
+        html, body {
+            width: 1920px !important; height: 1080px !important;
+            min-width: 1920px !important; min-height: 1080px !important;
+            max-width: 1920px !important; max-height: 1080px !important;
+            margin: 0 !important; padding: 0 !important; overflow: hidden !important;
+            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif);
+            background: var(--bg-primary); color: #fff;
+        }
+        /* Cụm đồ họa V3 luôn neo ở đáy, canh giữa */
+        .graphics-wrapper {
+            position: absolute;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: max-content;
+            height: 200px;
+            display: none;
+            z-index: 50;
+        }
+        /* Container chứa lưới gói điểm (non-V3 only) — dùng CSS Grid */
+        .qGridContainer:not(#qGridContainerV3) {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            grid-template-rows: repeat(3, 1fr) !important;
+        }
+        .question-box { display: flex; flex-direction: row; align-items: stretch; }
+        .content-left { flex: 1; position: relative; }
+        .time-bar-wrapper { position: absolute; bottom: 0; left: 0; width: 100%; height: 6px; z-index: 20; }
+        .content-right { width: 320px; flex-shrink: 0; position: relative; margin-left: 0; padding-left: 30px; }
+        .content-right::before { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 4px; background: white; transform: skewX(-20deg); }
+
+        #main-container {
+            width: 1920px; height: 1080px; position: absolute; top: 50%; left: 50%; margin-top: -540px; margin-left: -960px;
+            display: flex; flex-direction: column; transform-origin: center center;
+        }/* --- THEME 1: DEFAULT (CỔ ĐIỂN) --- */
+        body.default {
+            background-image:
+                radial-gradient(ellipse at 10% 20%, rgba(0, 210, 211, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 90% 80%, rgba(108, 92, 231, 0.15) 0%, transparent 50%);
+        }
+        body.default .bg-grid {
+            position: absolute; inset: 0; z-index: 0; pointer-events: none;
+            background-image: linear-gradient(rgba(0, 210, 211, 0.05) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0, 210, 211, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: grid-drift 20s linear infinite;
+        }
+        @keyframes grid-drift { 0% { transform: translate(0, 0); } 100% { transform: translate(50px, 50px); } }
+        
+        body.default .ascend-only { display: none !important; }
+        body.default .ascend-frame { flex: 1; display: flex; flex-direction: column; } 
+        body.default .header { text-align: center; padding: 50px 0 10px; z-index: 10; position: relative; }
+        body.default .round-title {
+            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif); font-size: 40px; font-weight: 900;
+            letter-spacing: 6px; text-transform: uppercase;
+            background: linear-gradient(90deg, #00d2d3, #ffffff, #00d2d3);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 210, 211, 0.3);
+        }
+
+        body.default #timerContainer {
+            width: 80%; height: 8px; background: rgba(255,255,255,0.1);
+            border-radius: 4px; margin-bottom: 20px; overflow: hidden;
+            display: none; box-shadow: 0 0 15px rgba(0, 210, 211, 0.2);
+        }
+        body.default #timerBar {
+            height: 100%; width: 100%; background: #00d2d3;
+            box-shadow: 0 0 10px #00d2d3; transition: width 0.1s linear;
+        }
+
+        body.default .scoreboard-area {
+            padding: 0 150px 80px; z-index: 10; display: flex; justify-content: center; gap: 30px; flex-wrap: wrap;
+        }
+        body.default .team-card {
+            background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px; padding: 15px; text-align: center; position: relative; overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5); transition: all 0.3s;
+            flex: 1 1 auto; max-width: 320px; min-width: 200px;
+        }
+        body.default .team-card::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 8px; background: var(--accent); opacity: 0.5; }
+        body.default .team-card.is-main {
+            background: rgba(0, 0, 0, 0.75); border-color: #fff;
+            transform: translateY(-10px); box-shadow: 0 15px 30px rgba(0,0,0,0.6), inset 0 0 20px rgba(255,255,255,0.2);
+        }
+        body.default .team-card.buzzed { background: rgba(255, 255, 255, 0.2); animation: highlight-buzz 0.4s infinite alternate; }
+        body.default .team-card.buzzed { border-color: var(--accent); box-shadow: 0 0 60px var(--accent), inset 0 0 30px var(--accent); }
+        @keyframes highlight-buzz { from { transform: scale(1) translateY(-10px); filter: brightness(1.1); } to { transform: scale(1.1) translateY(-10px); filter: brightness(1.6); } }
+        body.default .team-name { font-size: 24px; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
+        body.default .team-school { font-size: 16px; color: rgba(255,255,255,0.7); margin-bottom: 10px; }
+        body.default .team-score { font-family: var(--font-score, 'Orbitron', sans-serif); font-size: 46px; font-weight: 900; color: #fff; }
+
+        /* --- ANIMATIONS CHUNG --- */
+        @keyframes pulse { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.05); filter: brightness(1.2); } 100% { transform: scale(1); filter: brightness(1); } }
+        @keyframes blink-star { 0% { opacity: 0.5; } 50% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0.5; } }
+        @keyframes score-bounce-up { 0% { transform: translateY(0); color: inherit; } 50% { transform: translateY(-10px) scale(1.2); color: #10ac84; text-shadow: 0 0 20px #10ac84; } 100% { transform: translateY(0); color: inherit; } }
+        @keyframes score-bounce-down { 0% { transform: translateY(0); color: inherit; } 50% { transform: translateY(10px) scale(0.9); color: #ff4757; text-shadow: 0 0 20px #ff4757; } 100% { transform: translateY(0); color: inherit; } }
+
+        /* THANH THỜI GIAN THEME MẶC ĐỊNH */
+        #timerContainerDefault {
+            width: 80%; height: 8px; background: rgba(255,255,255,0.1);
+            border-radius: 4px; margin-top: 20px; overflow: hidden;
+            display: none; box-shadow: 0 0 15px rgba(0, 210, 211, 0.2);
+            margin-left: auto; margin-right: auto;
+        }
+        #timerBarDefault {
+            height: 100%; width: 100%; background: linear-gradient(90deg, #00d2d3, #0984e3);
+            transition: width 0.05s linear;
+        }
+
+        /* --- THEME 2: ASCEND 2026 (MỚI) --- */
+        body.ascend_2026 {
+            background: transparent !important;
+        }
+        body.v3 {
+            background: transparent !important;
+        }
+        body.ascend_2026 .default-only { display: none !important; }
+        
+        body.ascend_2026 .ascend-frame {
+            width: 90%; max-width: 1600px; height: auto; min-height: 550px; margin: auto;
+            border: 2px solid rgba(84, 160, 255, 0.8); border-radius: 15px;
+            background: rgba(4, 15, 33, 0.85); /* Tối hơn để dễ nhìn */
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            position: relative; display: flex; flex-direction: column;
+            box-shadow: 0 0 40px rgba(84, 160, 255, 0.4), inset 0 0 30px rgba(84, 160, 255, 0.2);
+        }
+
+        body.ascend_2026 .ascend-top-bar {
+            display: flex; height: 70px; border-bottom: 1px solid rgba(84, 160, 255, 0.5);
+            border-radius: 12px 12px 0 0;
+        }
+
+        body.ascend_2026 .ascend-pts-box {
+            width: 15%; background: linear-gradient(135deg, #f5f6fa, #dcdde1);
+            color: #2f3640; font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif); font-weight: 900; font-size: 30px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: inset 0 0 20px rgba(255,255,255,1);
+            border-right: 2px solid rgba(84, 160, 255, 0.8); border-radius: 12px 0 0 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        body.ascend_2026 .ascend-scoreboard {
+            width: 85%; display: flex;
+        }
+
+        body.ascend_2026 .team-card {
+            flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+            padding: 0 10px; border-right: 1px solid rgba(84, 160, 255, 0.3);
+            background: transparent; transition: all 0.3s; position: relative;
+        }
+        body.ascend_2026 .team-card:last-child { border-right: none; }
+        body.ascend_2026 .team-school { display: none; }
+        body.ascend_2026 .team-name {
+            font-size: 26px; font-weight: 700; color: #fff; margin:0;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.8);
+            white-space: nowrap;
+            flex: 1; min-width: 0; display: flex; align-items: center; overflow: hidden;
+            line-height: 1; margin-top: 3px;
+        }
+        body.ascend_2026 .name-inner {
+            display: inline-block; white-space: nowrap; transform-origin: left center;
+        }
+        body.ascend_2026 .team-score { font-family: var(--font-score, 'Orbitron', sans-serif); font-size: 32px; font-weight: 900; color: #fff; text-shadow: 0 0 15px rgba(255,255,255,0.5); }
+        
+        body.ascend_2026 .team-card.is-main {
+            background: rgba(255, 255, 255, 0.85);
+            box-shadow: inset 0 0 30px rgba(255,255,255,1), 0 0 20px rgba(255,255,255,0.8);
+        }
+        body.ascend_2026 .team-card.is-main .team-name, body.ascend_2026 .team-card.is-main .team-score {
+            color: #012a5e; text-shadow: none; font-weight: 900;
+        }
+        body.ascend_2026 .team-card.buzzed {
+            background: rgba(0, 255, 170, 0.7);
+            animation: highlight-buzz-ascend 0.4s infinite alternate;
+        }
+        body.ascend_2026 .team-card.buzzed .team-name, body.ascend_2026 .team-card.buzzed .team-score {
+            color: #fff; text-shadow: 0 0 10px #000;
+        }
+        @keyframes highlight-buzz-ascend {
+            from { box-shadow: inset 0 0 20px rgba(0,255,170,0.8), 0 0 20px rgba(0,255,170,0.6); }
+            to { box-shadow: inset 0 0 60px rgba(0,255,170,1), 0 0 50px rgba(0,255,170,1); }
+        }
+
+        body.ascend_2026 #timerContainerAscend {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 8px;
+            background: rgba(255,255,255,0.1); border-radius: 0 0 10px 10px; display: none;
+        }
+        body.ascend_2026 #timerBarAscend {
+            height: 100%; width: 0%; background: #00d2d3;
+            box-shadow: 0 0 15px #00d2d3, 0 0 30px #00d2d3; transition: width 0.1s linear;
+            position: relative; border-radius: 0 0 0 10px;
+        }
+        body.ascend_2026 #timerBarAscend::after {
+            content: ''; position: absolute; right: -4px; top: -4px; width: 16px; height: 16px;
+            background: #fff; border-radius: 50%; box-shadow: 0 0 10px #fff;
+            animation: pulse-timer 0.6s infinite alternate;
+        }
+        @keyframes pulse-timer {
+            0% { transform: scale(1); box-shadow: 0 0 10px #fff, 0 0 10px #00d2d3; }
+            100% { transform: scale(1.6); box-shadow: 0 0 20px #fff, 0 0 20px #00d2d3; }
+        }
+
+
+        /* --- CHUNG CHO CẢ 2 THEME --- */
+        .question-area {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 20px 60px; z-index: 10; position: relative; width: 100%;
+        }
+        body.ascend_2026 .question-area { padding: 10px 20px; }
+
+        /* LƯỚI CÂU HỎI */
+        .grid-container {
+            width: 100%; max-width: 1400px; display: flex; flex-direction: row; gap: 40px; justify-content: center; align-items: flex-start;
+        }
+        body.default .grid-container { margin: auto; }
+        .grid-col {
+            flex: 1; max-width: 350px; background: rgba(10, 25, 54, 0.8);
+            border: 1px solid rgba(0, 210, 211, 0.3); border-radius: 20px;
+            padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+        }
+        body.ascend_2026 .grid-col { background: transparent; border: none; box-shadow: none; }
+        
+        .grid-header {
+            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif); font-size: 38px; font-weight: 900;
+            text-align: center; margin-bottom: 0; padding-bottom: 20px; text-transform: uppercase;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.8);
+            border-bottom: 1px solid rgba(0, 210, 211, 0.3);
+        }
+        .grid-cells { display: flex; flex-direction: row; width: 100%; justify-content: center; align-items: flex-start; margin-top: 20px; gap: 10px; flex-wrap: wrap; }
+        .grid-cells.mode1-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; display: grid; }
+        .grid-cells.mode1-grid .q-cell { width: 100%; max-width: none; height: 50px; font-size: 24px; padding: 0; }
+        .grid-cells:not(.mode1-grid) .q-cell { flex: 1 1 calc(33.333% - 10px); min-width: 60px; max-width: 90px; height: 50px; font-size: 24px; padding: 0; }
+        .q-cell {
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 10px; padding: 15px 0; text-align: center; width: 100%; max-width: 200px; height: 70px;
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif); font-size: 32px; font-weight: 700;
+            transition: all 0.3s;
+        }
+        .q-cell.inactive-tab {
+            color: transparent; background: transparent; border-color: rgba(0, 210, 211, 0.3); box-shadow: none;
+        }
+        .q-cell.active-tab {
+            background: rgba(255,255,255,0.9); color: #000; border-color: #fff; text-shadow: none;
+        }
+        body.ascend_2026 .q-cell { 
+            border-color: rgba(84, 160, 255, 0.6); 
+        }
+        body.ascend_2026 .q-cell.inactive-tab {
+            background: transparent; border-color: rgba(84, 160, 255, 0.3);
+        }
+        body.ascend_2026 .q-cell.active-tab {
+            background: rgba(255,255,255,0.9); color: #000; border-color: #fff; text-shadow: none;
+        }
+        .q-cell.played {
+            background: rgba(0,0,0,0.75) !important; color: rgba(255,255,255,0.3);
+            border-color: rgba(255,255,255,0.1) !important; text-decoration: line-through;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8) !important;
+        }
+        .q-cell.selected-anim {
+            animation: cell-blink 0.3s infinite alternate !important;
+            background: #fff !important; color: #000 !important; transform: scale(1.1) !important;
+            border-color: #00d2d3 !important; box-shadow: 0 0 20px #00d2d3 !important;
+        }
+        @keyframes cell-blink {
+            0% { transform: scale(1); filter: brightness(1); }
+            100% { transform: scale(1.15); filter: brightness(1.3); }
+        }
+
+        #packagePointsContainer {
+            display: none;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            gap: 10px;
+            margin: 0;
+            width: 100%;
+            max-width: 1300px;
+        }
+        .package-pts-box {
+            background: #576574;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 5px 15px;
+            border-radius: 6px;
+            font-size: 20px;
+            font-weight: bold;
+            opacity: 0.8;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        .package-pts-box.active-pts {
+            opacity: 1;
+            border-color: #fff;
+        }
+        
+        @keyframes glowing10 { 0% { box-shadow: 0 0 10px #10ac84; } 50% { box-shadow: 0 0 25px #10ac84; } 100% { box-shadow: 0 0 10px #10ac84; } }
+        @keyframes glowing20 { 0% { box-shadow: 0 0 10px #f39c12; } 50% { box-shadow: 0 0 25px #f39c12; } 100% { box-shadow: 0 0 10px #f39c12; } }
+        @keyframes glowing40 { 0% { box-shadow: 0 0 10px #ff4757; } 50% { box-shadow: 0 0 25px #ff4757; } 100% { box-shadow: 0 0 10px #ff4757; } }
+
+        /* HỘP CÂU HỎI */
+        .question-box {
+            background: rgba(10, 25, 54, 0.8); backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 210, 211, 0.3); border-radius: 20px;
+            width: 100%; max-width: 1300px; padding: 40px; min-height: 250px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5), inset 0 0 20px rgba(0,210,211,0.1);
+            position: relative; display: none; flex-direction: column; align-items: flex-start; justify-content: flex-start;
+        }
+        body.ascend_2026 .question-box {
+            background: transparent; border: none; box-shadow: none; backdrop-filter: none;
+            flex: 1; width: 100%; max-width: none;
+            padding: 30px 40px;
+        }
+
+        .question-box::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+        }
+        body.ascend_2026 .question-box::before { display: none; }
+
+        .q-meta {
+            position: absolute; top: 20px; font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif); font-size: 20px; font-weight: 700;
+            color: #ff9f43; letter-spacing: 2px; text-transform: uppercase;
+        }
+        body.ascend_2026 .q-meta { display: none; } /* Ascend hiển thị điểm ở ô góc trái trên cùng */
+
+        .hope-star-badge {
+            position: absolute; top: -110px; right: -120px; width: 350px; height: 350px;
+            background: url('/Star_1.gif') no-repeat center center;
+            background-size: contain;
+            z-index: 20;
+            animation: star-pulse 2s infinite;
+        }
+        @keyframes star-pulse { 0%, 100% { transform: scale(1) rotate(0deg); } 50% { transform: scale(1.1) rotate(15deg); } }
+        .question-text {
+            font-size: 38px; font-weight: 700; line-height: 1.4; text-align: left; width: 100%; margin-top: 0; text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+        }
+
+        /* --- ASCEND 2026 LIQUID GLASS GRID --- */
+        body.ascend_2026 #qGrid {
+            background: rgba(4, 15, 33, 0.98) !important;
+            backdrop-filter: blur(15px) !important;
+            -webkit-backdrop-filter: blur(15px) !important;
+            border-radius: 20px !important;
+            border: 2px solid rgba(255, 255, 255, 0.15) !important;
+            padding: 30px !important;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5) !important;
+            margin: auto !important;
+            width: fit-content !important;
+            animation: flip3D 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            transform-origin: center center;
+        }
+        @keyframes flip3D {
+            0% { transform: perspective(1200px) rotateX(-90deg); opacity: 0; }
+            100% { transform: perspective(1200px) rotateX(0deg); opacity: 1; }
+        }
+
+        /* --- AUDIO/VIDEO OVERLAYS --- */
+        #videoOverlay { position: fixed; inset: 0; background: #000; z-index: 5000; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        #mainVideo { width: 100%; height: 100%; object-fit: contain; }
+        @keyframes expandIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .expand-in {
+            animation: expandIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes slideUpIn {
+            0% { transform: translateY(100px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+        .slide-up-in {
+            animation: slideUpIn 0.6s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+        }
+        body { user-select: none; -webkit-user-select: none; }
+        input, textarea { user-select: text; -webkit-user-select: text; }
+        #qrCodeOverlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 9999; display: none; flex-direction: column; justify-content: center; align-items: center; }
+        .scoreboard {
+            position: absolute; top: 0; left: 0; right: 0;
+            display: none; justify-content: center; align-items: stretch;
+            padding: 20px 40px; gap: 20px; z-index: 10;
+        }
+        #qrCodeContainer { background: #fff; padding: 40px; border-radius: 20px; box-shadow: 0 0 50px rgba(0, 210, 211, 0.5); display: flex; justify-content: center; align-items: center; }
+        .qr-title { color: #00d2d3; font-size: 50px; font-weight: 800; margin-bottom: 30px; text-transform: uppercase; text-shadow: 0 0 20px rgba(0, 210, 211, 0.5); }
+        .qr-subtitle { color: #fff; font-size: 30px; margin-top: 30px; font-weight: 600; }
+        .qr-ip { color: #ff9f43; font-size: 40px; font-weight: 800; margin-top: 15px; }
+
+        body.ascend_2026 #qBoxContainer .q-scoreboard { display: none !important; }
+
+        /* ========================================================================= */
+        /* CSS FIX CHUẨN XÁC CHO GIAO DIỆN V3 (KẾ THỪA ẢNH 3 - CÁCH LY HOÀN TOÀN)  */
+        /* ========================================================================= */
+        /* Ẩn giao diện cũ KHÔNG DÙNG JS, CHỈ KHI BODY CLASS LÀ V3 */
+        body.v3 #main-container { display: none !important; }
+        body.v3 .bg-grid { display: none !important; }
+
+        /* Hộp câu hỏi chia Flexbox Ngang chuẩn xác */
+        .v3-new-root .center-content-wrapper.question-box {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: stretch !important;
+            padding: 0 !important; /* FIX: Ép viền bằng 0 */
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            height: 100%;
+            width: 100%;
+        }
+
+        /* NỘI DUNG TRÁI */
+        .v3-new-root .q-left-column.content-left {
+            flex: 1 !important;
+            position: relative !important;
+            background: rgba(10, 25, 54, 0.95);
+            border: 2px solid rgba(84, 160, 255, 0.8);
+            border-right: none;
+            border-radius: 15px 0 0 15px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* FIX THANH THỜI GIAN: Nằm bên trong khối trái, neo chặt dưới đáy */
+        .v3-new-root .time-bar-wrapper {
+            position: absolute !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 6px !important;
+            background: rgba(255, 255, 255, 0.1);
+            z-index: 20;
+        }
+
+        /* NỘI DUNG PHẢI */
+        .v3-new-root .q-right-column.content-right {
+            width: 320px !important;
+            flex-shrink: 0 !important;
+            position: relative !important;
+            background: rgba(10, 25, 54, 0.98);
+            border: 2px solid rgba(84, 160, 255, 0.8);
+            border-left: none;
+            border-radius: 0 15px 15px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding-left: 30px !important; /* Khoảng lùi cho vạch trắng */
+        }
+
+        /* FIX VẠCH TRẮNG (-20deg): Neo chặt sát viền trái của khối phải */
+        .v3-new-root .q-right-column.content-right::before {
+            content: '';
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            height: 100% !important;
+            width: 4px !important;
+            background: white !important;
+            transform: skewX(-20deg) !important;
+            transform-origin: top left !important;
+        }
+    </style>
+    <link rel="stylesheet" href="v3_anim.css?v=5">
+    <script src="qrcode.min.js"></script>
+</head>
+<body class="default main-screen">
+    <div id="qrCodeOverlay" onclick="this.style.display='none'">
+        <div class="qr-title">QUÉT MÃ ĐỂ VÀO PHÒNG THI</div>
+        <div id="qrCodeContainer"></div>
+        <div class="qr-subtitle">Hoặc truy cập bằng địa chỉ web:</div>
+        <div class="qr-ip" id="qrIpText">Đang tải IP...</div>
+    </div>
+    <div id="videoOverlay">
+        <video id="mainVideo" src=""></video>
+    </div>
+
+    <div id="overallScoreboardOverlay" style="position: fixed; inset: 0; background: #040f21 url('/Themes/Background/B1.png') center/cover no-repeat; z-index: 6000; display: none; flex-direction: column; align-items: center; justify-content: center;">
+        <div id="overallScoreboardGrid" style="display: flex; gap: 40px; width: 90%; max-width: 1600px; justify-content: space-around; align-items: flex-end;">
+            </div>
+    </div>
+
+    <div id="main-container">
+        <div class="bg-grid default-only"></div>
+        <div class="header default-only" style="display: none !important;">
+            <div class="round-title" data-i18n="scr_round">ROUND 3.2: MYSTERY BOX</div>
+        </div>
+
+        <div class="ascend-frame" id="ascendFrame" style="display: none;">
+            <div class="ascend-top-bar ascend-only">
+                <div class="ascend-pts-box" id="ascendPtsBox" data-i18n="scr_pts_empty">-- ĐIỂM</div>
+                <div class="ascend-scoreboard" id="ascendScoreboard"></div>
+            </div>
+
+            <div class="question-area">
+                <div id="packagePointsContainer"></div>
+
+                <div class="question-box" id="qBox">
+                    <div class="q-meta" id="qPoints" data-i18n="scr_pts_empty_1">- ĐIỂM</div>
+                    <div id="hopeStarBadge" class="hope-star-badge" style="display: none;"></div>
+                    <div class="question-text" id="qText" data-i18n="scr_wait">Đang chờ câu hỏi...</div>
+                </div>
+                
+                <div id="timerContainerDefault" class="default-only">
+                    <div id="timerBarDefault"></div>
+                </div>
+            </div>
+
+            <div id="timerContainerAscend" class="ascend-only">
+                <div id="timerBarAscend"></div>
+            </div>
+        </div>
+
+        <div class="grid-container" id="qGrid" style="display: none;">
+            <div class="grid-col"><div class="grid-header" id="gh10" style="color: #10ac84" data-i18n="scr_pts_10">10 ĐIỂM</div><div class="grid-cells" id="grid10"></div></div>
+            <div class="grid-col"><div class="grid-header" id="gh20" style="color: #f39c12" data-i18n="scr_pts_20">20 ĐIỂM</div><div class="grid-cells" id="grid20"></div></div>
+            <div class="grid-col"><div class="grid-header" id="gh40" style="color: #e17055" data-i18n="scr_pts_40">40 ĐIỂM</div><div class="grid-cells" id="grid40"></div></div>
+        </div>
+
+        <div class="scoreboard-area default-only" id="defaultScoreboard" style="display: none;"></div>
+    </div>
+
+    <audio id="snd_choose_each_question" src="/sounds/choose_each_question.mp3" preload="auto"></audio>
+    <audio id="snd_question_open" src="/sounds/open_question.mp3" preload="auto"></audio>
+    <audio id="snd_question_open_mode1" src="/sounds/question_open.mp3" preload="auto"></audio>
+    <audio id="snd_buzzer_5s" src="/sounds/buzzer_5s.mp3" preload="auto"></audio>
+    <audio id="snd_buzzed" src="/sounds/buzzed.mp3" preload="auto"></audio>
+    <audio id="snd_correct" src="/sounds/correct.mp3" preload="auto"></audio>
+    <audio id="snd_wrong" src="/sounds/wrong.mp3" preload="auto"></audio>
+    <audio id="snd_hope_star" src="/sounds/hope_star.mp3" preload="auto"></audio>
+    <audio id="snd_countdown_10s" src="/sounds/countdown_10s.mp3" preload="auto"></audio>
+    <audio id="snd_countdown_15s" src="/sounds/countdown_15s.mp3" preload="auto"></audio>
+    <audio id="snd_finish_turn" src="/sounds/finish_turn.mp3" preload="auto"></audio>
+    <audio id="snd_on_stage" src="/sounds/on_stage.mp3" preload="auto"></audio>
+    <audio id="snd_choose_package" src="/sounds/choose_package.mp3" preload="auto"></audio>
+
+    <script>
+        const socket = io();
+        let audioContextUnlocked = true;
+        document.addEventListener('DOMContentLoaded', () => {
+            const overlay = document.getElementById('audioUnlockOverlay');
+            if (overlay) overlay.style.display = 'none';
+        });
+
+        function unlockAudio() {
+            document.getElementById('audioUnlockOverlay').style.display = 'none';
+            if (audioContextUnlocked) return;
+            audioContextUnlocked = true;
+            let testAudio = new Audio(); testAudio.play().catch(e => {});
+        }
+
+        document.addEventListener('click', unlockAudio, { once: true });
+        document.addEventListener('keydown', unlockAudio, { once: true });
+
+        function playSound(soundId) {
+            if (!audioContextUnlocked) return;
+            const el = document.getElementById('snd_' + soundId);
+            if (el) { el.currentTime = 0; el.play().catch(e => {}); }
+        }
+        socket.on('playSound', (soundId) => { playSound(soundId); });
+
+        // VIDEO
+        const videoOverlay = document.getElementById('videoOverlay');
+        const mainVideo = document.getElementById('mainVideo');
+        socket.on('playVideo', (url) => {
+            if (url) {
+                videoOverlay.style.display = 'flex';
+                if (url.includes(':\\') || url.startsWith('C:') || url.startsWith('D:')) {
+                    mainVideo.src = '/api/video?path=' + encodeURIComponent(url);
+                } else {
+                    mainVideo.src = url;
+                }
+                mainVideo.play().catch(e => {});
+            }
+        });
+        socket.on('closeVideo', () => {
+            mainVideo.pause(); mainVideo.src = ""; videoOverlay.style.display = 'none';
+        });
+
+        // Master video sync
+        mainVideo.addEventListener('timeupdate', () => {
+            // Emit sync every ~250ms (timeupdate frequency)
+            socket.emit('videoSync', mainVideo.currentTime);
+        });
+        mainVideo.addEventListener('play', () => {
+            socket.emit('videoPlayState', 'play');
+        });
+        mainVideo.addEventListener('pause', () => {
+            socket.emit('videoPlayState', 'pause');
+        });
+
+        // COUNTDOWN
+        let timerInterval = null;
+        let currentTheme = 'default';
+
+        function getTimerEls() {
+            if (currentTheme === 'ascend_2026') {
+                return { c: document.getElementById('timerContainerAscend'), b: document.getElementById('timerBarAscend') };
+            } else {
+                return { c: document.getElementById('timerContainerDefault'), b: document.getElementById('timerBarDefault') };
+            }
+        }
+
+        function stopCountdown() {
+            let elsDefault = { c: document.getElementById('timerContainerDefault'), b: document.getElementById('timerBarDefault') };
+            let elsAscend = { c: document.getElementById('timerContainerAscend'), b: document.getElementById('timerBarAscend') };
+            clearInterval(timerInterval);
+            elsDefault.c.style.display = 'none'; elsDefault.b.style.width = '0%';
+            elsAscend.c.style.display = 'none'; elsAscend.b.style.width = '0%';
+        }
+
+        socket.on('startCountdown', (seconds) => {
+            let els = getTimerEls();
+            els.c.style.display = 'block';
+            els.b.style.width = '0%';
+            let startTime = Date.now();
+            let duration = seconds * 1000;
+            
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                let elapsed = Date.now() - startTime;
+                let percent = (elapsed / duration) * 100;
+                if (percent >= 100) {
+                    percent = 100;
+                    clearInterval(timerInterval);
+                    setTimeout(() => { els.c.style.display = 'none'; els.b.style.width = '0%'; }, 500);
+                }
+                els.b.style.width = percent + '%';
+            }, 50);
+        });
+
+        // STATE UPDATE
+        socket.on('toggleQRCode', () => {
+            const overlay = document.getElementById('qrCodeOverlay');
+            if (overlay.style.display === 'flex') {
+                overlay.style.display = 'none';
+            } else {
+                overlay.style.display = 'flex';
+                if (!currentQrIp) {
+                    updateQRCode([window.location.hostname]);
+                }
+            }
+        });
+
+        socket.on('serverIPs', (ips) => {
+            updateQRCode(ips);
+        });
+
+        function triggerV3Anim(typeOrId) {
+            let id = typeOrId;
+            if (typeOrId === 'box') id = 'qBoxContainer';
+            else if (typeOrId === 'grid') id = 'qGridContainer';
+            
+            const container = document.getElementById(id);
+            if (!container) return;
+            
+            container.classList.remove('run-anim');
+            void container.offsetWidth; // trigger reflow
+            container.classList.add('run-anim');
+            container.style.display = ''; // Let CSS run-anim take over
+        }
+        socket.on('runV3Anim', (type) => triggerV3Anim(type));
+
+
+
+        let currentQrIp = "";
+        function updateQRCode(ips) {
+            let ip = 'localhost';
+            if (ips && ips.length > 0) {
+                ip = ips.find(ip => ip !== '127.0.0.1' && ip !== '::1') || ips[0];
+            }
+            let port = window.location.port || 39281;
+            let url = `http://${ip}:${port}`;
+            if (currentQrIp === url) return; // already drawn
+            
+            currentQrIp = url;
+            document.getElementById('qrIpText').innerText = url;
+            const container = document.getElementById('qrCodeContainer');
+            container.innerHTML = ''; // clear old
+            try {
+                new QRCode(container, {
+                    text: url,
+                    width: 400,
+                    height: 400,
+                    colorDark : "#040f21",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+            } catch(e) {
+                console.error("Lỗi tạo QR:", e);
+                container.innerHTML = '<div style="color:red; font-size:20px;">Lỗi tạo QR Code. Đảm bảo qrcode.min.js đã được tải.</div>';
+            }
+        }
+        socket.on('updateState', (state) => {
+            console.log('[DEBUG screen.html updateState] callback triggered, theme =', state.settings ? state.settings.theme : 'N/A');
+            // ================= FONT LOGIC =================
+            if (state.settings) {
+                let s = state.settings;
+                let globalEnabled = s.globalFontEnabled || false;
+                let fGlobal = s.fontGlobal || 'SF Pro Display Bold';
+                let fGeneral = s.fontGeneral || 'SF Pro Display Bold';
+                let fQuestion = s.fontQuestion || 'SF Pro Display Bold';
+                let fTeam = s.fontTeamName || 'SF Pro Display Bold';
+                let fScore = s.fontScore || 'Orbitron';
+                
+                let styleEl = document.getElementById('dynamic-font-styles-global');
+                if (!styleEl) {
+                    styleEl = document.createElement('style');
+                    styleEl.id = 'dynamic-font-styles-global';
+                    document.head.appendChild(styleEl);
+                }
+                
+                let rules = '';
+                if (globalEnabled) {
+                    rules += `@font-face { font-family: 'CustomFontGlobal'; src: url('/font/${encodeURIComponent(fGlobal)}') format('truetype'); }\n`;
+                    rules += `:root { 
+                        --font-general: 'CustomFontGlobal', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-team-name: 'CustomFontGlobal', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-score: 'CustomFontGlobal', 'Orbitron', sans-serif;
+                        --font-question: 'CustomFontGlobal', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                    }`;
+                } else {
+                    rules += `@font-face { font-family: 'CustomFontGeneral'; src: url('/font/${encodeURIComponent(fGeneral)}') format('truetype'); }\n`;
+                    rules += `@font-face { font-family: 'CustomFontQuestion'; src: url('/font/${encodeURIComponent(fQuestion)}') format('truetype'); }\n`;
+                    rules += `@font-face { font-family: 'CustomFontTeamName'; src: url('/font/${encodeURIComponent(fTeam)}') format('truetype'); }\n`;
+                    rules += `@font-face { font-family: 'CustomFontScore'; src: url('/font/${encodeURIComponent(fScore)}') format('truetype'); }\n`;
+                    
+                    rules += `:root { 
+                        --font-general: 'CustomFontGeneral', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-team-name: 'CustomFontTeamName', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-score: 'CustomFontScore', 'Orbitron', sans-serif;
+                        --font-question: 'CustomFontQuestion', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                    }`;
+                }
+                
+                if (styleEl.innerHTML !== rules) {
+                    styleEl.innerHTML = rules;
+                }
+            }
+            // ===============================================
+
+            if (!state.teams) return;
+
+            // Xử lý ẩn hiện theo vòng (activeRound)
+            const mainContainer = document.getElementById('main-container');
+            if (mainContainer) {
+                mainContainer.style.transition = 'opacity 0.3s, visibility 0.3s';
+                mainContainer.style.visibility = 'visible';
+                mainContainer.style.opacity = '1';
+            }
+            const round1Timer = document.getElementById('round1-timer-container');
+            if (round1Timer) {
+                round1Timer.style.opacity = state.activeRound === 1 ? '1' : '0';
+                round1Timer.style.visibility = state.activeRound === 1 ? 'visible' : 'hidden';
+            }
+
+            if (state.activeRound === 1 && false) {
+                document.body.style.background = 'transparent';
+                document.documentElement.style.background = 'transparent';
+            } else {
+                document.body.style.background = '';
+                document.documentElement.style.background = '';
+            }
+
+            // 0. Settings
+            if (state.settings) {
+                currentTheme = state.settings.theme || 'default';
+                document.body.className = currentTheme + ' main-screen';
+                document.body.style.filter = `brightness(${(state.settings.brightness || 100) / 100})`;
+                autoScale();
+            }
+
+            // 1. Scoreboard (Render to both places, CSS handles visibility)
+            let html = '';
+            state.teams.forEach(team => {
+                let isMain = false;
+                if (state.currentQuestion.active) {
+                    isMain = (state.currentQuestion.mainTeamId === team.id);
+                } else {
+                    isMain = (state.turnOrder && state.turnOrder.length > 0 && state.turnOrder[0] === team.id);
+                }
+                
+                let isBuzzed = state.buzzedTeam === team.id;
+                let classes = 'team-card';
+                if (isMain) classes += ' is-main';
+                if (isBuzzed) classes += ' buzzed';
+                
+                let teamNameDisplay = team.name;
+
+                html += `
+                    <div class="${classes}" data-team="${team.id}">
+                        <div class="team-name" style="display:flex; align-items:center; justify-content:center;"><span class="name-inner" style="display:inline-block; transform-origin:center center;">${teamNameDisplay}</span></div>
+                        <div class="team-school">${team.school || '&nbsp;'}</div>
+                        <div class="team-score">${team.score}</div>
+                    </div>
+                `;
+            });
+            document.getElementById('defaultScoreboard').innerHTML = html;
+            document.getElementById('ascendScoreboard').innerHTML = html;
+
+            // Render scoreboard for V3 question box
+            const qBoxScoreboard = document.getElementById('qBoxScoreboard');
+            if (qBoxScoreboard && state.teams) {
+                let qScoreHtml = '';
+                state.teams.forEach((team, idx) => {
+                    let isMain = false;
+                    if (state.currentQuestion.active) {
+                        isMain = (state.currentQuestion.mainTeamId === team.id);
+                    } else {
+                        isMain = (state.turnOrder && state.turnOrder.length > 0 && state.turnOrder[0] === team.id);
+                    }
+                    
+                    let isEconovaV3 = currentTheme === 'v3';
+                    
+                    if (isEconovaV3) {
+                        if (isMain) {
+                            qScoreHtml += `
+                                <div class="q-score-item q-team-tab ${isMain ? 'active' : ''}" id="qt-${idx}">
+                                    <span class="q-score-name q-team-name">${idx + 1}. ${team.name}</span>
+                                </div>
+                            `;
+                        } else {
+                            qScoreHtml += `
+                                <div class="q-score-item q-team-tab" id="qt-${idx}">
+                                    <span class="q-score-name q-team-name">${idx + 1}. ${team.name} (${team.score})</span>
+                                </div>
+                            `;
+                        }
+                    } else {
+                        qScoreHtml += `
+                            <div class="q-score-item q-team-tab ${isMain ? 'active' : ''}" id="qt-${idx}">
+                                <span class="q-score-name q-team-name">${idx + 1}. ${team.name}</span>
+                                <span class="q-score-value q-team-score" id="qs-${idx}">${team.score}</span>
+                            </div>
+                        `;
+                    }
+                    if (currentTheme === 'v3' && idx < state.teams.length - 1) {
+                        qScoreHtml += `<div class="q-separator"></div>`;
+                    }
+                });
+                qBoxScoreboard.innerHTML = qScoreHtml;
+            }
+
+            // Overall Scoreboard Update
+            if (state.showOverallScoreboard) {
+                document.getElementById('overallScoreboardOverlay').style.display = 'flex';
+                if (state.scoreboardBg) {
+                    document.getElementById('overallScoreboardOverlay').style.backgroundImage = `url(${state.scoreboardBg})`;
+                } else {
+                    document.getElementById('overallScoreboardOverlay').style.backgroundImage = `url('/Themes/Background/B1.png')`;
+                }
+
+                // Fonts & avatar settings
+                let fontTeamName = (state.settings && state.settings.fontTeamName) ? state.settings.fontTeamName : "'SF Pro Display Bold', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+                let fontScore = (state.settings && state.settings.fontScore) ? state.settings.fontScore : "'SF Pro Display Bold', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+                let avatarSize = (state.settings && state.settings.avatarSize !== undefined) ? state.settings.avatarSize : 100;
+                let avatarOverlap = (state.settings && state.settings.avatarOverlap !== undefined) ? state.settings.avatarOverlap : 10;
+
+                let title = (state.settings && state.settings.scoreboardTitle) ? state.settings.scoreboardTitle.trim() : '';
+
+                // Render teams for overall scoreboard
+                let teamHtml = '';
+                state.teams.forEach(team => {
+                    let avatarUrl = `/Themes/Avatars/${team.id}.png`;
+                    if (state.avatarTimestamps && state.avatarTimestamps[team.id]) {
+                        avatarUrl += `?t=${state.avatarTimestamps[team.id]}`;
+                    }
+                    
+                    let tSize = team.avatarSize !== undefined ? team.avatarSize : 100;
+                    let tOverlap = team.avatarOverlap !== undefined ? team.avatarOverlap : 10;
+                    let tOffsetX = team.avatarOffsetX !== undefined ? team.avatarOffsetX : 0;
+
+                    teamHtml += `
+                        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; min-width: 0;">
+                            
+                            <img src="${avatarUrl}" style="width: ${tSize}%; height: auto; max-height: 65vh; object-fit: contain; z-index: 1; transform: translateX(${tOffsetX}%);" onerror="this.style.visibility='hidden'">
+                            
+                            <div style="width: ${Math.min(tSize, 100)}%; margin-top: -${tOverlap}%; z-index: 2; display: flex; flex-direction: column; border: 3px solid rgba(255, 255, 255, 0.9); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden;">
+                                <div class="overall-team-name-container" style="background: linear-gradient(180deg, #d2e4f6, #9bc2ea); padding: 8px 10px; text-align: center; border-bottom: 2px solid rgba(255,255,255,0.5); overflow: hidden; display: flex; justify-content: center;">
+                                    <div class="overall-team-name-inner" style="font-family: 'CustomTeamFont', '${fontTeamName}', sans-serif; font-size: 26px; font-weight: normal; color: #012a5e; margin: 0; text-transform: uppercase; white-space: nowrap; transform-origin: center;">${team.name}</div>
+                                </div>
+                                <div style="background: linear-gradient(180deg, #1059a4, #083466); padding: 12px 10px; text-align: center;">
+                                    <div style="font-family: 'CustomScoreFont', '${fontScore}', sans-serif; font-size: 50px; font-weight: normal; color: #ffffff; margin: 0; line-height: 1;">${team.score}</div>
+                                </div>
+                            </div>
+
+                        </div>
+                    `;
+                });
+
+                let yOffset = (state.settings && state.settings.scoreboardY !== undefined) ? state.settings.scoreboardY : 50;
+
+                let titleHtml = title 
+                    ? `<div style="position:absolute; top: 10%; width: 100%; text-align: center; z-index: 10;">
+                            <span style="font-family:'CustomTeamFont', '${fontTeamName}',sans-serif;font-size:75px;font-weight:normal;color:#fff;text-shadow:0 4px 15px rgba(0,0,0,0.8),0 2px 5px rgba(0,0,0,0.5);letter-spacing:4px;text-transform:uppercase;">${title}</span>
+                       </div>`
+                    : '';
+
+                let overallHtml = `
+                    ${titleHtml}
+                    <div style="position:absolute;width:100%;top:${yOffset}%;transform:translateY(-${yOffset}%);display:flex;justify-content:center;z-index:5;">
+                        <div id="overallScoreboardGrid" style="display:flex;gap:40px;width:90%;max-width:1600px;justify-content:space-around;align-items:flex-end;">
+                            ${teamHtml}
+                        </div>
+                    </div>
+                `;
+
+                let cleanTeam = fontTeamName.replace(/\s+/g, '');
+                let dashTeam = fontTeamName.replace(/\s+/g, '-');
+                let cleanScore = fontScore.replace(/\s+/g, '');
+                let dashScore = fontScore.replace(/\s+/g, '-');
+
+                let styleEl = document.getElementById('dynamic-font-styles');
+                if (!styleEl) {
+                    styleEl = document.createElement('style');
+                    styleEl.id = 'dynamic-font-styles';
+                    document.head.appendChild(styleEl);
+                }
+                let newStyles = `
+                    @font-face { font-family: 'CustomTeamFont'; src: url('/font/${encodeURIComponent(fontTeamName)}') format('truetype'); }
+                    @font-face { font-family: 'CustomScoreFont'; src: url('/font/${encodeURIComponent(fontScore)}') format('truetype'); }
+                `;
+                if (styleEl.innerHTML !== newStyles) {
+                    styleEl.innerHTML = newStyles;
+                }
+
+                document.getElementById('overallScoreboardOverlay').innerHTML = overallHtml;
+                
+                // Scale team names in overall scoreboard if too long
+                requestAnimationFrame(() => {
+                    document.querySelectorAll('#overallScoreboardGrid .overall-team-name-container').forEach(container => {
+                        let inner = container.querySelector('.overall-team-name-inner');
+                        if (inner) {
+                            inner.style.transform = 'scaleX(1)';
+                            let avail = container.clientWidth - 20; // padding
+                            if (inner.scrollWidth > avail && avail > 0) {
+                                let scale = avail / inner.scrollWidth;
+                                inner.style.transform = `scaleX(${scale})`;
+                            }
+                        }
+                    });
+                });
+            } else {
+                document.getElementById('overallScoreboardOverlay').style.display = 'none';
+            }
+
+            // Tự động thu nhỏ (Scale) nếu tên quá dài (Bound text)
+            if (currentTheme === 'ascend_2026') {
+                requestAnimationFrame(() => {
+                    document.querySelectorAll('#ascendScoreboard .team-card').forEach(card => {
+                        let nameContainer = card.querySelector('.team-name');
+                        let inner = card.querySelector('.name-inner');
+                        if (nameContainer && inner) {
+                            inner.style.transform = 'scaleX(1)'; // Reset
+                            let avail = nameContainer.clientWidth - 10; // 10px safe margin
+                            if (inner.scrollWidth > avail && avail > 0) {
+                                let scale = avail / inner.scrollWidth;
+                                inner.style.transform = `scaleX(${scale})`;
+                            }
+                        }
+                    });
+                });
+            }
+
+            // Language settings applied dynamically now via applyTranslations
+            const lang = (state.settings && state.settings.language) || 'vi';
+            applyTranslations(lang);
+            const textPts = t('scr_pts', lang);
+            const textWait = t('scr_wait', lang);
+
+            // 2. Grid
+            document.getElementById('gh10').textContent = `10 ${textPts}`;
+            document.getElementById('gh20').textContent = `20 ${textPts}`;
+            document.getElementById('gh40').textContent = `40 ${textPts}`;
+
+            const mode = state.lockedPackage ? state.lockedPackage.mode : (state.settings ? state.settings.questionSelectionMode : 1);
+            const ptsList = [10, 20, 40];
+            ptsList.forEach(pts => {
+                const container = document.getElementById('grid' + pts);
+                if (container) {
+                    container.innerHTML = '';
+                    
+                    if (mode === 1) {
+                        container.classList.add('mode1-grid');
+                        container.style.display = ''; // Let CSS run-anim take over
+                        container.style.flexWrap = 'wrap';
+                        container.style.justifyContent = 'center';
+                        let count = (state.questionCount && state.questionCount[pts] !== undefined) ? state.questionCount[pts] : 12;
+                        let rows = count > 18 ? 3 : (count > 6 ? 2 : 1);
+                        
+                        for (let i = 0; i < count; i++) {
+                            let isPlayed = false;
+                            if (state.playedQuestions && state.playedQuestions[pts] && state.playedQuestions[pts].includes(i)) {
+                                isPlayed = true;
+                            }
+                            
+                            let itemsThisRow = count;
+                            if (rows === 2) {
+                                let itemsR1 = Math.floor(count / 2);
+                                let itemsR2 = count - itemsR1;
+                                itemsThisRow = (i < itemsR1) ? itemsR1 : itemsR2;
+                            } else if (rows === 3) {
+                                let base = Math.floor(count / 3);
+                                let extra = count % 3;
+                                let itemsR1 = base + (extra > 0 ? 1 : 0);
+                                let itemsR2 = base + (extra > 1 ? 1 : 0);
+                                if (i < itemsR1) itemsThisRow = itemsR1;
+                                else if (i < itemsR1 + itemsR2) itemsThisRow = itemsR2;
+                                else itemsThisRow = count - itemsR1 - itemsR2;
+                            }
+                            
+                            let flexBasis = `calc((100% - ${(itemsThisRow - 1) * 10}px) / ${itemsThisRow})`;
+                            container.innerHTML += `<div class="q-cell active-tab ${isPlayed ? 'played' : ''}" style="flex: 0 0 ${flexBasis}; width: ${flexBasis}; max-width: ${flexBasis}; min-width: 0; padding: 0; box-sizing: border-box; animation-delay: ${i * 0.05}s;">${i + 1}</div>`;
+                        }
+                    } else {
+                        container.classList.remove('mode1-grid');
+                        let pkg = state.lockedPackage || state.pendingPackage;
+                        let rawQuestions = pkg ? (pkg.questions || pkg.package || []) : [];
+                        let qPerTeam = (state.settings && state.settings.questionsPerTeam) || 3;
+                        
+                        for (let i = 0; i < qPerTeam; i++) {
+                            let qData = rawQuestions[i];
+                            if (qData && qData.points === pts) {
+                                let isPlayed = false;
+                                let isCurrent = false;
+                                if (state.lockedPackage) {
+                                    if (pkg.currentIndex > i) {
+                                        isPlayed = true;
+                                    } else if (pkg.currentIndex === i) {
+                                        if (state.currentQuestion && state.currentQuestion.resolved) {
+                                            isPlayed = true;
+                                        } else if (state.currentQuestion && state.currentQuestion.active) {
+                                            isCurrent = true;
+                                        }
+                                    }
+                                }
+                                
+                                let qNumberText = "";
+                                let cellClass = "inactive-tab";
+                                let isChosen = (qData.idx !== undefined && qData.idx !== -1);
+                                
+                                if (isPlayed) {
+                                    cellClass = "played";
+                                    qNumberText = pkg.mode === 3 ? "" : (qData.idx + 1);
+                                } else if (isCurrent) {
+                                    cellClass = "active-tab";
+                                    qNumberText = pkg.mode === 3 ? "" : (qData.idx + 1);
+                                } else if (isChosen) {
+                                    cellClass = "active-tab";
+                                    qNumberText = pkg.mode === 3 ? "" : (qData.idx + 1);
+                                }
+                                
+                                if (currentTheme === 'v3') {
+                                    let isSelected = isPlayed || isCurrent || isChosen;
+                                    let content = `<span>${pts}</span>`;
+                                    if (isSelected && pkg.mode === 2) {
+                                        let N = qData.idx + 1;
+                                        content += `<div class="v3-cell-index-badge">${N}</div>`;
+                                    }
+                                    let v3Class = isSelected ? `${cellClass} v3-selected` : cellClass;
+                                    container.innerHTML += `<div class="q-cell ${v3Class}" data-idx="${qData.idx}">${content}</div>`;
+                                } else {
+                                    container.innerHTML += `<div class="q-cell ${cellClass}" data-idx="${qData.idx}">${qNumberText}</div>`;
+                                }
+                            } else {
+                                container.innerHTML += `<div class="q-cell inactive-tab"></div>`;
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 3. Question Logic
+            const qBox = (document.getElementById('qBoxscreen-mode') || document.getElementById('qBox'));
+            const qGrid = document.getElementById('qGrid');
+            const qPoints = document.getElementById('qPoints');
+            const qText = document.getElementById('qText');
+            const hopeStarBadge = document.getElementById('hopeStarBadge');
+            const ascendPtsBox = document.getElementById('ascendPtsBox');
+
+            let q = state.currentQuestion;
+
+
+
+            function applyDOMPositions() {
+                const qBox = (document.getElementById('qBoxscreen-mode') || document.getElementById('qBox'));
+                const qGrid = document.getElementById('qGrid');
+                const hopeStarBadge = document.getElementById('hopeStarBadge');
+                
+                const isV3Package = currentTheme === 'v3' && state.lockedPackage !== null;
+                
+                if (isV3Package) {
+                    if (qBox && qBox.parentElement.id !== 'v3BoxWrapper') {
+                        document.getElementById('v3BoxWrapper').appendChild(qBox);
+                        document.getElementById('qBoxContainer').appendChild(hopeStarBadge);
+                        qBox.style.display = 'flex';
+                    }
+                    if (qGrid && qGrid.parentElement.id !== 'v3GridWrapper') {
+                        document.getElementById('v3GridWrapper').appendChild(qGrid);
+                        qGrid.style.display = 'flex';
+                    }
+                } else {
+                    if (qBox && qBox.parentElement.id === 'v3BoxWrapper') {
+                        document.getElementById('qBoxContainer').insertAdjacentElement('afterend', qBox);
+                        qBox.appendChild(hopeStarBadge);
+                    }
+                    if (qGrid && qGrid.parentElement.id === 'v3GridWrapper') {
+                        document.getElementById('qGridContainer').insertAdjacentElement('afterend', qGrid);
+                    }
+                }
+            }
+
+            
+            function applyVisibility(state) {
+                const ascendFrame = document.getElementById('ascendFrame');
+                const defScoreboard = document.getElementById('defaultScoreboard');
+                const qArea = document.querySelector('.question-area');
+                const qBoxNode = document.getElementById('qBox');
+                const qGridNode = document.getElementById('qGrid');
+                
+                let isMode1 = state.settings ? state.settings.questionSelectionMode === 1 : true;
+                if (state.lockedPackage) isMode1 = (state.lockedPackage.mode === 1);
+                
+                let showGrid = false;
+                let showQBox = false;
+                
+                if (isMode1) {
+                    if (q.active) {
+                        showQBox = true;
+                    } else if (state.lockedPackage || state.pendingPackage) {
+                        showGrid = true;
+                    }
+                } else {
+                    if (q.active) {
+                        showQBox = true;
+                    } else if (state.lockedPackage || state.pendingPackage) {
+                        showGrid = true;
+                    }
+                }
+                
+                // Admin manual overrides if any
+                const isOverlay = window.location.pathname.includes('overlay');
+                if (state.isGridVisibleOnOverlay) {
+                    showGrid = true;
+                    showQBox = false; // Grid overrides question if admin forces it?
+                }
+
+                if (showQBox) {
+                    if (qGridNode) qGridNode.style.display = 'none';
+                    if (qArea) qArea.style.display = 'flex';
+                    if (ascendFrame) {
+                        if (currentTheme === 'ascend_2026') {
+                            ascendFrame.style.display = 'flex';
+                            if (!ascendFrame.classList.contains('slide-up-in')) {
+                                void ascendFrame.offsetWidth;
+                                ascendFrame.classList.add('slide-up-in');
+                            }
+                        } else {
+                            ascendFrame.style.display = 'none';
+                        }
+                    }
+                    if (defScoreboard) {
+                        defScoreboard.style.display = 'flex';
+                        if (!defScoreboard.classList.contains('slide-up-in')) {
+                            void defScoreboard.offsetWidth;
+                            defScoreboard.classList.add('slide-up-in');
+                        }
+                    }
+                    if (qBoxNode) {
+                        qBoxNode.style.display = 'flex';
+                        qBoxNode.classList.remove('econova-mode');
+                        if (!qBoxNode.classList.contains('slide-up-in')) {
+                            void qBoxNode.offsetWidth;
+                            qBoxNode.classList.add('slide-up-in');
+                        }
+                    }
+                } else if (showGrid) {
+                    if (qArea) qArea.style.display = 'flex';
+                    if (qBoxNode) qBoxNode.style.display = 'none';
+                    if (ascendFrame) {
+                        ascendFrame.style.display = 'none';
+                    }
+                    if (defScoreboard) defScoreboard.style.display = 'none'; 
+                    if (qGridNode) {
+                        qGridNode.style.display = 'flex';
+                        if (!qGridNode.classList.contains('slide-up-in')) {
+                            void qGridNode.offsetWidth;
+                            qGridNode.classList.add('slide-up-in');
+                        }
+                    }
+                } else {
+                    // Waiting
+                    if (qArea) qArea.style.display = 'flex';
+                    if (qBoxNode) qBoxNode.style.display = 'none';
+                    if (qGridNode) qGridNode.style.display = 'none';
+                    
+                    if (currentTheme === 'ascend_2026') {
+                        if (defScoreboard) defScoreboard.style.display = 'none';
+                        if (ascendFrame) {
+                            ascendFrame.style.display = 'flex';
+                            if (!ascendFrame.classList.contains('slide-up-in')) {
+                                void ascendFrame.offsetWidth;
+                                ascendFrame.classList.add('slide-up-in');
+                            }
+                        }
+                    } else {
+                        if (defScoreboard) defScoreboard.style.display = 'none';
+                        if (ascendFrame) ascendFrame.style.display = 'none';
+                    }
+                }
+            }
+
+            if (q.active && !window.lastActiveState && q.idx !== null && currentTheme !== 'v3') {
+                window.isAnimating = true;
+                if (currentTheme === 'v3') {
+                    // Handled by V3 script block
+                } else {
+                    if (document.getElementById('qGrid')) document.getElementById('qGrid').style.display = 'flex'; 
+                    if (document.getElementById('qBox')) document.getElementById('qBox').style.display = 'none'; 
+                }
+                hopeStarBadge.style.display = 'none';
+                
+                if (currentTheme === 'ascend_2026') {
+                    // Default to grey background
+                    ascendPtsBox.style.background = 'linear-gradient(135deg, #f5f6fa, #dcdde1)';
+                    ascendPtsBox.style.color = '#2f3640';
+                    
+                    if (q && q.active) {
+                        // Handled in setTimeout to turn blue
+                    } else {
+                        // Question not active (Grid is showing)
+                        if (state.lockedPackage && (state.lockedPackage.mode === 2 || state.lockedPackage.mode === 3)) {
+                            // Mode 2/3: Show points immediately with grey background
+                            let pts = q ? q.points : '';
+                            ascendPtsBox.textContent = pts ? `${pts} ${textPts}` : '';
+                        } else {
+                            // Mode 1: Empty text
+                            ascendPtsBox.textContent = '';
+                        }
+                    }
+                } else {
+                    ascendPtsBox.textContent = `${q.points} ${textPts}`;
+                }
+        
+                
+                const container = document.getElementById('grid' + q.points);
+                let cell = null;
+                if (container && container.children[q.idx]) {
+                    cell = container.children[q.idx];
+                    cell.classList.add('selected-anim');
+                }
+                setTimeout(() => {
+                    if (cell) cell.classList.remove('selected-anim');
+                    
+                    if (currentTheme === 'v3') {
+                        // Handled by V3 script block
+                    } else {
+                        window.isAnimating = false;
+                        if (window.currentState && window.currentState.currentQuestion.active) applyVisibility(window.currentState);
+                    }
+                }, 1000);
+            } else if (!window.isAnimating) {
+                applyVisibility(state);
+            }
+
+            window.lastActiveState = q.active;
+            window.currentState = state;
+
+        });
+
+        function autoScale() {
+            const baseW = 1920;
+            const baseH = 1080;
+            const scaleX = window.innerWidth / baseW;
+            const scaleY = window.innerHeight / baseH;
+            const responsiveScale = Math.min(scaleX, scaleY);
+            
+            const manualScale = (window.currentState && window.currentState.settings && window.currentState.settings.scale) ? window.currentState.settings.scale / 100 : 1;
+            
+            document.getElementById('main-container').style.transform = `scale(${responsiveScale * manualScale})`;
+        }
+        window.addEventListener('resize', autoScale);
+        autoScale();
+
+        function autoScaleTeamNames() {
+            if (currentTheme === 'ascend_2026') {
+                document.querySelectorAll('#ascendScoreboard .team-card').forEach(card => {
+                    let nameContainer = card.querySelector('.team-name');
+                    let inner = card.querySelector('.name-inner');
+                    if (nameContainer && inner) {
+                        inner.style.transform = 'scaleX(1)';
+                        let avail = nameContainer.clientWidth - 10;
+                        if (inner.scrollWidth > avail && avail > 0) {
+                            inner.style.transform = `scaleX(${avail / inner.scrollWidth})`;
+                        }
+                    }
+                });
+            } else {
+                document.querySelectorAll('#compactScoreboard .compact-team-name').forEach(nameContainer => {
+                    let inner = nameContainer.querySelector('.name-inner');
+                    if (nameContainer && inner) {
+                        inner.style.transform = 'scaleX(1)';
+                        let avail = nameContainer.clientWidth - 5;
+                        if (inner.scrollWidth > avail && avail > 0) {
+                            inner.style.transform = `scaleX(${avail / inner.scrollWidth})`;
+                        }
+                    }
+                });
+            }
+            document.querySelectorAll('#overallScoreboardGrid .overall-team-name-container').forEach(container => {
+                let inner = container.querySelector('.overall-team-name-inner');
+                if (inner) {
+                    inner.style.transform = 'scaleX(1)';
+                    let avail = container.clientWidth - 20;
+                    if (inner.scrollWidth > avail && avail > 0) {
+                        inner.style.transform = `scaleX(${avail / inner.scrollWidth})`;
+                    }
+                }
+            });
+        }
+        setInterval(autoScaleTeamNames, 1000);
+
+        // --- VÒNG 1: ĐỒNG HỒ ĐẾM NGƯỢC ---
+        let round1TimerInterval = null;
+        let round1TimeSeconds = 0;
+
+        function updateRound1TimerDisplay() {
+            let m = Math.floor(round1TimeSeconds / 60);
+            let s = round1TimeSeconds % 60;
+            document.getElementById('round1-timer-text').innerText = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+        }
+
+        socket.on('timer-config-updated', (config) => {
+            const container = document.getElementById('round1-timer-container');
+            const text = document.getElementById('round1-timer-text');
+            
+            // Dynamic position
+            container.style.top = 'auto';
+            container.style.bottom = 'auto';
+            container.style.left = 'auto';
+            container.style.right = 'auto';
+            container.style.transform = 'none';
+
+            let margin = '50px';
+            switch (config.position) {
+                case 'top-left':
+                    container.style.top = margin; container.style.left = margin;
+                    break;
+                case 'top-center':
+                    container.style.top = margin; container.style.left = '50%'; container.style.transform = 'translateX(-50%)';
+                    break;
+                case 'top-right':
+                    container.style.top = margin; container.style.right = margin;
+                    break;
+                case 'bottom-left':
+                    container.style.bottom = margin; container.style.left = margin;
+                    break;
+                case 'bottom-center':
+                    container.style.bottom = margin; container.style.left = '50%'; container.style.transform = 'translateX(-50%)';
+                    break;
+                case 'bottom-right':
+                    container.style.bottom = margin; container.style.right = margin;
+                    break;
+            }
+
+            // Dynamic styles
+            text.style.fontSize = config.fontSize + 'px';
+            text.style.color = config.fontColor;
+            text.style.webkitTextStroke = `${config.strokeWidth}px ${config.strokeColor}`;
+            text.style.fontFamily = config.fontFamily;
+            text.style.fontWeight = config.isBold ? 'bold' : 'normal';
+            text.style.fontStyle = config.isItalic ? 'italic' : 'normal';
+            text.style.textDecoration = config.isUnderline ? 'underline' : 'none';
+        });
+
+        socket.on('timer-action', (action) => {
+            const container = document.getElementById('round1-timer-container');
+            if (action.type === 'SET_TIME') {
+                round1TimeSeconds = action.seconds;
+                updateRound1TimerDisplay();
+                container.style.display = 'block';
+            } else if (action.type === 'PLAY') {
+                container.style.display = 'block';
+                if (!round1TimerInterval) {
+                    round1TimerInterval = setInterval(() => {
+                        if (round1TimeSeconds > 0) {
+                            round1TimeSeconds--;
+                            updateRound1TimerDisplay();
+                        } else {
+                            clearInterval(round1TimerInterval);
+                            round1TimerInterval = null;
+                        }
+                    }, 1000);
+                }
+            } else if (action.type === 'PAUSE') {
+                if (round1TimerInterval) {
+                    clearInterval(round1TimerInterval);
+                    round1TimerInterval = null;
+                }
+            } else if (action.type === 'RESET') {
+                if (round1TimerInterval) {
+                    clearInterval(round1TimerInterval);
+                    round1TimerInterval = null;
+                }
+                container.style.display = 'none';
+            }
+        });
+    </script>
+
+    <div id="round1-timer-container" style="display: none; position: absolute; background-color: transparent !important; z-index: 1000; transition: all 0.3s; pointer-events: none; text-align: center;">
+        <span id="round1-timer-text">00:00</span>
+    </div>
+
+<div id="v3-wrapper" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 1600px; height: 420px; z-index: 5000;">
+    <div id="v3MasterContainer" class="v3-new-root screen-mode" style="display: flex;">
+        <!-- Shared Arrows -->
+        <div class="arrow-cyan ghost-l1 left-dir"></div>
+        <div class="arrow-cyan ghost-l2 left-dir"></div>
+        <div class="arrow-cyan l3 left-dir"></div>
+        <div class="arrow-navy left-dir"></div>
+
+        <div style="position:relative; width:100%; height:100%; flex:1; display:flex; align-items:center; justify-content:center;">
+            <!-- Question Box Layer -->
+            <div class="center-box" id="qBoxV3" style="position:absolute; width:100%; height:100%; display:none; flex-direction:column; background:linear-gradient(180deg, #001122, #003355); padding:2px; box-sizing:border-box;">
+                <div class="v3-oly-topbar" id="qBoxScoreboardV3" style="display:flex; justify-content:center; align-items:center; gap:20px; background:linear-gradient(90deg,#00cfff,#0088cc); padding:10px; font-weight:bold; font-size:24px; color:white;">
+                    <!-- Teams will be injected here -->
+                </div>
+                <div style="display:flex; flex:1; flex-direction:row;">
+                    <div class="v3-oly-main" style="flex:1; display:flex; padding:20px; align-items:center; justify-content:center;">
+                        <div class="q-text-area" id="qTextV3" data-i18n="scr_wait" style="font-size:36px; text-align:center; color:white; width:100%;">Đang tải...</div>
+                    </div>
+                    <div class="v3-oly-sidebar" id="v3EconovaPanelV3" style="width:250px; background:rgba(0,0,0,0.3); border-left:2px solid #00cfff; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px;">
+                        <div class="big-score-wrap-full" style="background:transparent;"><div class="big-score" id="v3EconovaScoreV3" style="font-size:80px; color:#ffcc00; text-shadow:0 0 10px rgba(255,204,0,0.5);">0</div></div>
+                        <div class="q-right-divider-horizontal" style="width:80%; height:2px; background:#00cfff; margin:20px 0;"></div>
+                        <div class="small-pts-wrap-full" id="v3EconovaPointsWrapperV3" style="font-size:32px; font-weight:bold; color:#00cfff;"></div>
+                    </div>
+                </div>
+                <div class="v3-oly-timer-container" id="timerContainerV3" style="height:20px; background:#111; position:relative; overflow:hidden;">
+                    <div id="timerBarV3" class="time-bar-fill" style="height:100%; width:0%; background:linear-gradient(90deg, #ccc, #fff); transition:width 1s linear;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grid Layer -->
+            <div class="center-box grid-center" id="qGridV3" style="position:absolute; width:100%; height:100%; display:none; justify-content:center; align-items:center;">
+                <div class="grid-content-wrapper qGrid v3-grid-wrapper" style="flex-direction: column;">
+                    <div class="v3-grid-row" id="grid10-v3"></div>
+                    <div class="v3-grid-row" id="grid20-v3"></div>
+                    <div class="v3-grid-row" id="grid40-v3"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="arrow-navy right-dir"></div>
+        <div class="arrow-cyan l3 right-dir"></div>
+        <div class="arrow-cyan ghost-l2 right-dir"></div>
+        <div class="arrow-cyan ghost-l1 right-dir"></div>
+    </div>
+</div>
+<script id="v3-script">
+document.addEventListener('DOMContentLoaded', () => {
+    let currentV3State = null;
+    let mainContainer = document.getElementById('main-container') || document.body.firstElementChild; 
+    let v3Wrapper = document.getElementById('v3-wrapper');
+    let isEconovaV3 = false;
+
+    // Listen to all relevant socket events to mirror the state into V3 independently
+    if (typeof socket !== 'undefined') {
+        socket.on('updateState', (state) => {
+            currentV3State = state;
+            if (state && state.settings && state.settings.theme === 'v3') {
+                isEconovaV3 = true;
+                v3Wrapper.style.display = 'block';
+                // Find .question-area inside main-container and hide it
+                const qArea = document.querySelector('.question-area');
+                if (qArea) {
+                    qArea.style.opacity = '0';
+                    qArea.style.visibility = 'hidden';
+                }
+                
+                // Hide timer Container Default
+                const timerDefault = document.getElementById('timerContainerDefault');
+                if (timerDefault) {
+                    timerDefault.style.opacity = '0';
+                    timerDefault.style.visibility = 'hidden';
+                }
+                
+                renderV3(state);
+            } else {
+                isEconovaV3 = false;
+                v3Wrapper.style.display = 'none';
+                const qArea = document.querySelector('.question-area');
+                if (qArea) {
+                    qArea.style.opacity = '1';
+                    qArea.style.visibility = 'visible';
+                }
+                
+                const timerDefault = document.getElementById('timerContainerDefault');
+                if (timerDefault) {
+                    timerDefault.style.opacity = '1';
+                    timerDefault.style.visibility = 'visible';
+                }
+            }
+        });
+
+        // Mirror question text
+        socket.on('sendQuestion', (q) => {
+            if (isEconovaV3 && q) {
+                document.getElementById('qTextV3').innerHTML = q.content || q;
+                // update score panel if needed
+                if (q.points) document.getElementById('v3EconovaScoreV3').innerText = q.points;
+            }
+        });
+
+        // Mirror timer
+        socket.on('timer-action', (action) => {
+            if (!isEconovaV3) return;
+            const bar = document.getElementById('timerBarV3');
+            if (action.type === 'start') {
+                bar.style.transition = 'none';
+                bar.style.width = '100%';
+                setTimeout(() => {
+                    bar.style.transition = 'width ' + action.duration + 's linear';
+                    bar.style.width = '0%';
+                }, 50);
+            } else if (action.type === 'stop' || action.type === 'reset') {
+                bar.style.transition = 'none';
+                bar.style.width = (action.type === 'reset') ? '100%' : bar.style.width;
+            }
+        });
+    }
+
+    function renderV3(state) {
+        window.lastV3State = state;
+        
+        let isMode1 = state.settings ? state.settings.questionSelectionMode === 1 : true;
+        if (state.lockedPackage) isMode1 = (state.lockedPackage.mode === 1);
+        
+        let computedMachineState = 0;
+        
+        if (isMode1) {
+            if (state.currentQuestion && state.currentQuestion.active) {
+                computedMachineState = 2;
+            } else if (state.lockedPackage || state.pendingPackage) {
+                // Screen Mode 1: khi kết thúc 1 câu mà gói chưa hết → hiện lưới lại tự động
+                computedMachineState = 1;
+            }
+        } else {
+            // Mode 2 or 3
+            if (state.lockedPackage) {
+                if (!window.v3LockedPackageTime) window.v3LockedPackageTime = Date.now();
+                if (Date.now() - window.v3LockedPackageTime >= 1000) {
+                    computedMachineState = 2;
+                } else {
+                    computedMachineState = 1;
+                    if (!window.v3TransitionTimeout) {
+                        window.v3TransitionTimeout = setTimeout(() => {
+                            window.v3TransitionTimeout = null;
+                            if (window.lastV3State) renderV3(window.lastV3State);
+                        }, 1000 - (Date.now() - window.v3LockedPackageTime));
+                    }
+                }
+            } else if (state.pendingPackage) {
+                computedMachineState = 1;
+                window.v3LockedPackageTime = null;
+            } else {
+                window.v3LockedPackageTime = null;
+            }
+        }
+        
+        state.machineState = computedMachineState;
+
+        const v3Master = document.getElementById('v3MasterContainer');
+        const qBoxV3 = document.getElementById('qBoxV3');
+        const qGridV3 = document.getElementById('qGridV3');
+        
+        if (!window.v3Transitioning) window.v3Transitioning = false;
+        if (!window.currentV3State) window.currentV3State = 0;
+        
+        if (state.machineState === window.currentV3State || window.v3Transitioning) {
+            if (state.machineState === 1) renderV3Grid(state);
+            else if (state.machineState === 2) renderV3QBox(state);
+            
+            if (state.currentQuestion) {
+                let qTextV3 = document.getElementById('qTextV3');
+                if (qTextV3) qTextV3.innerHTML = state.currentQuestion.content || 'Đang chờ câu hỏi...';
+                let v3Score = document.getElementById('v3EconovaScoreV3');
+                if (v3Score) v3Score.innerText = state.currentQuestion.points || '0';
+            }
+            return;
+        }
+
+        if (state.machineState === 0) {
+            if (window.currentV3State !== 0) {
+                // Exit animation
+                window.v3Transitioning = true;
+                v3Master.classList.remove('v3-shutter-open', 'run-anim');
+                void v3Master.offsetWidth;
+                v3Master.classList.add('v3-shutter-close');
+                
+                setTimeout(() => {
+                    v3Master.style.display = 'none';
+                    qBoxV3.style.display = 'none';
+                    qGridV3.style.display = 'none';
+                    window.v3Transitioning = false;
+                    window.currentV3State = 0;
+                }, 500);
+            } else {
+                v3Master.style.display = 'none';
+                qBoxV3.style.display = 'none';
+                qGridV3.style.display = 'none';
+            }
+            window.currentV3State = 0;
+        } else if (state.machineState === 1) {
+            renderV3Grid(state);
+            if (window.currentV3State === 2) {
+                // 2 -> 1: Close shutter over Question, show Grid, Open shutter
+                window.v3Transitioning = true;
+                v3Master.classList.remove('v3-shutter-open', 'v3-shutter-close', 'run-anim');
+                void v3Master.offsetWidth;
+                v3Master.classList.add('v3-shutter-close');
+                
+                setTimeout(() => {
+                    qBoxV3.style.display = 'none';
+                    qGridV3.style.display = 'flex';
+                    
+                    v3Master.classList.remove('v3-shutter-open', 'v3-shutter-close', 'run-anim');
+                    void v3Master.offsetWidth;
+                    v3Master.classList.add('v3-shutter-open', 'run-anim'); 
+                    setTimeout(() => { window.v3Transitioning = false; }, 600);
+                }, 500);
+            } else {
+                // 0 -> 1: Expand with Grid
+                v3Master.style.display = 'flex';
+                qBoxV3.style.display = 'none';
+                qGridV3.style.display = 'flex';
+                v3Master.classList.remove('v3-shutter-open', 'v3-shutter-close', 'run-anim');
+                void v3Master.offsetWidth;
+                v3Master.classList.add('v3-shutter-open', 'run-anim');
+            }
+            window.currentV3State = 1;
+        } else if (state.machineState === 2) {
+            renderV3QBox(state);
+            if (window.currentV3State === 1) {
+                // 1 -> 2: Close shutter over Grid, show Question, Open shutter
+                window.v3Transitioning = true;
+                v3Master.classList.remove('v3-shutter-open', 'v3-shutter-close', 'run-anim');
+                void v3Master.offsetWidth;
+                v3Master.classList.add('v3-shutter-close');
+                
+                setTimeout(() => {
+                    qGridV3.style.display = 'none';
+                    qBoxV3.style.display = 'flex';
+                    
+                    v3Master.classList.remove('v3-shutter-open', 'v3-shutter-close', 'run-anim');
+                    void v3Master.offsetWidth;
+                    v3Master.classList.add('v3-shutter-open', 'run-anim');
+                    setTimeout(() => { window.v3Transitioning = false; }, 600);
+                }, 500);
+            } else {
+                // 0 -> 2: Expand with Question
+                v3Master.style.display = 'flex';
+                qGridV3.style.display = 'none';
+                qBoxV3.style.display = 'flex';
+                v3Master.classList.remove('v3-shutter-open', 'v3-shutter-close', 'run-anim');
+                void v3Master.offsetWidth;
+                v3Master.classList.add('v3-shutter-open', 'run-anim');
+            }
+            window.currentV3State = 2;
+        }
+
+        // Current question content
+        if (state.currentQuestion) {
+            document.getElementById('qTextV3').innerHTML = state.currentQuestion.content || 'Đang chờ câu hỏi...';
+            document.getElementById('v3EconovaScoreV3').innerText = state.currentQuestion.points || '0';
+        }
+    }
+
+    function renderV3Grid(state) {
+        // Render trực tiếp vào grid10-v3 (bỏ qua grid20, grid40 vì gộp chung vào 1 khối container)
+        const gridContainer = document.getElementById('grid10-v3');
+        if (!gridContainer) return;
+        
+        let mode = state.settings ? state.settings.questionSelectionMode : 1;
+        if (state.lockedPackage) mode = state.lockedPackage.mode;
+        
+        if (mode === 1) {
+            let html = '<div class="v3-grid-col-row" style="display:flex;flex-direction:row;width:100%;height:100%;justify-content:center;">';
+            const colClasses = ['m1-col-left', 'm1-col-center', 'm1-col-right'];
+            [10, 20, 40].forEach((pts, colIdx) => {
+                let colClass = colClasses[colIdx];
+                html += `<div class="v3-col-wrapper ${colClass}" style="width:280px;height:240px;background:linear-gradient(180deg, #004466, #001122);display:flex;flex-direction:column;">`;
+                html += `<div class="v3-grid-label" style="height:60px;display:flex;justify-content:center;align-items:center;background:linear-gradient(90deg,#00cfff,#0088cc);font-size:24px;font-weight:bold;color:white;flex-shrink:0;">${pts} ĐIỂM</div>`;
+                html += `<div class="v3-grid-cells-area mode1-grid" style="flex:1;display:flex;flex-direction:column;justify-content:space-evenly;align-items:center;padding:10px 0;">`;
+                
+                let count = (state.questionCount && state.questionCount[pts] !== undefined) ? state.questionCount[pts] : 12;
+                // Mỗi cột chứa 4 câu: Col 0 -> 1,4,7,10. Col 1 -> 2,5,8,11. Col 2 -> 3,6,9,12
+                for (let rowIdx = 0; rowIdx < 4; rowIdx++) {
+                    let qNum = rowIdx * 3 + colIdx; // 0-indexed question number
+                    if (qNum >= count) break;
+                    let isPlayed = state.playedQuestions && state.playedQuestions[pts] && state.playedQuestions[pts].includes(qNum);
+                    
+                    if (isPlayed) {
+                        html += `<div class="q-cell" style="width:80%;height:35px;display:flex;align-items:center;justify-content:center;background:rgba(0,207,255,0.2);border:1px solid #00cfff;color:#fff;font-weight:bold;border-radius:4px;font-size:20px;">${qNum + 1}</div>`;
+                    } else {
+                        // Check if active (Mode 1 usually handles active selection differently, often pendingQuestion)
+                        let isActive = false;
+                        if (state.currentQuestion && state.currentQuestion.active && state.currentQuestion.points == pts && state.currentQuestion.idx === qNum) isActive = true;
+                        
+                        let cellBg = isActive ? 'linear-gradient(90deg, #e74c3c, #c0392b)' : 'rgba(0,207,255,0.2)';
+                        let cellBorder = isActive ? 'none' : '1px solid #00cfff';
+                        
+                        html += `<div class="q-cell" style="width:80%;height:35px;display:flex;align-items:center;justify-content:center;background:${cellBg};border:${cellBorder};color:#fff;font-weight:bold;border-radius:4px;font-size:20px;">${qNum + 1}</div>`;
+                    }
+                }
+                html += `</div></div>`;
+            });
+            html += '</div>';
+            gridContainer.innerHTML = html;
+            document.getElementById('grid20-v3').innerHTML = '';
+            document.getElementById('grid40-v3').innerHTML = '';
+        } else {
+            // Mode 2/3: 3x3 Grid
+            let pkg = state.lockedPackage || state.pendingPackage;
+            let rawQuestions = pkg ? (pkg.questions || pkg.package || []) : [];
+            let qPerTeam = (state.settings && state.settings.questionsPerTeam) || 3;
+            
+            const rows = [10, 20, 40];
+            const rowClasses = {
+                10: ['r1-left', 'r1-center', 'r1-right'],
+                20: ['r2-left', 'r2-center', 'r2-right'],
+                40: ['r3-left', 'r3-center', 'r3-right']
+            };
+            
+            let html = '<div style="display:flex;flex-direction:column;align-items:center;height:100%;justify-content:space-evenly;padding: 10px 0;">';
+            rows.forEach((pts, rowIndex) => {
+                html += '<div class="v3-grid-row">';
+                for (let col = 0; col < qPerTeam; col++) {
+                    let qData = rawQuestions[col];
+                    let isChosen = (qData && parseInt(qData.points) === pts);
+                    
+                    let cellClass = rowClasses[pts][col];
+                    let isPlayed = false;
+                    let isCurrent = false;
+                    let qNumberHtml = '';
+                    
+                    if (isChosen) {
+                        if (state.lockedPackage) {
+                            if (pkg.currentIndex > col) isPlayed = true;
+                            else if (pkg.currentIndex === col) {
+                                if (state.currentQuestion && state.currentQuestion.resolved) isPlayed = true;
+                                else if (state.currentQuestion && state.currentQuestion.active) isCurrent = true;
+                            }
+                        }
+                        if (mode === 2 && qData.idx !== undefined && qData.idx !== -1) {
+                            qNumberHtml = `<div class="q-order-badge">${qData.idx + 1}</div>`;
+                        }
+                    }
+                    
+                    let cellStateClass = '';
+                    if (isChosen) {
+                        cellStateClass = isPlayed ? 'played' : (isCurrent ? 'active-tab' : 'inactive-tab');
+                    } else {
+                        cellStateClass = 'inactive-tab';
+                    }
+                    
+                    let opacity = '1';
+                    let filter = 'none';
+                    if (!state.lockedPackage && qData && qData.idx === undefined) { opacity = '0.6'; filter = 'grayscale(1)'; }
+                    
+                    let margin = col > 0 ? 'margin-left: calc(-1 * var(--v3-skew) + 5px);' : '';
+                    html += `<div class="v3-cell-wrapper" style="position:relative; ${margin}">`;
+                    html += `<div class="v3-shape-cell ${cellClass} ${cellStateClass}" style="opacity:${opacity}; filter:${filter}; margin-left: 0;">${pts} ĐIỂM</div>`;
+                    html += qNumberHtml;
+                    html += `</div>`;
+                }
+                html += '</div>';
+            });
+            html += '</div>';
+            gridContainer.innerHTML = html;
+            document.getElementById('grid20-v3').innerHTML = '';
+            document.getElementById('grid40-v3').innerHTML = '';
+        }
+    }
+
+
+    function renderV3QBox(state) {
+        // Render Scoreboard in topbar
+        const qBoxScoreboard = document.getElementById('qBoxScoreboardV3');
+        if (qBoxScoreboard && state.teams) {
+            let qScoreHtml = '<div style="display:flex; flex-direction:row; justify-content:center; align-items:center; width:100%; height:100%; gap:10px;">';
+            state.teams.forEach((team, idx) => {
+                let isMain = false;
+                if (state.currentQuestion && state.currentQuestion.active) {
+                    isMain = (state.currentQuestion.mainTeamId === team.id);
+                } else if (state.turnOrder && state.turnOrder.length > 0) {
+                    isMain = (state.turnOrder[0] === team.id);
+                }
+                
+                let bgColor = isMain ? 'linear-gradient(90deg, #e74c3c, #c0392b)' : 'linear-gradient(90deg, #05164d, #030e33)';
+                let border = isMain ? '2px solid #fff' : '2px solid #00cfff';
+                let textColor = isMain ? '#fff' : '#00cfff';
+                let scoreColor = isMain ? '#ffff00' : '#fff';
+                
+                qScoreHtml += `<div style="display:flex; align-items:center; justify-content:center; background:${bgColor}; border:${border}; border-radius:4px; padding:4px 15px; font-size:20px; font-weight:bold; transform:skewX(-10deg); box-shadow:0 0 10px rgba(0,0,0,0.5);">
+                    <div style="transform:skewX(10deg); display:flex; gap:10px;">
+                        <span style="color:${textColor};">${team.name}</span>
+                        <span style="color:${scoreColor};">${team.score}</span>
+                    </div>
+                </div>`;
+            });
+            qScoreHtml += '</div>';
+            qBoxScoreboard.innerHTML = qScoreHtml;
+        }
+
+        // Right side package points (e.g. 20 / 20 / 20)
+        if (state.packages) {
+            let activeTeamId = null;
+            if (state.turnOrder && state.turnOrder.length > 0) activeTeamId = state.turnOrder[0];
+            if (state.currentQuestion && state.currentQuestion.active) activeTeamId = state.currentQuestion.mainTeamId;
+            let p = null;
+            if (activeTeamId) p = state.packages.find(pkg => pkg.teamId === activeTeamId);
+            
+            let ptsHtml = '';
+            if (p && p.questions) {
+                p.questions.forEach((q, idx) => {
+                    let color = '#ffffff'; // unplayed
+                    if (q.active) color = '#e74c3c'; // active (red)
+                    else if (q.played) color = '#aaaaaa'; // played (gray)
+                    
+                    ptsHtml += `<span style="color:${color};">${q.points}</span>`;
+                    if (idx < p.questions.length - 1) ptsHtml += ` <span style="color:#00cfff;">/</span> `;
+                });
+            }
+            document.getElementById('v3EconovaPointsWrapperV3').innerHTML = ptsHtml;
+        }
+    }
+});
+</script>
+    
+<script>console.log('HELLO FROM SCREEN.HTML');</script>
+
+</body></html>
+<div style="position:fixed; bottom:20px; right:20px; z-index:99999; background:rgba(0,0,0,0.8); padding:15px; border-radius:10px; border:1px solid #fff;">
+    <h3 style="color:#fff; margin-top:0;">Test Panel</h3>
+    <button onclick="document.body.className='ascend_2026'; isEconovaV3=false; applyVisibility();">Theme: Ascend</button>
+    <button onclick="document.body.className='v3'; currentTheme='v3'; isEconovaV3=true; applyVisibility();">Theme: V3</button>
+    <br><br>
+    <button onclick="testGrid()">Show Grid (Mode 2/3)</button>
+    <button onclick="testQuestion()">Show Question (Mode 2/3)</button>
+    <button onclick="testClose()">Idle/Wait</button>
+    <script>
+        function testGrid() {
+            state.pendingPackage = true;
+            state.lockedPackage = false;
+            let mainNode = document.querySelector(".v3-new-root");
+            if(mainNode) {
+                mainNode.classList.remove("run-anim", "v3-shutter-open", "v3-shutter-close");
+            }
+            applyVisibility();
+            if(isEconovaV3) renderV3Grid(state);
+        }
+        function testQuestion() {
+            state.pendingPackage = false;
+            state.lockedPackage = true;
+            q.active = true;
+            let mainNode = document.querySelector(".v3-new-root");
+            if(mainNode) {
+                mainNode.classList.remove("run-anim", "v3-shutter-open", "v3-shutter-close");
+            }
+            applyVisibility();
+            if(isEconovaV3) {
+                renderV3QBox(state);
+                setTimeout(() => {
+                    let mainNode2 = document.querySelector(".v3-new-root");
+                    mainNode2.classList.add("run-anim", "v3-shutter-close");
+                    setTimeout(() => {
+                        mainNode2.classList.remove("v3-shutter-close");
+                        mainNode2.classList.add("v3-shutter-open");
+                    }, 600);
+                }, 100);
+            }
+        }
+        function testClose() {
+            state.pendingPackage = false; state.lockedPackage = false; q.active = false;
+            let mainNode = document.querySelector(".v3-new-root");
+            if(mainNode) {
+                mainNode.classList.remove("run-anim", "v3-shutter-open", "v3-shutter-close");
+            }
+            applyVisibility();
+        }
+    </script>
+</div>
+

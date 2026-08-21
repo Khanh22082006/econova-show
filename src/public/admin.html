@@ -1,0 +1,3109 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title data-i18n="adm_title">Command Center - Kỹ thuật viên</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+    <script src="import_excel.js" defer></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/lang.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        let authParam = urlParams.get('auth');
+        if (authParam) {
+            sessionStorage.setItem('adminAuth', authParam);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (!sessionStorage.getItem('adminAuth')) {
+            window.location.href = './index.html';
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #1e1e2f; color: #fff; margin: 0; padding: 20px; }
+        .header { background: #ff4757; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(255,71,87,0.3); }
+        h1 { margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 2px; }
+        
+        .panel { background: #2f3542; border-radius: 8px; padding: 15px; margin-bottom: 15px; border-left: 4px solid #3742fa; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        h2 { color: #ffeb3b; font-size: 18px; margin-top: 0; border-bottom: 1px solid #576574; padding-bottom: 10px; display: flex; justify-content: space-between;}
+        
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 15px; }
+        .card { background: #1e1e2f; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #576574; }
+        .score { font-size: 32px; font-weight: bold; color: #ff9f43; margin: 10px 0; }
+        
+        input, select { padding: 10px; border-radius: 6px; border: none; font-size: 14px; font-family: 'Inter', sans-serif; width: 100%; box-sizing: border-box; background: #576574; color: white; margin-bottom: 10px;}
+        input:focus, select:focus { outline: 2px solid #3742fa; }
+        
+        button { padding: 6px 10px; border-radius: 4px; border: none; font-size: 12px; font-family: 'Inter', sans-serif; cursor: pointer; font-weight: bold; transition: 0.2s; color: white; text-transform: uppercase; width: auto; box-sizing: border-box; }
+        button:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        button:active { transform: translateY(0); }
+        
+        .btn-blue { background: #3742fa; }
+        .btn-green { background: #10ac84; }
+        .btn-red { background: #ff4757; }
+        .btn-orange { background: #ff9f43; }
+        .btn-purple { background: #9b59b6; }
+        .btn-yellow { background: #feca57; color: #222; border: 2px solid #feca57; }
+        .btn-primary { background: #3742fa; border: 2px solid #3742fa; }
+        .btn-secondary { background: #8395a7; border: 2px solid #8395a7; }
+
+        .control-row { display: flex; gap: 10px; align-items: end; margin-bottom: 10px; background: #1e1e2f; padding: 10px; border-radius: 8px;}
+        .control-row > div { flex: 1; }
+        
+        .status-box { background: #ff4757; color: white; padding: 15px; border-radius: 8px; text-align: center; font-size: 20px; font-weight: bold; margin-top: 20px; transition: background 0.3s; }
+        
+        /* Slot Grid */
+        .slot-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-top: 10px; }
+        .slot-card { background: #576574; padding: 10px; border-radius: 6px; text-align: center; }
+        .slot-card.has-data { background: #2ed573; color: #1e1e2f; font-weight: bold; }
+        
+        /* Turn order styles */
+        .turn-list { display: flex; gap: 10px; margin-top: 10px; flex-wrap: nowrap; overflow-x: hidden; }
+        .turn-item { background: #576574; padding: 10px 15px; border-radius: 6px; display: flex; align-items: center; gap: 10px; font-weight: bold;}
+        .turn-item.active { background: #10ac84; border: 2px solid #fff; box-shadow: 0 0 10px #10ac84;}
+        .turn-item.played { opacity: 0.5; text-decoration: line-through; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 data-i18n="adm_header_title">🖥️ Hệ thống điều khiển - Kỹ thuật viên</h1>
+    </div>
+
+    <!-- TABS -->
+    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <button class="btn-primary" id="btnTabRound1" onclick="switchTab('round1')" style="flex:1;">🎙️ VÒNG 1 (PITCHING & Q&A)</button>
+        <button class="btn-secondary" id="btnTabMain" onclick="switchTab('main')" style="flex:1;" data-i18n="adm_tab_main">🎮 VÒNG 2 (CHỨC NĂNG CHÍNH)</button>
+        <button class="btn-secondary" id="btnTabSettings" onclick="switchTab('settings')" style="flex:1;" data-i18n="adm_tab_settings">⚙️ CÀI ĐẶT</button>
+    </div>
+
+    <!-- TAB VÒNG 1 -->
+    <div id="tab-round1">
+        <div class="panel" style="border-left-color: #0abde3;">
+            <h2>⏱ CÀI ĐẶT ĐỒNG HỒ ĐẾM NGƯỢC (VÒNG 1)</h2>
+
+            <!-- TOGGLE ẨN ĐỒ HỌA VÒNG 2 -->
+            <div id="round2GraphicsToggleBar" style="background: linear-gradient(135deg, #2d3436, #1e272e); border: 2px solid #ff7675; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; box-shadow: 0 3px 12px rgba(0,0,0,0.4);">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 24px;">🎬</span>
+                    <div>
+                        <div style="font-size: 15px; font-weight: bold; color: #ff7675; margin-bottom: 2px;">Ẩn đồ hoạ Vòng 2</div>
+                        <div id="round2GraphicsStatusText" style="font-size: 12px; color: #b2bec3;">Đang ẩn đồ hoạ (Chỉ hiện lên khi tắt dấu tích)</div>
+                    </div>
+                </div>
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
+                    <span id="round2GraphicsLabel" style="font-size: 13px; font-weight: bold; color: #ff7675;">ẨN ĐỒ HỌA</span>
+                    <div style="position: relative; width: 52px; height: 28px; flex-shrink: 0;">
+                        <input type="checkbox" id="settingHideRound2Graphics" onchange="toggleRound2Graphics()" style="opacity: 0; width: 0; height: 0; position: absolute;">
+                        <div id="round2Toggle" onclick="document.getElementById('settingHideRound2Graphics').click()" style="position: absolute; inset: 0; background: #d63031; border-radius: 14px; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; padding: 3px;">
+                            <div id="round2ToggleThumb" style="width: 22px; height: 22px; background: white; border-radius: 50%; transition: transform 0.2s; transform: translateX(24px); box-shadow: 0 2px 5px rgba(0,0,0,0.4);"></div>
+                        </div>
+                    </div>
+                </label>
+            </div>
+            <!-- END TOGGLE ẨN ĐỒ HỌA VÒNG 2 -->
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
+                    <h3>Điều khiển thời gian</h3>
+                    <div style="text-align: center; margin-bottom: 15px; background: #1e272e; padding: 10px; border-radius: 8px;">
+                        <span id="adminRound1Timer" style="font-size: 48px; font-weight: bold; color: #feca57; font-family: monospace;">00:00</span>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <input type="number" id="timerSetSeconds" placeholder="Giây (vd: 180 = 3 phút)" style="width: 100%; padding: 10px; border-radius: 5px; margin-bottom: 10px;" value="180">
+                        <button class="btn-primary" onclick="sendTimerAction('SET_TIME')" style="width: 100%; margin-bottom: 5px;">CẬP NHẬT THỜI GIAN</button>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-green" onclick="sendTimerAction('PLAY')" style="flex:1;">▶ PLAY</button>
+                        <button class="btn-yellow" onclick="sendTimerAction('PAUSE')" style="flex:1;">⏸ PAUSE</button>
+                        <button class="btn-red" onclick="sendTimerAction('RESET')" style="flex:1;">⏹ RESET</button>
+                    </div>
+                </div>
+
+                <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
+                    <h3>Tuỳ chỉnh hiển thị</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label>Vị trí</label>
+                            <select id="timerPos" class="config-input" style="width: 100%; padding: 8px; border-radius: 5px; background: #2f3542; color: white;">
+                                <option value="top-left">Trái - Trên</option>
+                                <option value="top-center">Giữa - Trên</option>
+                                <option value="top-right">Phải - Trên</option>
+                                <option value="bottom-left">Trái - Dưới</option>
+                                <option value="bottom-center">Giữa - Dưới</option>
+                                <option value="bottom-right" selected>Phải - Dưới</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Cỡ chữ (px)</label>
+                            <input type="number" id="timerFontSize" value="120" class="config-input" style="width: 100%; padding: 8px; border-radius: 5px; background: #2f3542; color: white;">
+                        </div>
+                        <div>
+                            <label>Màu chữ</label>
+                            <input type="color" id="timerFontColor" value="#ffffff" style="width: 100%; height: 40px; padding: 0; border: none; background: transparent;" class="config-input">
+                        </div>
+                        <div>
+                            <label>Màu viền</label>
+                            <input type="color" id="timerStrokeColor" value="#000000" style="width: 100%; height: 40px; padding: 0; border: none; background: transparent;" class="config-input">
+                        </div>
+                        <div>
+                            <label>Độ dày viền (px)</label>
+                            <input type="number" id="timerStrokeWidth" value="4" class="config-input" style="width: 100%; padding: 8px; border-radius: 5px; background: #2f3542; color: white;">
+                        </div>
+                        <div>
+                            <label>Font chữ</label>
+                            <select id="timerFontFamily" class="config-input" style="width: 100%; padding: 8px; border-radius: 5px; background: #2f3542; color: white;">
+                                <option value="Arial" selected>Arial</option>
+                                <option value="Orbitron">Orbitron</option>
+                                <option value="Myriad Pro">Myriad Pro</option>
+                                <option value="Impact">Impact</option>
+                                <option value="Verdana">Verdana</option>
+                                <option value="Courier New">Courier New</option>
+                            </select>
+                        </div>
+                        <div style="grid-column: span 2; display: flex; gap: 15px; align-items: center; margin-top: 10px;">
+                            <label><input type="checkbox" id="timerBold" checked class="config-input"> <b>In Đậm</b></label>
+                            <label><input type="checkbox" id="timerItalic" class="config-input"> <i>In Nghiêng</i></label>
+                            <label><input type="checkbox" id="timerUnderline" class="config-input"> <u>Gạch chân</u></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 20px; margin-top: 15px; align-items: stretch;">
+            <!-- TRÌNH ĐIỀU KHIỂN POWERPOINT -->
+            <div class="panel" style="border-left-color: #ff9f43; margin-top: 0; flex: 1; display: flex; flex-direction: column;">
+                <h2>📊 TRÌNH ĐIỀU KHIỂN POWERPOINT</h2>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-primary" onclick="pptPrev()" style="flex: 1; font-size: 16px;">[◀] PREV SLIDE</button>
+                        <button class="btn-primary" onclick="pptNext()" style="flex: 1; font-size: 16px;">NEXT SLIDE [▶]</button>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-yellow" onclick="showSlidePicker()" style="flex: 1; font-size: 14px;">📑 NHẢY ĐẾN SLIDE / XEM LƯỚI ẢNH</button>
+                    </div>
+                    <div style="font-size: 13px; color: #a4b0be; text-align: center;">
+                        <span id="pptStatusText">Chưa có thông tin Slide. Bấm Đồng bộ để tải lưới ảnh.</span>
+                    </div>
+                    <div style="font-size: 13px; color: #a4b0be;">
+                        * Hotkey: Dùng phím <b>Mũi tên Trái / Phải</b> để chuyển slide nhanh (Chỉ có tác dụng khi đang mở Tab Vòng 1).
+                    </div>
+                </div>
+                <div style="flex: 1; display: flex; flex-direction: column; margin-top: 15px;">
+                    <h3 style="margin-bottom: 5px; color: #ff9f43;">📝 Speaker Notes (Slide hiện tại) 🔄</h3>
+                    <textarea id="pptNotesArea" readonly style="flex: 1; min-height: 120px; width: 100%; background: #2f3542; color: #fff; padding: 10px; border: 1px solid #576574; border-radius: 5px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 16px; line-height: 1.5; resize: none;" placeholder="Chưa có thông tin ghi chú..."></textarea>
+                </div>
+            </div>
+
+            <!-- LIVE PREVIEW (CONFIDENCE MONITOR) -->
+            <div class="panel" style="border-left-color: #10ac84; margin-top: 0; flex: 1; display: flex; flex-direction: column;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h2 style="margin: 0; font-size: 18px;">📺 LIVE PREVIEW POWERPOINT</h2>
+                    <button id="btn-ppt-preview" class="btn-green" onclick="togglePPTPreview()" style="padding: 5px 15px; font-size: 14px;">🔴 KẾT NỐI MÀN HÌNH PPT</button>
+                </div>
+                <div style="flex: 1; background: #000; border: 2px solid #576574; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative;">
+                    <video id="ppt-preview" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: contain;"></video>
+                    <div id="ppt-preview-placeholder" style="position: absolute; color: #a4b0be; font-size: 14px; text-align: center; pointer-events: none;">
+                        Bấm <b>Kết nối</b> và chọn màn hình Slide Show<br>để hiển thị Live Preview
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB CHÍNH -->
+    <div id="tab-main" style="display: none;">
+
+        <!-- 1. TÊN ĐỘI -->
+        <div class="panel">
+            <h2 data-i18n="adm_teams_title">👥 1. Thông tin các đội thi</h2>
+            <div class="grid" id="teamInputsContainer">
+                <!-- Dynamically filled by renderTeamInputs -->
+            </div>
+            <button class="btn-blue" style="width: auto; padding: 10px 20px; margin-top: 10px;" onclick="saveTeamNames()" data-i18n="adm_teams_save">💾 LƯU THÔNG TIN ĐỘI</button>
+        </div>
+
+        <!-- 2. NGÂN HÀNG CÂU HỎI -->
+        <div class="panel">
+            <h2 data-i18n="adm_bank_title">📁 2. Ngân hàng câu hỏi</h2>
+            <div class="control-row">
+                <div style="flex: 2;">
+                    <label style="color:#00d2d3;" data-i18n="adm_bank_import">📥 Nhập từ file Excel:</label><br>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-green" onclick="loadExcel()" data-i18n="adm_bank_load">📥 TẢI DỮ LIỆU</button>
+                        <button class="btn-orange" onclick="openBankEditModal()">✏️ CHỈNH SỬA</button>
+                    </div>
+                    <input type="file" id="excelFile" accept=".xlsx, .xls" style="margin-top: 10px; background: transparent;">
+                </div>
+            </div>
+            <div id="excelStatus" style="margin-bottom: 20px; font-size: 14px; color: #a4b0be;"><span data-i18n="adm_bank_empty">Chưa tải file.</span></div>
+            <div class="control-row">
+                <div>
+                    <label data-i18n="adm_bank_save_to">💾 Lưu bộ đề hiện tại vào thư mục:</label>
+                    <select id="saveSlot">
+                        <option value="1" data-i18n="adm_bank_slot_1">Đề 1</option><option value="2" data-i18n="adm_bank_slot_2">Đề 2</option><option value="3" data-i18n="adm_bank_slot_3">Đề 3</option>
+                        <option value="4" data-i18n="adm_bank_slot_4">Đề 4</option><option value="5" data-i18n="adm_bank_slot_5">Đề 5</option><option value="6" data-i18n="adm_bank_slot_6">Đề 6</option>
+                    </select>
+                </div>
+                <div>
+                    <label>&nbsp;</label>
+                    <input type="text" id="saveName" placeholder="Tên bộ đề (VD: Vòng chung kết)" data-i18n="adm_bank_save_name">
+                </div>
+                <div>
+                    <button class="btn-orange" onclick="saveToSlot()" data-i18n="adm_bank_save_btn">💾 LƯU</button>
+                </div>
+            </div>
+            <div>
+                <label style="color:#feca57;" data-i18n="adm_bank_load_from">📂 Tải bộ đề đã lưu:</label>
+                <div class="slot-grid" id="slotGrid"></div>
+            </div>
+        </div>
+
+        <!-- 3. CÀI ĐẶT CÂU HỎI HIỆN TẠI -->
+        <div class="panel">
+            <h2 data-i18n="adm_qset_title">🎯 3. Cài đặt câu hỏi tiếp theo</h2>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div style="flex: 1;">
+                    <label data-i18n="adm_qset_main">Đội chính:</label>
+                    <select id="mainTeam" style="width: 80%;">
+                        <option value="-1" data-i18n="adm_qset_auto">-- Tự động theo Lượt --</option>
+                        <option value="1" data-i18n="adm_qset_t1">Đội 1</option><option value="2" data-i18n="adm_qset_t2">Đội 2</option><option value="3" data-i18n="adm_qset_t3">Đội 3</option><option value="4" data-i18n="adm_qset_t4">Đội 4</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- This container will be dynamically generated by Javascript -->
+            <div id="qSelectionContainer"></div>
+
+            <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;" id="qSelectionActions">
+                <button class="btn-orange" id="btnToggleHopeStar1" style="flex: 1;" onclick="toggleHopeStar()" data-i18n="adm_hopestar">⭐ BẬT NS HY VỌNG</button>
+                <button class="btn-purple" style="flex: 1;" onclick="socket.emit('playSound', 'on_stage')">🎤 LÊN SÂN KHẤU</button>
+                <button class="btn-blue" style="flex: 1;" id="btnOpenQ" onclick="setQuestion()" data-i18n="adm_open_q">🚀 MỞ CÂU HỎI</button>
+                <button class="btn-green" id="btnShowOverlayGrid" style="flex: 1;" onclick="socket.emit('showOverlayGrid')" data-i18n="adm_grid_show">🟢 MỞ GÓI ĐIỂM</button>
+                <button class="btn-secondary" id="btnHideOverlayGrid" style="flex: 1; display: none; background: #576574;" onclick="socket.emit('hideOverlayGrid')" data-i18n="adm_grid_hide">🔴 ĐÓNG GÓI ĐIỂM</button>
+            </div>
+        </div>
+
+        <!-- 4. ĐIỀU KHIỂN LUỒNG & LƯỢT CHƠI -->
+        <div class="panel">
+            <h2 data-i18n="adm_flow_control">⚡ 4. Điều khiển luồng chơi</h2>
+            <div style="background: #1e1e2f; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <strong style="color:#feca57;" data-i18n="adm_turn_order">📋 Thứ tự lượt chơi hiện tại:</strong>
+                    <button class="btn-secondary" onclick="socket.emit('forceUpdateTurnOrder')" style="padding: 2px 8px; font-size: 12px; width: auto; border-radius: 4px;">🔄 Cập nhật Lượt</button>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <strong style="color:#00d2d3;"><span data-i18n="adm_current_q">📺 Câu hỏi đang hiển thị:</span> <span id="adminQMetaInfo" style="color:#ff9f43;"></span></strong> 
+                    <button class="btn-secondary" onclick="openEditQuestionModal()" style="padding: 2px 8px; font-size: 12px; width: auto; border-radius: 4px;">Sửa nội dung</button>
+                </div>
+                <div class="turn-list" id="turnList" style="margin-bottom: 15px;"></div>
+            </div>
+
+            <div id="actionPanel" style="display: none; border-top: 1px solid #576574; padding-top: 15px;">
+                <div id="adminQA" style="position: relative;">
+                    <strong style="color:#00d2d3; display:block; margin-bottom: 5px;"><span data-i18n="adm_current_q">📝 Câu hỏi đang hiển thị:</span> <span id="adminQMetaInfo" style="color:#ff9f43;"></span></strong> 
+                    <div id="adminQText" style="margin-bottom: 15px;"></div>
+                    <strong style="color:#10ac84; display:block; margin-bottom: 5px;" data-i18n="adm_ans">💡 Đáp án:</strong> 
+                    <div id="adminAText" style="margin-bottom: 15px;"></div>
+                    
+                    <div id="adminVideoSection" style="display: none; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
+                        <strong style="color:#ff9f43; display:block; margin-bottom: 10px;"><span data-i18n="adm_video">🎥 Video đính kèm:</span> <span id="adminVText"></span></strong>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn-purple" onclick="playVideo()" data-i18n="adm_play">▶️ PHÁT VIDEO</button>
+                            <button class="btn-red" onclick="closeVideo()" data-i18n="adm_close">❌ ĐÓNG VIDEO</button>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 15px; border-top: 1px solid #576574; padding-top: 15px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                        <strong style="color:#0abde3; white-space: nowrap;" data-i18n="adm_timer">⏱ Đếm ngược:</strong>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <div id="adminQuestionTimerOverlay" style="font-size: 18px; font-weight: bold; color: #ff4757; display: none; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 8px;">00:00</div>
+                            <button class="btn-blue" onclick="startCountdown(15)" data-i18n="adm_cd_15">15S</button>
+                            <button class="btn-orange" onclick="startCountdown(10)" data-i18n="adm_cd_10">10S</button>
+                        </div>
+                    </div>
+                    <button id="btnCloseQuestionBtn" class="btn-secondary" style="margin-top: 10px; width: 100%; border: 1px solid #576574; background: #2f3542;" onclick="closeQuestion()" data-i18n="adm_back">🔙 ĐÓNG CÂU HỎI & TRỞ VỀ BẢNG CHỌN</button>
+                </div>
+                
+                <div id="mainTeamActions" style="margin-top: 15px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                    <h3 data-i18n="adm_team_act" style="margin: 0; white-space: nowrap; font-size: 16px;">Đội chính:</h3>
+                    <div style="display: flex; gap: 10px; flex: 1;">
+                        <button class="btn-green" style="flex: 1;" onclick="correctMainTeam()" data-i18n="adm_correct">✅ ĐÚNG</button>
+                        <button class="btn-red" style="flex: 1;" onclick="startBuzzer()" data-i18n="adm_wrong">🚨 SAI → MỞ CHUÔNG 5S</button>
+                    </div>
+                </div>
+
+                <div id="buzzerActions" style="display: none; margin-top: 15px; border-top: 1px dashed #576574; padding-top: 15px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                        <h3 style="margin: 0; white-space: nowrap; font-size: 16px;"><span data-i18n="adm_buzzed">Đội giành quyền:</span> <span id="buzzedTeamName" style="color: #ff9f43;">-</span></h3>
+                        <div style="display: flex; gap: 10px; flex: 1;">
+                            <button class="btn-green" style="flex: 1;" onclick="correctBuzzedTeam()" data-i18n="adm_correct">✅ ĐÚNG</button>
+                            <button class="btn-red" style="flex: 1;" onclick="wrongBuzzedTeam()" data-i18n="adm_wrong">❌ SAI</button>
+                        </div>
+                    </div>
+                    <div id="buzzTimeTableContainer" style="margin-top: 20px; display: none;">
+                        <h4 style="margin-bottom: 10px; color: #a4b0be; font-size: 16px;" data-i18n="adm_buzz_time">Thứ tự bấm chuông:</h4>
+                        <table style="width: 100%; border-collapse: collapse; text-align: left; background: #2f3542; border-radius: 5px; overflow: hidden; font-size: 16px;">
+                            <thead>
+                                <tr style="background: #576574;">
+                                    <th style="padding: 10px;" data-i18n="adm_rank">Hạng</th>
+                                    <th style="padding: 10px;" data-i18n="adm_team">Đội</th>
+                                    <th style="padding: 10px;" data-i18n="adm_time">Thời gian</th>
+                                </tr>
+                            </thead>
+                            <tbody id="buzzTimeTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="statusIndicator" class="status-box" style="background:#576574;" data-i18n="adm_waiting">ĐANG CHỜ...</div>
+        </div>
+
+        <!-- 5. BẢNG ĐIỂM & THỦ CÔNG -->
+        <div class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2 data-i18n="adm_sec5">5. Bảng điểm & Chỉnh thủ công</h2>
+                <button class="btn-red" style="width: auto; padding: 10px 20px;" onclick="resetGame()" data-i18n="adm_reset">🔄 RESET GAME</button>
+            </div>
+            <div class="grid" id="team-container"></div>
+            <div style="margin-top: 20px; border-top: 1px solid #576574; padding-top: 15px;">
+                <h3 style="color: #feca57; margin-bottom: 10px;">Lịch sử cộng/trừ điểm (Undo)</h3>
+                <div id="scoreLogContainer" style="max-height: 200px; overflow-y: auto; background: #1e272e; padding: 10px; border-radius: 5px; font-size: 13px;">
+                    <div style="color: #a4b0be; font-style: italic;">Chưa có lịch sử điểm số.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. BẢNG ĐIỂM TỔNG HỢP -->
+        <div class="panel">
+            <h2 data-i18n="adm_sb_main_title">🏆 6. Bảng Điểm Tổng Hợp (Màn hình chính)</h2>
+            
+            <!-- Nút bật/tắt + nền -->
+            <div style="display: flex; gap: 15px; align-items: stretch; margin-bottom: 15px;">
+                <button class="btn-primary" id="btnToggleOverallScoreboard" onclick="toggleOverallScoreboard()" style="flex: 1; padding: 15px; font-size: 16px;">
+                    <span data-i18n="adm_sb_show">👁️ HIỂN THỊ BẢNG ĐIỂM TỔNG LÊN MÀN HÌNH</span>
+                </button>
+                <div style="flex: 1; background: #1e1e2f; padding: 15px; border-radius: 8px;">
+                    <label style="color:#0abde3;" data-i18n="adm_sb_bg">Thay đổi hình nền Bảng Điểm (Tùy chọn):</label><br>
+                    <input type="file" id="scoreboardBgInput" accept="image/png, image/jpeg" style="margin-top: 10px; background: transparent; width: 100%;" onchange="uploadScoreboardBg(event)">
+                </div>
+            </div>
+
+            <!-- Tiêu đề + Tuỳ chỉnh ảnh -->
+            <div style="background: #1e1e2f; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                    <div style="flex: 2; min-width: 200px;">
+                        <label style="color: #0abde3;" data-i18n="adm_sb_title_inp">📝 Tiêu đề Bảng Điểm (để trống = không hiển thị):</label>
+                        <input type="text" id="settingScoreboardTitle" placeholder="VD: KẾT QUẢ CHUNG CUỘC" data-i18n="adm_sb_title_ph" oninput="applySettings()" style="margin-top: 5px;">
+                    </div>
+                    <div style="flex: 1; min-width: 120px;">
+                        <label><span data-i18n="adm_sb_y">Vị trí dọc Y (</span><span id="lblScoreboardY">50</span>%):</label>
+                        <input type="range" id="settingScoreboardY" min="0" max="100" value="50" style="width:100%" oninput="document.getElementById('lblScoreboardY').innerText=this.value" onchange="applySettings()">
+                    </div>
+                </div>
+                <hr style="border-color: #576574; margin: 15px 0;">
+                <div style="display: flex; gap: 10px; margin-bottom: 15px; font-size: 12px; flex-wrap: wrap;" id="teamAvatarSettingsContainer">
+                    <!-- Dynamically filled by renderTeamSettings -->
+                </div>
+                <hr style="border-color: #576574; margin: 15px 0;">
+                <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 120px;">
+                        <label style="color:#ff9f43;"><span data-i18n="adm_sb_size">📷 Cỡ ảnh chung (</span><span id="lblAvatarSize">100</span>%):</label>
+                        <input type="range" id="settingAvatarSize" min="40" max="200" value="100" style="width:100%" oninput="document.getElementById('lblAvatarSize').innerText=this.value">
+                    </div>
+                    <div style="flex: 1; min-width: 120px;">
+                        <label style="color:#ff9f43;"><span data-i18n="adm_sb_overlap">⬇️ Che tên chung (</span><span id="lblAvatarOverlap">10</span>%):</label>
+                        <input type="range" id="settingAvatarOverlap" min="10" max="50" value="10" style="width:100%" oninput="document.getElementById('lblAvatarOverlap').innerText=this.value">
+                    </div>
+                    <div style="flex: 1; min-width: 120px;">
+                        <label style="color:#ff9f43;"><span data-i18n="adm_sb_offsetx">↔️ Lệch ngang chung (</span><span id="lblAvatarOffsetX">0</span>%):</label>
+                        <input type="range" id="settingAvatarOffsetX" min="-100" max="100" value="0" style="width:100%" oninput="document.getElementById('lblAvatarOffsetX').innerText=this.value">
+                    </div>
+                    <div style="flex: 1; min-width: 120px; display: flex; align-items: flex-end;">
+                        <button class="btn-orange" onclick="applyGlobalAvatarSettings()" style="width:100%; padding: 10px;" data-i18n="adm_sb_apply_all">ÁP DỤNG TẤT CẢ</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Font chữ (select thay vì datalist để tránh lọc) -->
+            <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                <div style="flex: 1;">
+                    <label data-i18n="adm_sb_font_team">Font Tên Đội:</label>
+                    <select id="settingFontTeamName" onchange="applySettings()" style="font-size: 13px;">
+                        <option value="Orbitron">Orbitron</option>
+                    </select>
+                </div>
+                <div style="flex: 1;">
+                    <label data-i18n="adm_sb_font_score">Font Điểm Số:</label>
+                    <select id="settingFontScore" onchange="applySettings()" style="font-size: 13px;">
+                        <option value="Myriad Pro">Myriad Pro</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Mini preview bảng điểm -->
+            <div style="background: #1e1e2f; padding: 10px; border-radius: 8px;">
+                <strong style="color: #10ac84; font-size: 13px;" data-i18n="adm_sb_preview">👁 Preview Bảng Điểm:</strong>
+                <div id="scoreboardMiniPreview" style="margin-top: 8px; width: 100%; aspect-ratio: 16/9; background: #040f21 url('/Themes/Background/B1.png') center/cover no-repeat; border-radius: 6px; display: none; overflow: hidden; position: relative; align-items: flex-end; justify-content: space-around;">
+                    <!-- Filled dynamically -->
+                </div>
+                <p id="scoreboardPreviewHint" style="color: #576574; font-size: 12px; margin: 5px 0 0; text-align: center;" data-i18n="adm_sb_preview_hint">Bật Bảng Điểm để xem preview.</p>
+            </div>
+        </div>
+    </div> <!-- End Tab Chính -->
+
+    <!-- TAB CÀI ĐẶT -->
+    <div id="tab-settings" style="display:none;">
+        <!-- MẠNG & PHÒNG THI -->
+        <div class="panel" style="border-left-color: #0abde3;">
+            <h2 data-i18n="adm_network_title">🌍 Điều Khiển Mạng Ngoại & Phòng Thi</h2>
+            <div style="display: flex; gap: 20px; align-items: stretch;">
+                <div style="flex: 1; background: #1e1e2f; padding: 15px; border-radius: 8px;">
+                    <div id="localIpsArea" style="margin-bottom: 15px;">
+                        <strong style="color: #0abde3;" data-i18n="adm_lan_title">1. MẠNG LAN / VPN (KHUYÊN DÙNG)</strong>
+                        <p style="font-size: 14px; color: #a4b0be; margin-top: 5px;" data-i18n="adm_lan_desc">Dùng khi kết nối chung WiFi hoặc ứng dụng VPN (Radmin VPN, Hamachi...)</p>
+                        <div id="localIpsList" style="background: #2f3542; padding: 10px; border-radius: 5px; font-size: 15px; margin-top: 5px;">
+                            <span data-i18n="adm_ip_loading">⏳ Đang tải IP...</span>
+                        </div>
+                        <button class="btn-yellow" id="btnToggleQR" onclick="toggleQRCode()" style="margin-top: 10px; width: 100%; padding: 10px;">📱 HIỂN THỊ MÃ QR LÊN MÀN HÌNH CHÍNH</button>
+                    </div>
+                    <hr style="border-color: #576574; margin-bottom: 15px;">
+                    <strong style="color: #0abde3;" data-i18n="adm_public_title">2. THI ĐẤU QUA INTERNET (RADMIN VPN)</strong>
+                    <p style="font-size: 14px; color: #a4b0be; margin-top: 5px;" data-i18n="adm_public_desc">Để có độ trễ cực thấp (bấm chuông nhanh) và không giới hạn băng thông, hãy tải và cài đặt Radmin VPN (radmin-vpn.com).<br><br>1. Tại máy Quản Trị, tạo Network mới trong Radmin VPN.<br>2. Các Thí Sinh cài Radmin VPN và ấn Join Network với tên/pass bạn vừa tạo.<br>3. Copy IP LAN ở mục 1 gửi cho các Thí Sinh truy cập.</p>
+                    <div id="serverLinkArea" style="display: none; background: #2f3542; padding: 10px; border-radius: 5px; font-size: 15px; word-break: break-all;">
+                        <span style="color: #10ac84;" data-i18n="adm_ngrok_success">✅ Đã kết nối thành công:</span><br>
+                        <span data-i18n="adm_ngrok_link">Link truy cập:</span> <b id="lblLongUrl" style="color: #ff9f43;">-</b>
+                        <div id="serverWarningArea" style="color: #feca57; margin-top: 8px; font-size: 13px; font-style: italic; display: none;"></div>
+                    </div>
+                    <div id="serverErrorArea" style="color: #ff4757; margin-top: 10px; font-size: 14px; text-align: center; display: none; font-weight: bold;"></div>
+                </div>
+                <div style="flex: 1; background: #1e1e2f; padding: 15px; border-radius: 8px;">
+                    <strong style="color: #ff9f43;" data-i18n="adm_room_title">3. TRẠNG THÁI PHÒNG THI</strong>
+                    <p style="font-size: 14px; color: #a4b0be; margin-top: 5px;" data-i18n="adm_room_desc">Thí sinh cần nhập Mã PIN để tham gia thi đấu.</p>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span style="font-size: 18px;"><span id="lblPinLabel">Mã PIN:</span> <b id="lblRoomPIN" style="color: #ff4757; font-size: 24px; letter-spacing: 2px;">ĐÃ ĐÓNG</b></span>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-green" id="btnOpenRoom" onclick="toggleRoom(true)" style="flex: 1;" data-i18n="adm_room_open">🟢 MỞ PHÒNG</button>
+                        <button class="btn-red" id="btnCloseRoom" onclick="toggleRoom(false)" style="flex: 1;" data-i18n="adm_room_close">🔴 ĐÓNG PHÒNG</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- THEMES PANEL -->
+        <div class="panel">
+            <h3 data-i18n="adm_sec6">6. Cài đặt Đồ hoạ (Themes)</h3>
+            <div class="control-row">
+                <div style="flex: 1;">
+                    <label data-i18n="adm_theme">Giao diện (Theme):</label>
+                    <select id="settingTheme" onchange="applySettings()">
+                        <option value="default" data-i18n="adm_theme_classic">Cổ điển (Vũ trụ)</option>
+                        <option value="ascend_2026" data-i18n="adm_theme_ascend">Ascend 2026 (Mới)</option>
+                        <option value="v3" data-i18n="adm_theme_v3">Hiệu ứng Bay Lượn (V3)</option>
+                    </select>
+                </div>
+                <div style="flex: 1;">
+                    <label data-i18n="adm_lang">Ngôn ngữ hiển thị (Language):</label>
+                    <select id="settingLanguage" onchange="applySettings()">
+                        <option value="vi" data-i18n="adm_lang_vi">Tiếng Việt</option>
+                        <option value="en" data-i18n="adm_lang_en">English</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display: flex; gap: 15px; margin-top: 15px;">
+                <div style="flex: 1;">
+                    <label><span data-i18n="adm_scale">Thu phóng Kích cỡ</span> (<span id="lblScale">100</span>%):</label>
+                    <input type="range" id="settingScale" min="50" max="150" value="100" style="width:100%" oninput="document.getElementById('lblScale').innerText=this.value" onchange="applySettings()">
+                </div>
+                <div style="flex: 1;">
+                    <label><span data-i18n="adm_bright">Độ sáng Màn hình</span> (<span id="lblBright">100</span>%):</label>
+                    <input type="range" id="settingBrightness" min="30" max="200" value="100" style="width:100%" oninput="document.getElementById('lblBright').innerText=this.value" onchange="applySettings()">
+                </div>
+            </div>
+        </div>
+
+        <!-- ANTI-CHEAT PANEL -->
+        <div class="panel" style="border-left-color: #feca57; margin-top: 15px;">
+            <h3 style="color:#feca57; border-bottom: 1px solid #555; padding-bottom:5px; margin-bottom:10px;" data-i18n="adm_ac_title">Cài đặt Chống gian lận (Anti-Cheat)</h3>
+            <div class="control-row">
+                <div style="flex: 1;">
+                    <label style="color:#feca57;" data-i18n="adm_ac_status">Trạng thái Anti-Cheat:</label>
+                    <select id="settingAntiCheat" onchange="applySettings()" style="background:#2d3436; border:1px solid #feca57; color:#feca57; font-weight:bold;">
+                        <option value="0" data-i18n="adm_ac_off">TẮT (Chế độ Test)</option>
+                        <option value="1" data-i18n="adm_ac_on">BẬT (Thi đấu chính thức)</option>
+                    </select>
+                    <div id="antiCheatStats" style="margin-top: 10px; font-size: 13px; color: #ff9f43;"></div>
+                </div>
+                <div style="flex: 1; padding-left: 15px; border-left: 1px solid #555;">
+                    <label style="color:#feca57;">Độ trễ hiển thị chuông (ms):</label>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-top: 5px;">
+                        <input type="range" id="settingBuzzerDelaySlider" min="0" max="3000" step="100" value="500" oninput="document.getElementById('settingBuzzerDelay').value = this.value; applySettings()" style="flex: 1;">
+                        <input type="number" id="settingBuzzerDelay" value="500" min="0" max="5000" step="100" oninput="document.getElementById('settingBuzzerDelaySlider').value = this.value; applySettings()" style="width: 80px; text-align: right; background: #2d3436; border: 1px solid #feca57; color: #feca57; font-weight: bold;"> ms
+                    </div>
+                    <div style="font-size: 12px; color: #ccc; margin-top: 5px; margin-bottom: 10px;">Kéo hoặc nhập số. Nhập 500-1000ms để tạo cảm giác hồi hộp.</div>
+                    
+                    <label style="display: flex; align-items: center; gap: 8px; color: #feca57; font-size: 14px; cursor: pointer;">
+                        <input type="checkbox" id="settingDisableBuzzerTimerBar" onchange="applySettings()" style="width:16px; height:16px;">
+                        Ẩn thanh thời gian chạy khi mở chuông 5s
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- FONTS PANEL -->
+        <div class="panel" style="border-left-color: #ff9f43; margin-top: 15px;">
+            <h3 style="color:#ff9f43; border-bottom: 1px solid #555; padding-bottom:5px; margin-bottom:10px;" data-i18n="adm_font_title">Tùy chỉnh Font chữ</h3>
+            <div class="control-row">
+                <div style="flex: 1;">
+                    <label style="display:flex; align-items:center; gap:10px; color:#ff9f43; margin-bottom: 10px;">
+                        <input type="checkbox" id="settingGlobalFontEnabled" onchange="toggleFontSettings(); applySettings()" style="width:auto; margin:0;"> 
+                        <span data-i18n="adm_font_global_enable">Sử dụng một Font chung cho toàn bộ ứng dụng</span>
+                    </label>
+                </div>
+            </div>
+            <div class="control-row" id="globalFontGroup" style="display:none;">
+                <div style="flex: 1;">
+                    <label data-i18n="adm_font_global">Font chung (Global):</label>
+                    <select id="settingFontGlobal" onchange="applySettings()"></select>
+                </div>
+            </div>
+            <div id="detailedFontGroup">
+                <div class="control-row">
+                    <div style="flex: 1; padding-right: 10px;">
+                        <label data-i18n="adm_font_general">Font Tiêu chuẩn (General):</label>
+                        <select id="settingFontGeneral" onchange="applySettings()"></select>
+                    </div>
+                    <div style="flex: 1; padding-left: 10px;">
+                        <label data-i18n="adm_font_team">Font Tên Đội (Team Name):</label>
+                        <select id="settingFontTeamNameGlobal" onchange="document.getElementById('settingFontTeamName').value=this.value; applySettings()"></select>
+                    </div>
+                </div>
+                <div class="control-row">
+                    <div style="flex: 1; padding-right: 10px;">
+                        <label data-i18n="adm_font_score">Font Điểm số (Score):</label>
+                        <select id="settingFontScoreGlobal" onchange="document.getElementById('settingFontScore').value=this.value; applySettings()"></select>
+                    </div>
+                    <div style="flex: 1; padding-left: 10px;">
+                        <label data-i18n="adm_font_question">Font Câu hỏi (Question):</label>
+                        <select id="settingFontQuestion" onchange="applySettings()"></select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GAME RULES PANEL -->
+        <div class="panel" style="border-left-color: #ff4757; margin-top: 15px;">
+            <h3 style="color:#ff4757; border-bottom: 1px solid #555; padding-bottom:5px; margin-bottom:10px;" data-i18n="adm_game_rules">Cài đặt Luật chơi</h3>
+            <div class="control-row" style="margin-top: 15px;">
+                <div style="flex: 1;">
+                    <label style="color:#ff4757;" data-i18n="adm_team_cnt">⚠️ Số lượng Đội thi:</label>
+                    <select id="settingTeamCount" onchange="changeTeamCount()" style="background:#2d3436; border:1px solid #ff4757; color:#ff4757;">
+                        <option value="2" data-i18n="adm_team_2">2 Đội</option>
+                        <option value="3" data-i18n="adm_team_3">3 Đội</option>
+                        <option value="4" data-i18n="adm_team_4">4 Đội</option>
+                        <option value="5" data-i18n="adm_team_5">5 Đội</option>
+                        <option value="6" data-i18n="adm_team_6">6 Đội</option>
+                    </select>
+                </div>
+                <div style="flex: 2;">
+                    <label style="color:#0984e3;" data-i18n="adm_question_type">Kiểu chọn câu:</label>
+                    <select id="settingQuestionSelectionMode" onchange="changeSettingQuestionSelectionMode()" style="background:#2d3436; border:1px solid #0abde3; color:#0abde3;">
+                        <option value="1" data-i18n="adm_sel_mode1">Kiểu 1: Chọn từng câu</option>
+                        <option value="2" data-i18n="adm_sel_mode2">Kiểu 2: Chọn tất cả (tùy ý)</option>
+                        <option value="3" data-i18n="adm_sel_mode3">Kiểu 3: Chọn tất cả (ngẫu nhiên)</option>
+                    </select>
+                </div>
+                <div style="flex: 1;">
+                    <label style="color:#00b894;" data-i18n="adm_question_cnt">Số câu hỏi mỗi đội:</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="number" id="settingQuestionsPerTeam" value="3" min="1" max="9" style="width: 60px; background:#2d3436; border:1px solid #00b894; color:#00b894;">
+                        <button class="btn-green" onclick="changeQuestionsPerTeam()" style="padding: 5px 10px; font-size: 12px;" data-i18n="adm_save">LƯU</button>
+                        <span style="font-size: 12px; color: #a4b0be;" id="maxQuestionsLabel">(Tối đa: 9)</span>
+                    </div>
+                </div>
+            </div>
+            <div class="control-row" id="mode2SettingsRow" style="display: none; margin-top: 10px;">
+                <div style="flex: 1;">
+                    <label style="color:#f1f2f6;">Số dòng lưới Mode 2:</label>
+                    <input type="number" id="settingMode2Rows" value="3" min="1" max="6" style="background:#2d3436; border:1px solid #747d8c; color:#fff; width: 80px;" onchange="applyModeSettings()">
+                </div>
+            </div>
+            <div style="font-size: 12px; color: #a4b0be; margin-top: 5px; margin-bottom: 15px;" data-i18n="adm_change_warn">Lưu ý: Thay đổi sẽ Reset toàn bộ điểm số và câu hỏi.</div>
+            <div class="control-row">
+                <div style="flex: 1;">
+                    <label style="color:#fdcb6e;" data-i18n="adm_turn_rule">Quy tắc thứ tự lượt chơi:</label>
+                    <select id="settingTurnOrderRule" onchange="applySettings()" style="background:#2d3436; border:1px solid #fdcb6e; color:#fdcb6e;">
+                        <option value="mode_order" data-i18n="adm_tr_seq">Theo thứ tự đội (1 -> 4)</option>
+                        <option value="mode_desc" data-i18n="adm_tr_desc">Điểm từ Cao xuống Thấp</option>
+                        <option value="mode_asc" data-i18n="adm_tr_asc">Điểm từ Thấp lên Cao</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        socket.on('debugLog', (msg) => {
+            let logDiv = document.getElementById('debugLogContainer');
+            if (logDiv) {
+                let entry = document.createElement('div');
+                entry.innerText = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+                logDiv.prepend(entry);
+            }
+        });
+    
+
+        const adminPin = sessionStorage.getItem('adminAuth');
+        if (adminPin) {
+            socket.emit('adminLogin', adminPin, (res) => {
+                if (!res.success) {
+                    alert(t('adm_err_auth', currentGlobalLang));
+                    window.location.href = './index.html';
+                }
+            });
+        } else {
+            window.location.href = './index.html';
+        }
+        function switchTab(tab) {
+            const tabIds = ['round1', 'main', 'settings'];
+            tabIds.forEach(id => {
+                const el = document.getElementById('tab-' + id);
+                if (el) el.style.display = 'none';
+            });
+
+            const buttons = {
+                round1: document.getElementById('btnTabRound1'),
+                main: document.getElementById('btnTabMain'),
+                settings: document.getElementById('btnTabSettings')
+            };
+
+            Object.values(buttons).forEach(btn => {
+                if (btn) {
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-secondary');
+                }
+            });
+
+            const activeTab = document.getElementById('tab-' + tab);
+            if (activeTab) activeTab.style.display = 'block';
+
+            const activeBtn = buttons[tab];
+            if (activeBtn) {
+                activeBtn.classList.remove('btn-secondary');
+                activeBtn.classList.add('btn-primary');
+            }
+        }
+
+        let currentState = null;
+        let questionBank = { 10: [], 20: [], 40: [] };
+        let currentVideoUrl = "";
+
+        function saveQuestionBankToLocalStorage(displayName, slotId) {
+            try {
+                localStorage.setItem('econova_questionBank', JSON.stringify(questionBank));
+                localStorage.setItem('econova_questionBankName', displayName || '');
+                localStorage.setItem('econova_activeBankSlot', slotId || '');
+            } catch (e) {
+                console.error("Lỗi lưu questionBank vào localStorage:", e);
+            }
+        }
+
+        function restoreQuestionBankFromLocalStorage() {
+            try {
+                const savedBank = localStorage.getItem('econova_questionBank');
+                if (savedBank) {
+                    questionBank = JSON.parse(savedBank);
+                    const displayName = localStorage.getItem('econova_questionBankName') || 'Đã khôi phục';
+                    const slotId = localStorage.getItem('econova_activeBankSlot') || '';
+                    
+                    document.getElementById('excelStatus').innerHTML =
+                        `<span style="color:#48dbfb">${t("adm_load_ok", currentGlobalLang).replace("{name}", displayName).replace("{10}", questionBank[10]?.length||0).replace("{20}", questionBank[20]?.length||0).replace("{40}", questionBank[40]?.length||0)}</span>`;
+                    
+                    updateQuestionDropdown();
+                    updateMaxQuestions();
+                    validateQuestionsPerTeam();
+                    
+                    socket.emit('setQuestionCount', { 
+                        "10": questionBank[10] ? questionBank[10].length : 0, 
+                        "20": questionBank[20] ? questionBank[20].length : 0, 
+                        "40": questionBank[40] ? questionBank[40].length : 0 
+                    });
+                    
+                    if (slotId && slotId !== 'excel') {
+                        socket.emit('setActiveBankSlot', slotId);
+                    }
+                    
+                    const savedSelected = localStorage.getItem('econova_adminSelectedQuestions');
+                    if (savedSelected) {
+                        adminSelectedQuestions = JSON.parse(savedSelected);
+                    }
+                }
+            } catch (e) {
+                console.error("Lỗi khôi phục questionBank từ localStorage:", e);
+            }
+        }
+
+        window.onload = () => { 
+            loadSlots(); 
+            restoreQuestionBankFromLocalStorage();
+            const savedTab = localStorage.getItem('adminActiveTab') || 'round1'; 
+            switchTab(savedTab); 
+        }
+
+        // TÊN ĐỘI
+        function saveTeamNames() {
+            if (!currentState || !currentState.teams) return;
+            const data = [];
+            currentState.teams.forEach(t => {
+                let nInp = document.getElementById(`teamName${t.id}`);
+                let sInp = document.getElementById(`teamSchool${t.id}`);
+                data.push({ name: nInp ? nInp.value : t.name, school: sInp ? sInp.value : t.school });
+            });
+            socket.emit('setTeamNames', data);
+        }
+
+        // EXCEL IMPORT
+        function loadExcel() {
+            const file = document.getElementById('excelFile').files[0];
+            if (!file) { alert(t("adm_err_excel", currentGlobalLang)); return; }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+                    questionBank = { 10: [], 20: [], 40: [] };
+
+                    // Dữ liệu từ dòng 4 (index 3) trong Excel
+                    for (let i = 3; i < json.length; i++) {
+                        let row = json[i];
+                        if (!row) continue;
+                        let stt = i - 2;
+
+                        if (row[2] && String(row[2]).trim())
+                            questionBank[10].push({ stt, q: String(row[2]), a: row[3] ? String(row[3]) : "", vid: row[4] ? String(row[4]) : "" });
+                        if (row[6] && String(row[6]).trim())
+                            questionBank[20].push({ stt, q: String(row[6]), a: row[7] ? String(row[7]) : "", vid: row[8] ? String(row[8]) : "" });
+                        if (row[10] && String(row[10]).trim())
+                            questionBank[40].push({ stt, q: String(row[10]), a: row[11] ? String(row[11]) : "", vid: row[12] ? String(row[12]) : "" });
+                    }
+
+                    document.getElementById('excelStatus').innerHTML =
+                        `<span style="color:#10ac84">${t("adm_excel_ok", currentGlobalLang).replace("{10}", questionBank[10].length).replace("{20}", questionBank[20].length).replace("{40}", questionBank[40].length)}</span>`;
+                    updateQuestionDropdown();
+                    updateMaxQuestions();
+                    validateQuestionsPerTeam();
+                    socket.emit('setQuestionCount', { "10": questionBank[10].length, "20": questionBank[20].length, "40": questionBank[40].length });
+                    saveQuestionBankToLocalStorage(file.name, 'excel');
+                } catch (err) {
+                    alert(t("adm_excel_err", currentGlobalLang) + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // QUESTION BANK SAVE/LOAD
+        function saveToSlot() {
+            const slotId = document.getElementById('saveSlot').value;
+            const name = document.getElementById('saveName').value || `${t("adm_save_name_prefix", currentGlobalLang)}${slotId}`;
+            const total = questionBank[10].length + questionBank[20].length + questionBank[40].length;
+            if (total === 0) { alert(t("adm_save_empty", currentGlobalLang)); return; }
+
+            fetch(`/api/questions/${slotId}`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Admin-Pin': sessionStorage.getItem('adminAuth')
+                },
+                body: JSON.stringify({ name, questions: questionBank })
+            })
+            .then(r => r.json())
+            .then(d => { 
+                alert(t("adm_save_ok", currentGlobalLang).replace("{slotId}", slotId)); 
+                saveQuestionBankToLocalStorage(name, slotId);
+                loadSlots(); 
+            })
+            .catch(e => alert(t("adm_save_err", currentGlobalLang) + e.message));
+        }
+
+        function loadFromSlot(slotId) {
+            fetch(`/api/questions/${slotId}`)
+            .then(r => { if (!r.ok) throw new Error(t("adm_load_empty", currentGlobalLang)); return r.json(); })
+            .then(data => {
+                questionBank = data.questions || { 10: [], 20: [], 40: [] };
+                let displayName = data.name;
+                if (/^(Đề|Set)\s\d$/.test(displayName)) {
+                    var language = document.getElementById('settingLanguage') ? document.getElementById('settingLanguage').value : 'vi';
+                    displayName = t('adm_save_name_prefix', language) + slotId;
+                }
+                document.getElementById('excelStatus').innerHTML =
+                    `<span style="color:#48dbfb">${t("adm_load_ok", currentGlobalLang).replace("{name}", displayName).replace("{10}", questionBank[10]?.length||0).replace("{20}", questionBank[20]?.length||0).replace("{40}", questionBank[40]?.length||0)}</span>`;
+                updateQuestionDropdown();
+                updateMaxQuestions();
+                validateQuestionsPerTeam();
+                socket.emit('setQuestionCount', { "10": questionBank[10] ? questionBank[10].length : 0, "20": questionBank[20] ? questionBank[20].length : 0, "40": questionBank[40] ? questionBank[40].length : 0 });
+                socket.emit('setActiveBankSlot', slotId);
+                saveQuestionBankToLocalStorage(displayName, slotId);
+            })
+            .catch(e => alert(t("adm_load_err", currentGlobalLang) + e.message));
+        }
+
+        function loadSlots() {
+            fetch('/api/questions')
+            .then(r => r.json())
+            .then(sets => {
+                const grid = document.getElementById('slotGrid');
+                grid.innerHTML = '';
+                sets.forEach(s => {
+                    let displayName = s.name;
+                    let i18nAttr = '';
+                    if (/^(Đề|Set)\s\d$/.test(displayName)) {
+                        i18nAttr = `data-i18n="adm_bank_slot_${s.id}"`;
+                        var language = document.getElementById('settingLanguage') ? document.getElementById('settingLanguage').value : 'vi';
+                        displayName = t('adm_save_name_prefix', language) + s.id;
+                    }
+                    grid.innerHTML += `
+                        <div class="slot-card ${s.hasData ? 'has-data' : ''}">
+                            <h4 ${i18nAttr}>${displayName}</h4>
+                            <small>${s.hasData ? t('adm_slot_txt', currentGlobalLang).replace('{10}', s.count10).replace('{20}', s.count20).replace('{40}', s.count40) : t('adm_slot_empty', currentGlobalLang)}</small><br>
+                            <button class="btn-green" style="margin-top:8px; padding: 5px; font-size: 12px; ${s.hasData ? '' : 'opacity:0.3; pointer-events:none;'}" 
+                                    onclick="loadFromSlot(${s.id})">${t("adm_slot_btn", currentGlobalLang)}</button>
+                        </div>
+                    `;
+                });
+            });
+        }
+
+        // QUESTION SELECTION
+        let adminSelectedQuestions = []; // Array of {points, idx}
+        let adminMode3Points = []; // Array of points, length up to qPerTeam
+
+        function renderQuestionSelectionUI() {
+            const container = document.getElementById('qSelectionContainer');
+            if (!container) return;
+            
+            const mode = (currentState && currentState.settings && currentState.settings.questionSelectionMode) || 1;
+            const qPerTeam = (currentState && currentState.settings && currentState.settings.questionsPerTeam) || 3;
+            
+            let html = '';
+            
+            // Build the visual grid
+            const buildGridHTML = () => {
+                let gridHtml = '';
+                const ptsTypes = [10, 20, 40];
+                
+                gridHtml = '<div style="display: flex; gap: 10px; margin-top: 10px; text-align: center;">';
+                ptsTypes.forEach(pts => {
+                    gridHtml += '<div style="flex: 1; border: 1px solid #34495e; border-radius: 5px; background: #2c3e50; padding: 5px;">' +
+                        '<div style="font-weight: bold; margin-bottom: 5px; color: ' + (pts==10?'#10ac84':(pts==20?'#feca57':'#ee5253')) + '">' + pts + ' ĐIỂM</div>' +
+                        '<div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 5px;">';
+                        
+                    let countInBank = 0;
+                    if (typeof questionBank !== 'undefined' && questionBank[pts]) {
+                        countInBank = questionBank[pts].length;
+                    }
+                    
+                    // Mode 1: cells for each question in the bank
+                    for (let i = 0; i < countInBank; i++) {
+                        let played = currentState && currentState.playedQuestions && currentState.playedQuestions[pts] && currentState.playedQuestions[pts].includes(i);
+                        let isSelected = adminSelectedQuestions.find(q => q.points == pts && q.idx == i);
+                        
+                        let bgColor = '#34495e';
+                        let border = '1px solid rgba(255,255,255,0.1)';
+                        let cursor = 'pointer';
+                        let opacity = 1;
+                        
+                        if (played) {
+                            opacity = 0.3;
+                            cursor = 'not-allowed';
+                        } else if (isSelected) {
+                            bgColor = pts==10?'#10ac84':(pts==20?'#feca57':'#ee5253');
+                            border = '1px solid #fff';
+                        }
+                        
+                        gridHtml += '<div onclick="' + (played ? '' : 'toggleAdminGridSelection(' + pts + ', ' + i + ', ' + mode + ')') + '" style="flex: 0 0 calc(33.333% - 4px); box-sizing: border-box; background: ' + bgColor + '; border: ' + border + '; opacity: ' + opacity + '; cursor: ' + cursor + '; padding: 8px 0; border-radius: 3px; font-size: 12px; font-weight: bold; color: #fff;">Câu ' + (i+1) + '</div>';
+                    }
+                    
+                    gridHtml += '</div></div>';
+                });
+                gridHtml += '</div>';
+                return gridHtml;
+            };
+
+            if (mode == 1) {
+                html += '<div style="color: #a4b0be; font-style: italic; margin-bottom: 5px;">Quản trị viên chọn duy nhất 1 câu hỏi từ lưới dưới đây để lên màn hình:</div>';
+                if (currentState && currentState.pendingPackage && currentState.pendingPackage.mode === 1 && adminSelectedQuestions.length === 0) {
+                    if (currentState.pendingPackage.idx !== -1) {
+                        adminSelectedQuestions = [{ points: currentState.pendingPackage.points, idx: currentState.pendingPackage.idx }];
+                    }
+                }
+                html += buildGridHTML();
+            } else if (mode == 2) {
+                html += '<div style="color: #a4b0be; font-style: italic; margin-bottom: 5px;">Quản trị viên chọn ' + qPerTeam + ' câu hỏi từ lưới dưới đây để tạo thành gói:</div>';
+                if (currentState && currentState.pendingPackage && currentState.pendingPackage.mode === 2 && adminSelectedQuestions.length === 0) {
+                    let pQ = currentState.pendingPackage.questions || currentState.pendingPackage.package;
+                    if (pQ) {
+                        adminSelectedQuestions = pQ.map((q, i) => ({ points: q.points, idx: q.idx, slotIndex: i }));
+                    }
+                }
+                while (adminSelectedQuestions.length < qPerTeam) {
+                    adminSelectedQuestions.push({ points: null, idx: -1, slotIndex: adminSelectedQuestions.length });
+                }
+                
+                let selectedTextArr = [];
+                for (let i = 0; i < adminSelectedQuestions.length; i++) {
+                    let q = adminSelectedQuestions[i];
+                    if (q.points !== null && q.idx !== -1) {
+                        selectedTextArr.push(`Câu ${i+1}: ${q.points}đ (Câu ${q.idx+1})`);
+                    } else {
+                        selectedTextArr.push(`Câu ${i+1}: Chưa chọn`);
+                    }
+                }
+                if (selectedTextArr.length > 0) {
+                    html += '<div style="color: #feca57; font-weight: bold; margin-bottom: 10px;">Đã chọn: ' + selectedTextArr.join(' | ') + '</div>';
+                } else {
+                    html += '<div style="color: #feca57; font-weight: bold; margin-bottom: 10px;">Chưa chọn câu nào.</div>';
+                }
+                
+                html += buildGridHTML();
+            } else if (mode == 3) {
+                html += '<div style="color: #a4b0be; font-style: italic; margin-bottom: 5px;">Mode 3 - Chọn điểm cho từng câu (server sẽ random chọn câu tương ứng):</div>';
+                
+                // Restore from pending package if needed
+                if (currentState && currentState.pendingPackage && currentState.pendingPackage.mode === 3 && adminSelectedQuestions.length === 0) {
+                    let pQ = currentState.pendingPackage.questions || currentState.pendingPackage.package;
+                    if (pQ) adminSelectedQuestions = pQ.map((q, i) => ({ points: q.points, idx: -1, slotIndex: i }));
+                }
+                
+                // Ensure adminSelectedQuestions has qPerTeam slots
+                while (adminSelectedQuestions.length < qPerTeam) {
+                    adminSelectedQuestions.push({ points: null, idx: -1, slotIndex: adminSelectedQuestions.length });
+                }
+                
+                html += '<div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">';
+                for (let slotIdx = 0; slotIdx < qPerTeam; slotIdx++) {
+                    let slot = adminSelectedQuestions[slotIdx] || { points: null, idx: -1 };
+                    let selectedPts = slot.points;
+                    html += '<div style="display:flex; align-items:center; gap:8px; background:#1e2a3a; border-radius:8px; padding:8px 12px;">';
+                    html += '<div style="color:#fff; font-weight:bold; min-width:60px;">Câu ' + (slotIdx + 1) + ':</div>';
+                    [10, 20, 40].forEach(pts => {
+                        let isSelected = (selectedPts == pts);
+                        let btnColor = pts == 10 ? '#10ac84' : (pts == 20 ? '#feca57' : '#ee5253');
+                        let btnBg = isSelected ? btnColor : '#34495e';
+                        let btnBorder = isSelected ? '2px solid #fff' : '2px solid rgba(255,255,255,0.1)';
+                        let btnTextColor = '#fff';
+                        html += '<button onclick="toggleMode3SlotPoints(' + slotIdx + ', ' + pts + ')" style="background:' + btnBg + '; border:' + btnBorder + '; color:' + btnTextColor + '; padding:6px 14px; border-radius:6px; font-size:14px; font-weight:bold; cursor:pointer; transition:all 0.2s; min-width:50px;">' + pts + '</button>';
+                    });
+                    if (selectedPts) {
+                        html += '<span style="color:#feca57; font-size:13px; margin-left:4px;">✓ ' + selectedPts + 'đ</span>';
+                    }
+                    html += '</div>';
+                }
+                html += '</div>';
+            }
+            container.innerHTML = html;
+            
+            const actions = document.getElementById('qSelectionActions');
+            if (actions) {
+                actions.innerHTML = `
+                    <div style="display: flex; gap: 10px; width: 100%; margin-bottom: 5px;">
+                        <button class="btn-orange" id="btnToggleHopeStar2" style="flex: 1;" onclick="toggleHopeStar()" data-i18n="adm_hopestar">⭐ BẬT NS HY VỌNG</button>
+                        <button class="btn-purple" style="flex: 1;" onclick="socket.emit('playSound', 'on_stage')">🎤 LÊN SÂN KHẤU</button>
+                        <button class="btn-green" id="btnShowOverlayGrid" style="flex: 1;" onclick="socket.emit('showOverlayGrid')" data-i18n="adm_grid_show">🟢 MỞ GÓI ĐIỂM</button>
+                        <button class="btn-secondary" id="btnHideOverlayGrid" style="flex: 1; display: none; background: #576574;" onclick="socket.emit('hideOverlayGrid')" data-i18n="adm_grid_hide">🔴 ĐÓNG GÓI ĐIỂM</button>
+                    </div>
+                    <div style="display: flex; gap: 10px; width: 100%;">
+                        ${mode == 1 ? `
+                            <button class="btn-blue" style="flex: 1;" id="btnOpenQ" onclick="setQuestion()" data-i18n="adm_open_q">🚀 MỞ CÂU HỎI</button>
+                        ` : `
+                            <button class="btn-primary" style="flex: 1; background: #9b59b6;" onclick="nextQuestionInPackage()">🚀 CHUYỂN CÂU</button>
+                            <button class="btn-danger" style="flex: 1; background: #e74c3c; color: white; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer;" onclick="cancelLockedPackage()">HUỶ GÓI</button>
+                            <button class="btn-orange" style="flex: 1; background: #e67e22;" onclick="lockPackage()">CHỐT GÓI CÂU HỎI</button>
+                        `}
+                    </div>
+                `;
+            }
+        }
+
+        let mode1ClickTimeout = null;
+        let isMode1Locked = false;
+
+        function toggleAdminGridSelection(pts, idx, mode) {
+            if (isMode1Locked) return;
+            
+            if (currentState && !currentState.isGridVisibleOnOverlay) {
+                showAlert('Bạn chưa "MỞ GÓI ĐIỂM" trên màn hình Overlay! Vui lòng bấm "MỞ GÓI ĐIỂM" trước khi chọn câu hỏi.');
+                return;
+            }
+            const qPerTeam = (currentState && currentState.settings && currentState.settings.questionsPerTeam) || 3;
+            
+            if (mode === 1) {
+                adminSelectedQuestions = [{ points: pts, idx: idx }];
+                // Emit syncPendingPackage so screen highlights selected question in grid
+                socket.emit('syncPendingPackage', {
+                    mode: 1,
+                    points: pts,
+                    idx: idx,
+                    playSound: true
+                });
+                
+                isMode1Locked = false;
+                renderQuestionSelectionUI();
+                
+                return; // Admin must manually press "MỞ CÂU HỎI" button to open the question
+            } else if (mode === 2) {
+                let existingIdx = adminSelectedQuestions.findIndex(q => q.points == pts && q.idx == idx);
+                if (existingIdx >= 0) {
+                    adminSelectedQuestions[existingIdx] = { points: null, idx: -1, slotIndex: existingIdx };
+                } else {
+                    let emptyIdx = adminSelectedQuestions.findIndex(q => q.points === null || q.idx === -1);
+                    if (emptyIdx >= 0) {
+                        adminSelectedQuestions[emptyIdx] = { points: pts, idx: idx, slotIndex: emptyIdx };
+                    } else {
+                        showAlert('Đã chọn đủ số lượng câu hỏi trong gói (' + qPerTeam + ' câu). Hãy bỏ chọn ô khác để đổi.');
+                        return;
+                    }
+                }
+                syncPendingPackage(true);
+            }
+            renderQuestionSelectionUI();
+        }
+
+
+        function toggleMode3SlotPoints(slotIdx, pts) {
+            if (!currentState || !currentState.isGridVisibleOnOverlay) {
+                showAlert('Bạn chưa "MỞ GÓI ĐIỂM" trên màn hình Overlay! Vui lòng bấm "MỞ GÓI ĐIỂM" trước khi chọn điểm.');
+                return;
+            }
+            const qPerTeam = (currentState && currentState.settings && currentState.settings.questionsPerTeam) || 3;
+            // Ensure array is long enough
+            while (adminSelectedQuestions.length <= slotIdx) {
+                adminSelectedQuestions.push({ points: null, idx: -1, slotIndex: adminSelectedQuestions.length });
+            }
+            // Toggle: if same pts already selected, deselect; otherwise set
+            if (adminSelectedQuestions[slotIdx].points == pts) {
+                adminSelectedQuestions[slotIdx] = { points: null, idx: -1, slotIndex: slotIdx };
+            } else {
+                adminSelectedQuestions[slotIdx] = { points: pts, idx: -1, slotIndex: slotIdx };
+            }
+            syncPendingPackage(true);
+            renderQuestionSelectionUI();
+        }
+
+        function changeSettingQuestionSelectionMode() {
+            let select = document.getElementById('settingQuestionSelectionMode');
+            if (!select) return;
+            let val = parseInt(select.value);
+            
+            // Xoá các câu đã chọn ở Mode cũ
+            adminSelectedQuestions = [];
+            adminMode3Points = [];
+            socket.emit('syncPendingPackage', { mode: val, package: [], playSound: false });
+            
+            socket.emit('updateSettings', { questionSelectionMode: val });
+        }
+
+        function applyModeSettings() {
+            let mode2Rows = parseInt(document.getElementById('settingMode2Rows')?.value || 3);
+            socket.emit('updateSettings', { mode2Rows });
+        }
+
+        function changeQuestionsPerTeam() {
+            validateQuestionsPerTeam();
+            let input = document.getElementById('settingQuestionsPerTeam');
+            if (input) {
+                let val = parseInt(input.value);
+                socket.emit('updateSettings', { questionsPerTeam: val });
+            }
+        }
+
+        function updateQuestionDropdown() {
+            if (typeof renderQuestionSelectionUI === 'function') {
+                renderQuestionSelectionUI();
+            }
+        }
+
+        function updateQuestionDropdownMode2(i) {
+            if (typeof renderQuestionSelectionUI === 'function') {
+                renderQuestionSelectionUI();
+            }
+        }
+
+        function syncPendingPackage(playSound = true) {
+            if (!currentState || !currentState.settings) return;
+            const mode = currentState.settings.questionSelectionMode || 1;
+            if (mode === 1) return;
+            
+            let packageData = [];
+            if (mode == 2) {
+                packageData = adminSelectedQuestions.map(q => ({ points: q.points, idx: q.idx }));
+            } else if (mode == 3) {
+                packageData = adminSelectedQuestions.map(q => ({ points: q.points, idx: -1 }));
+            }
+            
+            socket.emit('syncPendingPackage', { mode: mode, package: packageData, playSound: playSound });
+        }
+
+        function lockPackage() {
+            const teamId = parseInt(document.getElementById('mainTeam').value);
+            const mode = currentState.settings.questionSelectionMode || 1;
+            const qPerTeam = currentState.settings.questionsPerTeam || 3;
+            
+            let packageData = [];
+            
+            if (mode == 2 || mode == 3) {
+                let filledCount = 0;
+                if (mode == 2) {
+                    filledCount = adminSelectedQuestions.filter(q => q.points !== null && q.idx !== -1).length;
+                } else {
+                    filledCount = adminSelectedQuestions.filter(q => q.points !== null).length;
+                }
+                
+                if (filledCount !== qPerTeam) {
+                    showAlert('Vui lòng chọn đủ ' + qPerTeam + ' câu hỏi/điểm!');
+                    return;
+                }
+                
+                if (mode == 2) {
+                    packageData = adminSelectedQuestions.map(q => ({ points: q.points, idx: q.idx }));
+                } else if (mode == 3) {
+                    packageData = adminSelectedQuestions.map(q => ({ points: q.points, idx: -1 }));
+                }
+            }
+            socket.emit('lockPackage', { mainTeamId: teamId, mode: mode, package: packageData });
+        }
+
+        function cancelLockedPackage() {
+            socket.emit('nextQuestionInPackage', { cancel: true }); // We'll add cancel logic later if needed, but for now we'll just reload page or add custom socket event. Actually, just send a new socket event.
+            socket.emit('updateSettings', {}); // trigger update to clear lockedPackage (Need server logic for this)
+        }
+
+        function nextQuestionInPackage() {
+            if (!currentState.lockedPackage) return;
+            let pkg = currentState.lockedPackage;
+            let targetIndex = pkg.currentIndex + 1;
+            if (targetIndex < pkg.questions.length) {
+                let qData = pkg.questions[targetIndex];
+                let text = "", answer = "", vid = "";
+                let newIdx = qData.idx;
+                if (pkg.mode === 3 && newIdx === -1) {
+                    let pts = qData.points;
+                    let availableIndices = [];
+                    if (questionBank[pts]) {
+                        for (let i = 0; i < questionBank[pts].length; i++) {
+                            if (!currentState.playedQuestions[pts] || !currentState.playedQuestions[pts].includes(i)) {
+                                let alreadyAssigned = false;
+                                for(let j=0; j<pkg.questions.length; j++) {
+                                    if(pkg.questions[j].idx === i) { alreadyAssigned = true; break; }
+                                }
+                                if(!alreadyAssigned) availableIndices.push(i);
+                            }
+                        }
+                    }
+                    if (availableIndices.length > 0) {
+                        newIdx = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+                        qData.idx = newIdx; // local update
+                    } else {
+                        newIdx = 0; qData.idx = 0;
+                    }
+                }
+                
+                if (newIdx >= 0 && questionBank[qData.points] && questionBank[qData.points][newIdx]) {
+                    text = questionBank[qData.points][newIdx].q || "";
+                    answer = questionBank[qData.points][newIdx].a || "";
+                    vid = questionBank[qData.points][newIdx].vid || "";
+                }
+                
+                currentVideoUrl = vid;
+                socket.emit('nextQuestionInPackage', { text: text, answer: answer, vid: vid, idx: newIdx, revealOnly: false });
+            } else {
+                finishTurn();
+            }
+        }
+
+        // GAME CONTROL
+        function toggleHopeStar() {
+            const teamId = parseInt(document.getElementById('mainTeam').value);
+            socket.emit('toggleHopeStar', teamId);
+            var language = document.getElementById('settingLanguage').value || 'vi';
+            document.getElementById('statusIndicator').innerText = t('adm_q_selected', language) + t('adm_star_added', language);
+            document.getElementById('statusIndicator').style.background = "#f39c12";
+        }
+
+        function claimTurnForMainTeam() {
+            socket.emit('claimTurnForMainTeam');
+        }
+
+        function undoScore(logId) {
+            if (confirm("Bạn có chắc chắn muốn hoàn tác thay đổi này? Điểm của đội sẽ được cộng/trừ ngược lại.")) {
+                socket.emit('undoScore', logId);
+            }
+        }
+
+        let editingBankCategory = 10;
+        
+        function openBankEditModal() {
+            if (typeof questionBank === 'undefined' || !questionBank[10]) {
+                alert("Chưa có dữ liệu ngân hàng đề!");
+                return;
+            }
+            document.getElementById('bankEditModal').style.display = 'flex';
+            renderBankEditList(10);
+        }
+        
+        function renderBankEditList(category) {
+            editingBankCategory = category;
+            const container = document.getElementById('bankEditList');
+            if (!questionBank[category] || questionBank[category].length === 0) {
+                container.innerHTML = '<div style="color:#a4b0be; padding: 10px;">Không có câu hỏi nào.</div>';
+                return;
+            }
+            
+            let html = '';
+            questionBank[category].forEach((item, idx) => {
+                html += `
+                    <div style="background: #2d3436; padding: 10px; margin-bottom: 10px; border-radius: 5px; border-left: 3px solid #10ac84;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <strong style="color: #00d2d3;">Câu ${idx + 1} (${category} Điểm)</strong>
+                            <button class="btn-orange" style="padding: 2px 8px; font-size: 11px; width: auto;" onclick="saveBankItem(${category}, ${idx})">Lưu câu này</button>
+                        </div>
+                        <input type="text" id="bankEdit_q_${category}_${idx}" value="${item.q ? item.q.replace(/"/g, '&quot;') : ''}" placeholder="Nội dung câu hỏi" style="width: 100%; margin-bottom: 5px; padding: 5px;">
+                        <input type="text" id="bankEdit_a_${category}_${idx}" value="${item.a ? item.a.replace(/"/g, '&quot;') : ''}" placeholder="Đáp án" style="width: 100%; margin-bottom: 5px; padding: 5px;">
+                        <input type="text" id="bankEdit_v_${category}_${idx}" value="${item.vid ? item.vid.replace(/"/g, '&quot;') : ''}" placeholder="Link Video (nếu có)" style="width: 100%; padding: 5px;">
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function saveBankItem(category, idx) {
+            let qText = document.getElementById(`bankEdit_q_${category}_${idx}`).value;
+            let aText = document.getElementById(`bankEdit_a_${category}_${idx}`).value;
+            let vText = document.getElementById(`bankEdit_v_${category}_${idx}`).value;
+            
+            questionBank[category][idx].q = qText;
+            questionBank[category][idx].a = aText;
+            questionBank[category][idx].vid = vText;
+            
+            try {
+                localStorage.setItem('econova_questionBank', JSON.stringify(questionBank));
+            } catch (e) {
+                console.error("Lỗi cập nhật questionBank vào localStorage:", e);
+            }
+            
+            alert(`Đã lưu Câu ${idx + 1} (${category} Điểm) vào bộ nhớ tạm.\nVui lòng bấm 'Lưu Ngân Hàng Hiện Tại' ở phần Cài đặt để lưu vĩnh viễn!`);
+            
+            if (typeof updateQuestionDropdown === 'function') updateQuestionDropdown();
+        }
+
+        function openEditQuestionModal() {
+            if (!currentState || !currentState.currentQuestion || !currentState.currentQuestion.active) return;
+            document.getElementById('editQText').value = currentState.currentQuestion.text || '';
+            document.getElementById('editAText').value = currentState.currentQuestion.answer || '';
+            document.getElementById('editQuestionModal').style.display = 'flex';
+        }
+
+        function saveEditedQuestion() {
+            let qText = document.getElementById('editQText').value;
+            let aText = document.getElementById('editAText').value;
+            socket.emit('editCurrentQuestion', { text: qText, answer: aText });
+            document.getElementById('editQuestionModal').style.display = 'none';
+        }
+
+        function setQuestion() {
+            try {
+                const teamId = parseInt(document.getElementById('mainTeam').value);
+                const mode = (currentState && currentState.settings && currentState.settings.questionSelectionMode) || 1;
+                if (mode !== 1) return; // Only mode 1
+                
+                if (adminSelectedQuestions.length === 0) {
+                    showAlert('Vui lòng chọn một câu hỏi trên lưới trước khi lên sân khấu!');
+                    return;
+                }
+                
+                const points = adminSelectedQuestions[0].points;
+                const idx = adminSelectedQuestions[0].idx;
+                
+                let text = "", answer = "", vid = "";
+                if (idx >= 0 && questionBank[points] && questionBank[points][idx]) {
+                    text = questionBank[points][idx].q || "";
+                    answer = questionBank[points][idx].a || "";
+                    vid = questionBank[points][idx].vid || "";
+                }
+                
+                currentVideoUrl = vid;
+                
+                socket.emit('setQuestion', { mainTeamId: teamId, points, text, answer, vid, idx });
+                
+                const vidSection = document.getElementById('adminVideoSection');
+                const vText = document.getElementById('adminVText');
+                if (vidSection && vText) {
+                    if (vid) {
+                        vidSection.style.display = 'block';
+                        vText.innerText = vid;
+                    } else {
+                        vidSection.style.display = 'none';
+                    }
+                }
+            } catch (err) {
+                alert(t("adm_err_q", currentGlobalLang) + err.message);
+                console.error(err);
+            }
+        }
+
+        function switchTab(tabId) {
+            document.getElementById('tab-main').style.display = tabId === 'main' ? 'block' : 'none';
+            document.getElementById('tab-settings').style.display = tabId === 'settings' ? 'block' : 'none';
+            document.getElementById('tab-round1').style.display = tabId === 'round1' ? 'block' : 'none';
+
+            document.getElementById('btnTabMain').className = tabId === 'main' ? 'btn-primary' : 'btn-secondary';
+            document.getElementById('btnTabSettings').className = tabId === 'settings' ? 'btn-primary' : 'btn-secondary';
+            document.getElementById('btnTabRound1').className = tabId === 'round1' ? 'btn-primary' : 'btn-secondary';
+
+            localStorage.setItem('adminActiveTab', tabId);
+
+            if (tabId === 'round1') {
+                socket.emit('change-round', 1);
+            } else if (tabId === 'main') {
+                socket.emit('change-round', 2);
+            }
+        }
+
+        function startCountdown(secs) { socket.emit('startCountdown', secs); }
+        function playVideo() { if(currentVideoUrl) socket.emit('playVideo', currentVideoUrl); }
+        function closeVideo() { socket.emit('closeVideo'); }
+        
+        
+        function toggleFontSettings() {
+            const isGlobal = document.getElementById('settingGlobalFontEnabled').checked;
+            document.getElementById('globalFontGroup').style.display = isGlobal ? 'flex' : 'none';
+            document.getElementById('detailedFontGroup').style.display = isGlobal ? 'none' : 'block';
+        }
+
+        // ---- FONT POPULATION ----
+        // fontsLoaded = global cache of font list
+        // fontPopulationNeeded = flag that state arrived before fonts loaded
+        let _fontsCache = null;
+        let _pendingFontState = null;
+
+        function populateFontSelects(fonts, settings) {
+            const ids = ['settingFontGlobal', 'settingFontGeneral', 'settingFontTeamName',
+                         'settingFontScore', 'settingFontQuestion',
+                         'settingFontTeamNameGlobal', 'settingFontScoreGlobal'];
+            
+            // Map each select ID to its settings key + fallback
+            const fontMap = {
+                'settingFontGlobal':       { key: 'fontGlobal',   fallback: 'SF Pro Display Bold' },
+                'settingFontGeneral':      { key: 'fontGeneral',  fallback: 'SF Pro Display Bold' },
+                'settingFontTeamName':     { key: 'fontTeamName', fallback: 'Orbitron' },
+                'settingFontScore':        { key: 'fontScore',    fallback: 'Myriad Pro' },
+                'settingFontQuestion':     { key: 'fontQuestion', fallback: 'SF Pro Display Bold' },
+                'settingFontTeamNameGlobal': { key: 'fontTeamName', fallback: 'Orbitron' },
+                'settingFontScoreGlobal':  { key: 'fontScore',   fallback: 'Myriad Pro' }
+            };
+
+            ids.forEach(id => {
+                let el = document.getElementById(id);
+                if (!el) return;
+                
+                // Build options
+                el.innerHTML = '';
+                fonts.forEach(f => {
+                    let opt = document.createElement('option');
+                    opt.value = f;
+                    opt.textContent = f;
+                    el.appendChild(opt);
+                });
+
+                // Set value from settings
+                if (settings) {
+                    let map = fontMap[id];
+                    let val = settings[map.key] || map.fallback;
+                    el.value = val;
+                    // If value wasn't found in options list, add it manually
+                    if (el.value !== val) {
+                        let opt = document.createElement('option');
+                        opt.value = val;
+                        opt.textContent = val + ' (đang dùng)';
+                        el.insertBefore(opt, el.firstChild);
+                        el.value = val;
+                    }
+                }
+            });
+        }
+
+        function loadFontList(settings) {
+            fetch('/api/fonts')
+                .then(res => {
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    return res.json();
+                })
+                .then(fonts => {
+                    _fontsCache = fonts;
+                    // Use provided settings, or fall back to currentState
+                    let s = settings || (currentState && currentState.settings) || null;
+                    populateFontSelects(fonts, s);
+                })
+                .catch(err => {
+                    console.error('Failed to load fonts, retrying in 2s:', err);
+                    setTimeout(() => loadFontList(settings), 2000);
+                });
+        }
+
+        // Initial load — triggered after socket connects and state arrives
+        // (called from updateState handler below)
+        // -----------------------------------------------------------------
+        
+        function toggleRoom(isOpen) { socket.emit('toggleRoom', isOpen); }
+        function startPublicServer() { socket.emit('startPublicServer'); }
+        function toggleQRCode() { socket.emit('toggleQRCode'); }
+        function correctMainTeam() { socket.emit('correctMainTeam'); }
+        function startBuzzer() { socket.emit('startBuzzer'); }
+        function correctBuzzedTeam() { socket.emit('correctBuzzedTeam'); }
+        function wrongBuzzedTeam() { socket.emit('wrongBuzzedTeam'); }
+        function closeQuestion() { socket.emit('closeQuestion'); }
+        function finishTurn() { socket.emit('finishTurn'); }
+        function finishTurnForTeam(id) { socket.emit('finishTurnForTeam', id); }
+        function manualChangeInput(id, multiplier) { 
+            let input = document.getElementById(`customPts${id}`);
+            let pts = parseInt(input.value) || 0;
+            socket.emit('updateScore', { teamId: id, points: pts * multiplier }); 
+            if (input) input.value = '';
+        }
+        function unlockTeam(id) { socket.emit('unlockTeam', id); }
+        
+        // --- ADMIN VÒNG 1 (POWERPOINT) ---
+        let pptCurrentSlide = 0;
+        let pptTotalSlides = 0;
+        let isManualPptAction = false;
+        
+        function pptPrev() { isManualPptAction = true; socket.emit('ppt-prev'); }
+        function pptNext() { isManualPptAction = true; socket.emit('ppt-next'); }
+        function pptSync() { isManualPptAction = true; socket.emit('ppt-sync'); }
+        function pptJump(i) { isManualPptAction = true; socket.emit('ppt-jump', i); }
+        function pptRefreshThumbs() { 
+            isManualPptAction = true; 
+            socket.emit('ppt-refresh-thumbs'); 
+            
+            // Ép tải lại ngay lập tức từ bộ đệm nội bộ để hiển thị ảnh ngay lập tức nếu chúng đã tồn tại
+            for (let i = 1; i <= pptTotalSlides; i++) {
+                const img = document.getElementById('thumb-img-' + i);
+                if (img) {
+                    img.style.display = 'block'; // Bật lại nếu trước đó bị ẩn
+                    img.src = `temp_thumbs/slide_${i}.jpg?t=${Date.now()}`;
+                }
+            }
+        }
+
+        socket.on('ppt-status', (status) => {
+            if (!status) return;
+            
+            if (status.error) {
+                console.error("PPT Error:", status.error);
+                let msg = "Lỗi kết nối PowerPoint:\n" + status.error;
+                if (status.error.includes("MK_E_UNAVAILABLE") || status.error.includes("0x800401E3")) {
+                    msg = "KHÔNG TÌM THẤY POWERPOINT! (Lỗi MK_E_UNAVAILABLE).\n\nCÁCH KHẮC PHỤC:\n1. Tắt PowerPoint đang mở.\n2. Mở lại PowerPoint bình thường (KHÔNG được chạy bằng Run as Administrator).\n3. Bật Slide Show (F5) lên trước.\n4. Sau đó bấm nút Đồng Bộ PPT ở đây.\n(Do ứng dụng và PPT đang khác quyền hạn Admin/User nên bị chặn kết nối COM).";
+                } else if (status.error.includes("SlideShowWindow")) {
+                    msg = "CHƯA BẬT SLIDE SHOW!\n\nVui lòng bấm F5 (hoặc nút Trình Chiếu) trong PowerPoint để bắt đầu, sau đó mới có thể đồng bộ và điều khiển Slide!";
+                }
+                
+                if (isManualPptAction) {
+                    showAlert(msg);
+                    isManualPptAction = false;
+                } else {
+                    const st = document.getElementById('pptStatusText');
+                    if (st) st.innerHTML = `<span style="color:#7f8fa6">Chưa kết nối PowerPoint</span>`;
+                }
+                return;
+            }
+
+            // Reset manual flag after successful connection
+            isManualPptAction = false;
+
+            const textarea = document.getElementById('pptNotesArea');
+            if (textarea) {
+                textarea.value = status.notes ? status.notes : '(Slide này không có ghi chú)';
+            }
+            pptCurrentSlide = status.currentSlide;
+            pptTotalSlides = status.totalSlides;
+            
+            const st = document.getElementById('pptStatusText');
+            if (st) {
+                st.innerHTML = `Slide hiện tại: <b style="color:#00d2d3">${pptCurrentSlide}</b> / ${pptTotalSlides}`;
+            }
+
+            // Update modal if open
+            if (typeof updateSlidePickerHighlight === 'function') {
+                updateSlidePickerHighlight();
+            }
+        });
+
+
+
+        socket.on('ppt-thumbnails-ready', (data) => {
+            const img = document.getElementById('thumb-img-' + data.index);
+            if (img) {
+                img.src = data.url;
+                img.style.display = 'block';
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (document.getElementById('tab-round1').style.display !== 'block') return;
+            const tag = e.target.tagName.toLowerCase();
+            if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                pptPrev();
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                pptNext();
+            }
+        });
+
+        // --- PPT LIVE PREVIEW ---
+        let currentPPTStream = null;
+
+        async function togglePPTPreview() {
+            const btn = document.getElementById('btn-ppt-preview');
+            const videoElement = document.getElementById('ppt-preview');
+            const placeholder = document.getElementById('ppt-preview-placeholder');
+
+            if (currentPPTStream) {
+                // Ngắt kết nối
+                currentPPTStream.getTracks().forEach(track => track.stop());
+                videoElement.srcObject = null;
+                currentPPTStream = null;
+                
+                if (placeholder) placeholder.style.display = 'block';
+                if (btn) {
+                    btn.innerHTML = '🔴 KẾT NỐI MÀN HÌNH PPT';
+                    btn.className = 'btn-green';
+                }
+                return;
+            }
+
+            try {
+                if (btn) {
+                    btn.innerHTML = '⏳ ĐANG TẢI BỘ NHỚ ĐỆM PPT...';
+                    btn.className = 'btn-red';
+                }
+
+                // Chờ precache hoàn tất
+                await new Promise(resolve => {
+                    socket.emit('ppt-prewarm');
+                    socket.once('ppt-prewarm-done', resolve);
+                    setTimeout(resolve, 5000); // 5s timeout
+                });
+
+                if (btn) btn.innerHTML = '🖥️ CHỌN MÀN HÌNH TRÌNH CHIẾU...';
+
+                // Kết nối mới
+                const stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: {
+                        cursor: "always"
+                    },
+                    audio: false
+                });
+                
+                currentPPTStream = stream;
+                
+                if (videoElement) {
+                    videoElement.srcObject = stream;
+                    if (placeholder) placeholder.style.display = 'none';
+                    if (btn) {
+                        btn.innerHTML = '⏹ NGẮT PREVIEW';
+                        btn.className = 'btn-red';
+                    }
+                    
+                    stream.getVideoTracks()[0].addEventListener('ended', () => {
+                        currentPPTStream = null;
+                        if (placeholder) placeholder.style.display = 'block';
+                        if (btn) {
+                            btn.innerHTML = '🔴 KẾT NỐI MÀN HÌNH PPT';
+                            btn.className = 'btn-green';
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error("Lỗi kết nối Preview: ", err);
+                alert("Không thể kết nối Screen Capture. Vui lòng cấp quyền hoặc thử lại!");
+            }
+        }
+
+        // --- ADMIN VÒNG 1 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTab = localStorage.getItem('adminActiveTab') || 'round1';
+            switchTab(savedTab);
+
+            const configInputs = document.querySelectorAll('.config-input');
+            configInputs.forEach(input => {
+                input.addEventListener('change', () => {
+                    const config = {
+                        position: document.getElementById('timerPos').value,
+                        fontSize: parseInt(document.getElementById('timerFontSize').value),
+                        fontColor: document.getElementById('timerFontColor').value,
+                        strokeColor: document.getElementById('timerStrokeColor').value,
+                        strokeWidth: parseInt(document.getElementById('timerStrokeWidth').value),
+                        fontFamily: document.getElementById('timerFontFamily').value,
+                        isBold: document.getElementById('timerBold').checked,
+                        isItalic: document.getElementById('timerItalic').checked,
+                        isUnderline: document.getElementById('timerUnderline').checked
+                    };
+                    socket.emit('update-timer-config', config);
+                });
+            });
+        });
+
+        function sendTimerAction(action) {
+            let data = { type: action };
+            if (action === 'SET_TIME') {
+                data.seconds = parseInt(document.getElementById('timerSetSeconds').value) || 0;
+            }
+            socket.emit('timer-action', data);
+        }
+
+        let adminRound1TimerInterval = null;
+        let adminRound1TimeSeconds = 0;
+
+        function updateAdminRound1TimerDisplay() {
+            let m = Math.floor(adminRound1TimeSeconds / 60);
+            let s = adminRound1TimeSeconds % 60;
+            const el = document.getElementById('adminRound1Timer');
+            if (el) {
+                el.innerText = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+                el.style.color = adminRound1TimeSeconds <= 10 && adminRound1TimeSeconds > 0 ? '#ff4757' : '#feca57';
+            }
+        }
+
+        socket.on('timer-action', (action) => {
+            if (action.type === 'SET_TIME') {
+                adminRound1TimeSeconds = action.seconds;
+                updateAdminRound1TimerDisplay();
+            } else if (action.type === 'PLAY') {
+                if (!adminRound1TimerInterval) {
+                    adminRound1TimerInterval = setInterval(() => {
+                        if (adminRound1TimeSeconds > 0) {
+                            adminRound1TimeSeconds--;
+                            updateAdminRound1TimerDisplay();
+                        } else {
+                            clearInterval(adminRound1TimerInterval);
+                            adminRound1TimerInterval = null;
+                        }
+                    }, 1000);
+                }
+            } else if (action.type === 'PAUSE') {
+                if (adminRound1TimerInterval) {
+                    clearInterval(adminRound1TimerInterval);
+                    adminRound1TimerInterval = null;
+                }
+            } else if (action.type === 'STOP' || action.type === 'RESET') {
+                if (adminRound1TimerInterval) {
+                    clearInterval(adminRound1TimerInterval);
+                    adminRound1TimerInterval = null;
+                }
+                if (action.type === 'RESET') {
+                    adminRound1TimeSeconds = 0;
+                    updateAdminRound1TimerDisplay();
+                }
+            }
+        });
+
+        let adminQuestionCountdownInterval = null;
+        let adminQuestionCountdownSeconds = 0;
+
+        function updateAdminQuestionCountdownDisplay() {
+            let m = Math.floor(adminQuestionCountdownSeconds / 60);
+            let s = adminQuestionCountdownSeconds % 60;
+            const overlayEl = document.getElementById('adminQuestionTimerOverlay');
+            if (overlayEl) {
+                overlayEl.innerText = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+                overlayEl.style.color = adminQuestionCountdownSeconds <= 5 && adminQuestionCountdownSeconds > 0 ? '#ff4757' : '#feca57';
+            }
+        }
+
+        socket.on('startCountdown', (seconds) => {
+            adminQuestionCountdownSeconds = parseInt(seconds, 10);
+            if (isNaN(adminQuestionCountdownSeconds)) adminQuestionCountdownSeconds = 0;
+            
+            if (document.getElementById('adminQuestionTimerOverlay')) {
+                document.getElementById('adminQuestionTimerOverlay').style.display = 'block';
+            }
+            updateAdminQuestionCountdownDisplay();
+            
+            if (adminQuestionCountdownInterval) {
+                clearInterval(adminQuestionCountdownInterval);
+            }
+            
+            adminQuestionCountdownInterval = setInterval(() => {
+                if (adminQuestionCountdownSeconds > 0) {
+                    adminQuestionCountdownSeconds--;
+                    updateAdminQuestionCountdownDisplay();
+                } else {
+                    clearInterval(adminQuestionCountdownInterval);
+                    adminQuestionCountdownInterval = null;
+                    if (document.getElementById('adminQuestionTimerOverlay')) {
+                        setTimeout(() => {
+                            document.getElementById('adminQuestionTimerOverlay').style.display = 'none';
+                        }, 1000);
+                    }
+                }
+            }, 1000);
+        });
+        // ---- TOGGLE ẨN ĐỒ HỌA VÒNG 2 ----
+        function toggleRound2Graphics() {
+            var checkbox = document.getElementById('settingHideRound2Graphics');
+            var isHidden = checkbox.checked; // true = đang ẩn (checked), false = đang hiện (unchecked)
+            socket.emit('updateSettings', { hideRound2Graphics: isHidden });
+            updateRound2GraphicsUI(isHidden);
+        }
+
+        function updateRound2GraphicsUI(isHidden) {
+            var label = document.getElementById('round2GraphicsLabel');
+            var statusText = document.getElementById('round2GraphicsStatusText');
+            var toggleBg = document.getElementById('round2Toggle');
+            var toggleThumb = document.getElementById('round2ToggleThumb');
+            var checkbox = document.getElementById('settingHideRound2Graphics');
+            if (!label) return;
+
+            checkbox.checked = isHidden;
+
+            if (isHidden) {
+                // ĐANG ẨN (tích bật)
+                label.textContent = 'ẨN ĐỒ HỌA';
+                label.style.color = '#ff7675';
+                statusText.textContent = 'Đang ẩn đồ hoạ (Chỉ hiện lên khi tắt dấu tích)';
+                toggleBg.style.background = '#d63031';
+                toggleThumb.style.transform = 'translateX(24px)';
+            } else {
+                // ĐANG HIỆN (tích tắt)
+                label.textContent = 'HIỂN THỊ';
+                label.style.color = '#2ed573';
+                statusText.textContent = 'Đang hiện đồ hoạ Vòng 2';
+                toggleBg.style.background = '#2ed573';
+                toggleThumb.style.transform = 'translateX(0)';
+            }
+        }
+        // ---- END TOGGLE ẨN ĐỒ HỌA VÒNG 2 ----
+
+        function applySettings() {
+            let theme = document.getElementById('settingTheme').value;
+            var language = document.getElementById('settingLanguage').value;
+            let brightness = parseInt(document.getElementById('settingBrightness').value);
+            let scale = parseInt(document.getElementById('settingScale').value);
+            let antiCheat = parseInt(document.getElementById('settingAntiCheat').value) === 1;
+            
+            let fontGlobal = document.getElementById('settingFontGlobal')?.value || 'SF Pro Display Bold';
+            let fontGeneral = document.getElementById('settingFontGeneral')?.value || 'SF Pro Display Bold';
+            let fontQuestion = document.getElementById('settingFontQuestion')?.value || 'SF Pro Display Bold';
+            let globalFontEnabled = document.getElementById('settingGlobalFontEnabled')?.checked || false;
+            let fontTeamName = document.getElementById('settingFontTeamName')?.value || 'Orbitron';
+            let fontScore = document.getElementById('settingFontScore')?.value || 'Myriad Pro';
+            let scoreboardY = parseInt(document.getElementById('settingScoreboardY')?.value || 50);
+            let scoreboardTitle = (document.getElementById('settingScoreboardTitle')?.value || '').trim();
+            let questionsPerTeam = parseInt(document.getElementById('settingQuestionsPerTeam')?.value || 3);
+            let turnOrderRule = document.getElementById('settingTurnOrderRule')?.value || 'mode_asc';
+            let buzzerDelayMs = parseInt(document.getElementById('settingBuzzerDelay')?.value || 500);
+            let disableBuzzerTimerBar = document.getElementById('settingDisableBuzzerTimerBar')?.checked || false;
+
+            localStorage.setItem('econova_lang', language);
+            socket.emit('updateSettings', { theme, language, brightness, scale, antiCheat, fontTeamName, fontScore, scoreboardY, scoreboardTitle, globalFontEnabled, fontGlobal, fontGeneral, fontQuestion, questionsPerTeam, turnOrderRule, buzzerDelayMs, disableBuzzerTimerBar });
+        }
+
+        function updateMaxQuestions() {
+            let totalQuestions = (questionBank[10]?.length || 0) + (questionBank[20]?.length || 0) + (questionBank[40]?.length || 0);
+            if (totalQuestions === 0 && currentState && currentState.questionCount) {
+                totalQuestions = (currentState.questionCount[10] || 0) + (currentState.questionCount[20] || 0) + (currentState.questionCount[40] || 0);
+            }
+            let teamCount = currentState?.settings?.teamCount || parseInt(document.getElementById('settingTeamCount').value) || 4;
+            let maxQuestions = totalQuestions > 0 ? Math.floor(totalQuestions / teamCount) : 999;
+            
+            let label = document.getElementById('maxQuestionsLabel');
+            let input = document.getElementById('settingQuestionsPerTeam');
+            let lang = currentState?.settings?.language || currentGlobalLang || 'vi';
+            
+            if (label && input) {
+                if (totalQuestions > 0) {
+                    label.innerText = `${t('adm_team_max', lang)}${maxQuestions})`;
+                    input.max = maxQuestions;
+                    if (parseInt(input.value) > maxQuestions) {
+                        input.value = maxQuestions;
+                        socket.emit('updateSettings', { questionsPerTeam: maxQuestions });
+                    }
+                } else {
+                    label.innerText = `${t('adm_team_max', lang)}-)`;
+                    input.max = 999;
+                }
+            }
+            return maxQuestions;
+        }
+
+        function validateQuestionsPerTeam() {
+            let input = document.getElementById('settingQuestionsPerTeam');
+            if (!input) return;
+            let maxQuestions = updateMaxQuestions();
+            let val = parseInt(input.value);
+            let lang = currentState?.settings?.language || currentGlobalLang || 'vi';
+            if (val > maxQuestions && maxQuestions > 0) {
+                alert(t("adm_err_not_enough_q", lang).replace("{max}", maxQuestions));
+                input.value = maxQuestions;
+            }
+        }
+
+        function saveTeamAvatarSettings(teamId) {
+            let size = parseInt(document.getElementById(`teamSize${teamId}`).value);
+            let overlap = parseInt(document.getElementById(`teamOverlap${teamId}`).value);
+            let offsetX = parseInt(document.getElementById(`teamOffsetX${teamId}`).value);
+            socket.emit('updateTeamAvatarSettings', { id: teamId, avatarSize: size, avatarOverlap: overlap, avatarOffsetX: offsetX });
+        }
+
+        function applyGlobalAvatarSettings() {
+            let size = parseInt(document.getElementById('settingAvatarSize').value);
+            let overlap = parseInt(document.getElementById('settingAvatarOverlap').value);
+            let offsetX = parseInt(document.getElementById('settingAvatarOffsetX').value);
+            socket.emit('updateAllAvatarSettings', { avatarSize: size, avatarOverlap: overlap, avatarOffsetX: offsetX });
+        }
+
+        function resetGame() { 
+            showConfirm(t('adm_confirm_reset', currentGlobalLang), () => {
+                cancelLockedPackage();
+                adminSelectedQuestions = [];
+                
+                try {
+                    localStorage.removeItem('econova_questionBank');
+                    localStorage.removeItem('econova_questionBankName');
+                    localStorage.removeItem('econova_activeBankSlot');
+                    localStorage.removeItem('econova_adminSelectedQuestions');
+                } catch (e) {
+                    console.error("Lỗi xóa localStorage trong resetGame:", e);
+                }
+                
+                hasAutoLoadedSlot = true; // Prevent auto-loading when game is reset
+                questionBank = { 10: [], 20: [], 40: [] };
+                document.getElementById('excelStatus').innerHTML = `<span>${t("adm_bank_empty", currentGlobalLang)}</span>`;
+                updateQuestionDropdown();
+                updateMaxQuestions();
+                validateQuestionsPerTeam();
+                
+                socket.emit('resetGame');
+            }); 
+        }
+
+        function changeTeamCount() {
+            let select = document.getElementById('settingTeamCount');
+            if (!select) return;
+            let val = parseInt(select.value);
+            showConfirm(t('adm_confirm_team_cnt', currentGlobalLang), 
+                () => { // onOk
+                    socket.emit('changeTeamCount', val);
+                },
+                () => { // onCancel
+                    if (currentState && currentState.settings) {
+                        select.value = currentState.settings.teamCount || 4;
+                    }
+                }
+            );
+        }
+
+        // STATE UPDATE
+        let hasAutoLoadedSlot = false;
+        socket.on('updateState', (state) => {
+
+            // ================= FONT LOGIC =================
+            if (state.settings) {
+                let s = state.settings;
+                let globalEnabled = s.globalFontEnabled || false;
+                let fGlobal = s.fontGlobal || 'SF Pro Display Bold';
+                let fGeneral = s.fontGeneral || 'SF Pro Display Bold';
+                let fQuestion = s.fontQuestion || 'SF Pro Display Bold';
+                let fTeam = s.fontTeamName || 'SF Pro Display Bold';
+                let fScore = s.fontScore || 'Orbitron';
+                
+                let styleEl = document.getElementById('dynamic-font-styles-global');
+                if (!styleEl) {
+                    styleEl = document.createElement('style');
+                    styleEl.id = 'dynamic-font-styles-global';
+                    document.head.appendChild(styleEl);
+                }
+                
+                let rules = '';
+                if (globalEnabled) {
+                    rules += '@font-face { font-family: \'CustomFontGlobal\'; src: url(\'/font/' + encodeURIComponent(fGlobal) + '\') format(\'truetype\'); }\n';
+                    rules += ':root { ' +
+                        '--font-general: \'CustomFontGlobal\', \'SF Pro Display Bold\', \'Segoe UI\', sans-serif;' +
+                        '--font-team-name: \'CustomFontGlobal\', \'SF Pro Display Bold\', \'Segoe UI\', sans-serif;' +
+                        '--font-score: \'CustomFontGlobal\', \'Orbitron\', sans-serif;' +
+                        '--font-question: \'CustomFontGlobal\', \'SF Pro Display Bold\', \'Segoe UI\', sans-serif;' +
+                    '}';
+                } else {
+                    rules += '@font-face { font-family: \'CustomFontGeneral\'; src: url(\'/font/' + encodeURIComponent(fGeneral) + '\') format(\'truetype\'); }\n';
+                    rules += '@font-face { font-family: \'CustomFontQuestion\'; src: url(\'/font/' + encodeURIComponent(fQuestion) + '\') format(\'truetype\'); }\n';
+                    rules += '@font-face { font-family: \'CustomFontTeamName\'; src: url(\'/font/' + encodeURIComponent(fTeam) + '\') format(\'truetype\'); }\n';
+                    rules += '@font-face { font-family: \'CustomFontScore\'; src: url(\'/font/' + encodeURIComponent(fScore) + '\') format(\'truetype\'); }\n';
+                    
+                    rules += ':root { ' +
+                        '--font-general: \'CustomFontGeneral\', \'SF Pro Display Bold\', \'Segoe UI\', sans-serif;' +
+                        '--font-team-name: \'CustomFontTeamName\', \'SF Pro Display Bold\', \'Segoe UI\', sans-serif;' +
+                        '--font-score: \'CustomFontScore\', \'Orbitron\', sans-serif;' +
+                        '--font-question: \'CustomFontQuestion\', \'SF Pro Display Bold\', \'Segoe UI\', sans-serif;' +
+                    '}';
+                }
+                
+                if (styleEl.innerHTML !== rules) {
+                    styleEl.innerHTML = rules;
+                }
+            }
+            // ===============================================
+
+            currentState = state;
+            if (!state.teams) return;
+            state.turnOrder = state.turnOrder || [];
+
+            // Sync "Ẩn Đồ Hoạ Vòng 2" toggle UI
+            if (state.settings && typeof state.settings.hideRound2Graphics !== 'undefined') {
+                var isHidden = state.settings.hideRound2Graphics;
+                if (typeof updateRound2GraphicsUI === 'function') updateRound2GraphicsUI(isHidden);
+            }
+            
+            if (!state.pendingPackage && !state.lockedPackage) {
+                adminSelectedQuestions = [];
+                adminMode3Points = [];
+            }
+            
+            // If the active bank slot changes, reset the auto-loaded flag so we can sync the new slot
+            if (currentState && state.activeBankSlot !== currentState.activeBankSlot) {
+                hasAutoLoadedSlot = false;
+            }
+            
+            let totalQs = (questionBank[10] ? questionBank[10].length : 0) + (questionBank[20] ? questionBank[20].length : 0) + (questionBank[40] ? questionBank[40].length : 0);
+            const savedSlot = localStorage.getItem('econova_activeBankSlot');
+            if (state.activeBankSlot && (totalQs === 0 || String(state.activeBankSlot) !== String(savedSlot)) && !hasAutoLoadedSlot) {
+                hasAutoLoadedSlot = true;
+                loadFromSlot(state.activeBankSlot);
+            }
+            
+            let btnCloseQ = document.getElementById('btnCloseQuestionBtn');
+            if (btnCloseQ) {
+                let mode = state.settings && state.settings.questionSelectionMode ? state.settings.questionSelectionMode : 1;
+                if (mode == 2 || mode == 3) {
+                    btnCloseQ.style.display = 'none';
+                } else {
+                    btnCloseQ.style.display = 'block';
+                }
+            }
+            
+            // Update Room PIN status
+            let lblRoomPIN = document.getElementById('lblRoomPIN');
+            let btnOpenRoom = document.getElementById('btnOpenRoom');
+            let btnCloseRoom = document.getElementById('btnCloseRoom');
+            
+            let selectTeamCount = document.getElementById('settingTeamCount');
+            if (selectTeamCount && state.settings && state.settings.teamCount) {
+                selectTeamCount.value = state.settings.teamCount;
+            }
+            
+            let turnOrderRuleSelect = document.getElementById('settingTurnOrderRule');
+            if (turnOrderRuleSelect && turnOrderRuleSelect.options.length > 0) {
+                let teamCount = state.settings?.teamCount || 4;
+                let lang = state.settings?.language || currentGlobalLang || 'vi';
+                let template = t('adm_tr_seq', lang);
+                turnOrderRuleSelect.options[0].text = template.replace('{X}', teamCount);
+            }
+            
+            let inputQuestionsPerTeam = document.getElementById('settingQuestionsPerTeam');
+            if (inputQuestionsPerTeam && state.settings && state.settings.questionsPerTeam) {
+                inputQuestionsPerTeam.value = state.settings.questionsPerTeam;
+            }
+            let selectTurnOrderRule = document.getElementById('settingTurnOrderRule');
+            if (selectTurnOrderRule && state.settings && state.settings.turnOrderRule) {
+                selectTurnOrderRule.value = state.settings.turnOrderRule;
+            }
+            if (typeof updateMaxQuestions === 'function') updateMaxQuestions();
+            
+            let selectQuestionSelectionMode = document.getElementById('settingQuestionSelectionMode');
+            if (selectQuestionSelectionMode && state.settings && state.settings.questionSelectionMode) {
+                selectQuestionSelectionMode.value = state.settings.questionSelectionMode;
+            }
+            let inputMode2Rows = document.getElementById('settingMode2Rows');
+            if (inputMode2Rows && state.settings && state.settings.mode2Rows !== undefined) {
+                inputMode2Rows.value = state.settings.mode2Rows;
+            }
+            let inputMode2StartQ = document.getElementById('settingMode2StartQ');
+            if (inputMode2StartQ && state.settings && state.settings.mode2StartQ !== undefined) {
+                inputMode2StartQ.value = state.settings.mode2StartQ;
+            }
+            let mode2SettingsRow = document.getElementById('mode2SettingsRow');
+            if (mode2SettingsRow) {
+                let currentMode = (state.settings && state.settings.questionSelectionMode) || 1;
+                mode2SettingsRow.style.display = currentMode === 2 ? 'flex' : 'none';
+            }
+            if (typeof renderQuestionSelectionUI === 'function') renderQuestionSelectionUI();
+
+            if (lblRoomPIN && btnOpenRoom && btnCloseRoom) {
+                if (state.isRoomOpen) {
+                    let lblPinLabel = document.getElementById('lblPinLabel');
+                    if(lblPinLabel) lblPinLabel.innerText = t('adm_room_pin', currentGlobalLang);
+                    lblRoomPIN.innerText = state.roomPIN;
+                    lblRoomPIN.style.color = '#10ac84';
+                    btnOpenRoom.style.opacity = '0.5';
+                    btnOpenRoom.style.pointerEvents = 'none';
+                    btnCloseRoom.style.opacity = '1';
+                    btnCloseRoom.style.pointerEvents = 'auto';
+                } else {
+                    let lblPinLabel = document.getElementById('lblPinLabel');
+                    if(lblPinLabel) lblPinLabel.innerText = t('adm_room_status', currentGlobalLang);
+                    lblRoomPIN.innerText = t('adm_room_closed', currentGlobalLang);
+                    lblRoomPIN.style.color = '#ff4757';
+                    btnOpenRoom.style.opacity = '1';
+                    btnOpenRoom.style.pointerEvents = 'auto';
+                    btnCloseRoom.style.opacity = '0.5';
+                    btnCloseRoom.style.pointerEvents = 'none';
+                }
+            }
+
+            if (!window.initialLoaded && state.currentQuestion) {
+                let q = state.currentQuestion;
+                if (q.points) {
+                    let ptsSelect = document.getElementById('qPoints');
+                    if (ptsSelect) ptsSelect.value = q.points;
+                }
+                updateQuestionDropdown();
+                if (q.idx !== undefined && q.idx !== -1) {
+                    let qSel = document.getElementById('qSelect');
+                    if (qSel) qSel.value = q.idx;
+                }
+            } else {
+                updateQuestionDropdown();
+            }
+
+            // Dynamic Rendering Functions
+            function renderTeamInputs() {
+                const container = document.getElementById('teamInputsContainer');
+                if (!container) return;
+                // Only re-render if count changes
+                if (container.children.length === state.teams.length) return;
+                
+                const activeEl = document.activeElement;
+                const activeId = activeEl ? activeEl.id : null;
+                const activeVal = activeEl ? activeEl.value : '';
+                
+                container.innerHTML = '';
+                state.teams.forEach(team => {
+                    container.innerHTML += `
+                        <div><label>${window.t('adm_team', currentGlobalLang)} ${team.id}</label>
+                            <input type="text" id="teamName${team.id}" placeholder="${window.t('adm_placeholder_tname', currentGlobalLang).replace('{id}', team.id)}" value="${team.name}" oninput="saveTeamNames()">
+                            <input type="text" id="teamSchool${team.id}" placeholder="${window.t('adm_placeholder_tschool', currentGlobalLang).replace('{id}', team.id)}" value="${team.school || ''}" oninput="saveTeamNames()">
+                            <label style="font-size: 12px; color: #a4b0be; margin-top: 5px;">${window.t('adm_label_tavatar', currentGlobalLang).replace('{id}', team.id)}</label>
+                            <input type="file" id="teamAvatar${team.id}" accept="image/png, image/jpeg" style="font-size: 12px;" onchange="uploadTeamAvatar(event, ${team.id})">
+                        </div>
+                    `;
+                });
+                // Restore focus after rebuild
+                if (activeId) {
+                    let el = document.getElementById(activeId);
+                    if (el) { el.focus(); el.value = activeVal; }
+                }
+            }
+
+            function renderTeamSettings() {
+                const container = document.getElementById('teamAvatarSettingsContainer');
+                if (!container) return;
+                if (container.children.length === state.teams.length) return;
+                
+                container.innerHTML = '';
+                state.teams.forEach(team => {
+                    container.innerHTML += `
+                        <div style="flex: 1; min-width: 150px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px;">
+                            <label style="color:#0abde3;">${window.t("adm_ts_size", currentGlobalLang).replace("{id}", team.id)}<span id="lblTeamSize${team.id}">${team.avatarSize || 100}</span>%):</label>
+                            <input type="range" id="teamSize${team.id}" min="40" max="200" value="${team.avatarSize || 100}" style="width:100%" oninput="document.getElementById('lblTeamSize${team.id}').innerText=this.value" onchange="saveTeamAvatarSettings(${team.id})">
+                            <label style="color:#0abde3;">${window.t("adm_ts_overlap", currentGlobalLang)}<span id="lblTeamOverlap${team.id}">${team.avatarOverlap || 10}</span>%):</label>
+                            <input type="range" id="teamOverlap${team.id}" min="10" max="50" value="${team.avatarOverlap || 10}" style="width:100%" oninput="document.getElementById('lblTeamOverlap${team.id}').innerText=this.value" onchange="saveTeamAvatarSettings(${team.id})">
+                            <label style="color:#0abde3;">${window.t("adm_ts_offsetx", currentGlobalLang)}<span id="lblTeamOffsetX${team.id}">${team.avatarOffsetX || 0}</span>%):</label>
+                            <input type="range" id="teamOffsetX${team.id}" min="-100" max="100" value="${team.avatarOffsetX || 0}" style="width:100%" oninput="document.getElementById('lblTeamOffsetX${team.id}').innerText=this.value" onchange="saveTeamAvatarSettings(${team.id})">
+                        </div>
+                    `;
+                });
+            }
+
+            renderTeamInputs();
+            renderTeamSettings();
+
+            // 1. Inputs
+            const mainSel = document.getElementById('mainTeam');
+            if (mainSel.options.length - 1 !== state.teams.length) {
+                mainSel.innerHTML = `<option value="0">${t("adm_sel_team", currentGlobalLang)}</option>`;
+                state.teams.forEach(t => {
+                    let opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.text = t.name;
+                    mainSel.add(opt);
+                });
+            } else {
+                state.teams.forEach((t, idx) => {
+                    if (mainSel.options[idx+1]) mainSel.options[idx+1].text = t.name;
+                });
+            }
+            state.teams.forEach(t => {
+                if (!window.initialLoaded) {
+                    let nInp = document.getElementById(`teamName${t.id}`);
+                    let sInp = document.getElementById(`teamSchool${t.id}`);
+                    if (nInp) nInp.value = t.name;
+                    if (sInp) sInp.value = t.school || '';
+                }
+            });
+            window.initialLoaded = true;
+            
+            // 2. Turn order
+            const turnList = document.getElementById('turnList');
+            turnList.style.display = 'flex';
+            turnList.style.gap = '10px';
+            turnList.style.width = '100%';
+            turnList.innerHTML = '';
+            
+            const playedTeams = state.teams.filter(team => !state.turnOrder.includes(team.id));
+            playedTeams.forEach(team => {
+                turnList.innerHTML += `<div class="turn-item played" style="flex: 1; padding: 10px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-width: 0;"><div style="font-weight: bold; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${team.name}</div><div style="font-size: 11px; margin-top: 5px;">${window.t("adm_to_played", currentGlobalLang)}</div></div>`;
+            });
+            
+            state.turnOrder.forEach((tid, idx) => {
+                let teamObj = state.teams.find(x => x.id === tid);
+                let endBtn = `<button class="btn-red" style="padding:2px 8px; font-size:11px; width:auto;" onclick="finishTurnForTeam(${teamObj.id})">${window.t("adm_to_end", currentGlobalLang)}</button>`;
+                let stats = state.turnStats && state.turnStats[teamObj.id] ? state.turnStats[teamObj.id] : 0;
+                let statText = stats > 0 ? `<div style="color: #feca57; font-size: 12px; margin-top: 3px;">${window.t("adm_to_stats", currentGlobalLang).replace("{played}", stats).replace("{total}", state.settings?.questionsPerTeam || 3)}</div>` : '';
+                
+                let buttonsHtml = `<div style="display: flex; gap: 5px; justify-content: center; margin-top: 5px;">${endBtn}</div>`;
+                
+                turnList.innerHTML += `<div class="turn-item ${idx===0 ? 'active' : ''}" style="flex: 1; padding: 10px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-width: 0;">
+                    <div style="font-weight: bold; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${idx+1}. ${teamObj.name}</div>
+                    <div style="font-size: 13px; color: ${idx===0 ? '#fff' : '#00d2d3'}; margin-top: 2px;">${teamObj.score} ${window.t("adm_pts", currentGlobalLang)}</div>
+                    ${statText}
+                    ${buttonsHtml}
+                </div>`;
+            });
+
+            if (state.turnOrder.length > 0) {
+                let currentT = state.teams.find(x => x.id === state.turnOrder[0]);
+                if (currentT) {
+                    var language = document.getElementById('settingLanguage').value || 'vi';
+                    let btn = document.getElementById('btnFinishCurrentTurn');
+                    if (btn) btn.innerText = t('adm_end_turn_prefix', language) + currentT.name.toUpperCase();
+                }
+            } else {
+                var language = document.getElementById('settingLanguage').value || 'vi';
+                let btn = document.getElementById('btnFinishCurrentTurn');
+                if (btn) btn.innerText = t('adm_end_turn_default', language);
+            }
+
+            // 3. Current Question
+            let q = state.currentQuestion || { active: false, points: 0, mainTeamId: null, isHopeStar: false, text: "", answer: "" };
+            // ==========================================
+            let mTeam = q.mainTeamId ? state.teams.find(t => t.id === q.mainTeamId) : null;
+            
+            document.getElementById('actionPanel').style.display = q.active ? 'block' : 'none';
+            var language = document.getElementById('settingLanguage')?.value || 'vi';
+            document.getElementById('adminQText').innerText = q.text || t("adm_empty", language);
+            document.getElementById('adminAText').innerText = q.answer || t("adm_empty", language);
+
+            let qMode = state.settings?.questionSelectionMode || 1;
+            let qMetaText = '';
+            if (q.points) {
+                if (qMode === 2) {
+                    qMetaText = ` - Câu ${(q.idx || 0) + 1} (${q.points} ĐIỂM)`;
+                } else if (qMode === 3) {
+                    qMetaText = ` - Câu hỏi ${q.points} ĐIỂM`;
+                } else {
+                    qMetaText = ` - ${q.points} ĐIỂM`;
+                }
+            }
+            let metaEl = document.getElementById('adminQMetaInfo');
+            if (metaEl) metaEl.innerText = qMetaText;
+
+            
+            // Restore Video UI
+            const vidSection = document.getElementById('adminVideoSection');
+            const vText = document.getElementById('adminVText');
+            if (vidSection && vText) {
+                if (q.vid) {
+                    currentVideoUrl = q.vid;
+                    vidSection.style.display = 'block';
+                    vText.innerText = q.vid;
+                } else {
+                    currentVideoUrl = "";
+                    vidSection.style.display = 'none';
+                }
+            }
+            
+            // 4. Status UI
+            const ind = document.getElementById('statusIndicator');
+            const mainAct = document.getElementById('mainTeamActions');
+            const buzzAct = document.getElementById('buzzerActions');
+
+            if (q.active) {
+                if (q.resolved) {
+                    mainAct.style.display = 'none';
+                    buzzAct.style.display = 'none';
+                    ind.className = 'status-box';
+                    ind.style.background = '#8395a7';
+                    var language = document.getElementById('settingLanguage')?.value || 'vi'; ind.textContent = t('adm_q_resolved', language);
+                } else if (state.buzzedTeam) {
+                    let bTeam = state.teams.find(t => t.id === state.buzzedTeam);
+                    let bTimeNum = state.buzzTimes ? state.buzzTimes[bTeam.id] : undefined;
+                    let timeStr = typeof bTimeNum === 'number' ? ` (${(bTimeNum / 1000).toFixed(3)}s)` : '';
+                    var language = document.getElementById('settingLanguage').value || 'vi';
+                    document.getElementById('buzzedTeamName').innerText = bTeam ? t('adm_buzz_team', language) + bTeam.name + timeStr : "-";
+                    
+                    let tbody = document.getElementById('buzzTimeTableBody');
+                    let tableContainer = document.getElementById('buzzTimeTableContainer');
+                    if (state.buzzTimes && Object.keys(state.buzzTimes).length > 0) {
+                        tableContainer.style.display = 'block';
+                        let buzzArr = [];
+                        for (let tid in state.buzzTimes) {
+                            let t = state.teams.find(x => x.id === parseInt(tid));
+                            if (t) buzzArr.push({ name: t.name, time: state.buzzTimes[tid] });
+                        }
+                        buzzArr.sort((a, b) => a.time - b.time);
+                        tbody.innerHTML = '';
+                        buzzArr.forEach((bz, idx) => {
+                            let tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td style="padding: 8px 10px; border-bottom: 1px solid #576574;">${idx + 1}</td>
+                                <td style="padding: 8px 10px; border-bottom: 1px solid #576574; font-weight: bold; color: ${idx === 0 ? '#ff9f43' : '#fff'};">${bz.name}</td>
+                                <td style="padding: 8px 10px; border-bottom: 1px solid #576574;">${(bz.time / 1000).toFixed(3)}s</td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    } else {
+                        tableContainer.style.display = 'none';
+                    }
+
+                    mainAct.style.display = 'none';
+                    buzzAct.style.display = 'block';
+                    ind.className = 'status-box';
+                    ind.style.background = '#ff4757';
+                    var language = document.getElementById('settingLanguage').value || 'vi'; ind.textContent = t("adm_status_buzz_team", language).replace("{team}", bTeam.name);
+                } else if (!state.isBuzzerLocked) {
+                    mainAct.style.display = 'none';
+                    buzzAct.style.display = 'none';
+                    ind.className = 'status-box';
+                    ind.style.background = '#10ac84';
+                    var language = document.getElementById('settingLanguage').value || 'vi'; ind.textContent = t("adm_status_buzz_open", language);
+                } else {
+                    mainAct.style.display = 'block';
+                    buzzAct.style.display = 'none';
+                    ind.className = 'status-box';
+                    if (q.isHidden) {
+                        ind.style.background = '#f39c12';
+                        var language = document.getElementById('settingLanguage').value || 'vi'; 
+                        ind.textContent = t('adm_q_selected', language) + (q.isHopeStar ? t('adm_status_star', language) : '');
+                    } else {
+                        ind.style.background = '#3742fa';
+                        var language = document.getElementById('settingLanguage').value || 'vi'; 
+                        ind.textContent = t('adm_status_play', language).replace('{team}', mTeam ? mTeam.name : '').replace('{pts}', q.points) + (q.isHopeStar ? t('adm_status_star', language) : '');
+                    }
+                }
+            } else {
+                mainAct.style.display = 'none';
+                buzzAct.style.display = 'none';
+                if (!q.isHopeStar) {
+                    ind.className = 'status-box';
+                    ind.style.background = '#576574';
+                    var language = document.getElementById('settingLanguage').value || 'vi';
+                    ind.textContent = t('adm_waiting', language);
+                } else {
+                    ind.className = 'status-box';
+                    ind.style.background = '#f39c12';
+                    var language = document.getElementById('settingLanguage').value || 'vi'; ind.textContent = t("adm_status_star_only", language);
+                }
+            }
+
+            // Grid Buttons Visibility
+            const btnShowOverlay = document.getElementById('btnShowOverlayGrid');
+            const btnHideOverlay = document.getElementById('btnHideOverlayGrid');
+            if (btnShowOverlay && btnHideOverlay) {
+                if (state.isGridVisibleOnOverlay) {
+                    btnShowOverlay.style.display = 'none';
+                    btnHideOverlay.style.display = 'block';
+                } else {
+                    btnShowOverlay.style.display = 'block';
+                    btnHideOverlay.style.display = 'none';
+                }
+            }
+
+            // Hope Star Button Update
+            var hopeStarOn = q.isHopeStar === true;
+            var hopeStarBtnLabel = hopeStarOn ? '⭐ TắT NS HY VỌNG' : '⭐ BẬT NS HY VỌNG';
+            var hopeStarBtnBg = hopeStarOn ? '#e74c3c' : '#e67e22';
+            ['btnToggleHopeStar1', 'btnToggleHopeStar2'].forEach(function(bid) {
+                var btn = document.getElementById(bid);
+                if (btn) {
+                    btn.innerText = hopeStarBtnLabel;
+                    btn.style.background = hopeStarBtnBg;
+                }
+            });
+
+            // 5. Scoreboard
+            const container = document.getElementById('team-container');
+            const activeEl = document.activeElement;
+            const activeId = activeEl ? activeEl.id : null;
+            const activeVal = activeEl ? activeEl.value : '';
+            if (container.children.length !== state.teams.length) {
+                container.innerHTML = '';
+                state.teams.forEach(team => {
+                    container.innerHTML += `
+                        <div class="card" id="team-card-${team.id}" style="position: relative;">
+                            <h3 style="margin:0" id="team-name-${team.id}">${team.name}</h3>
+                            <div style="font-size: 12px; color: #a4b0be; margin-top: 5px;" id="team-buzz-time-${team.id}">${team.school || '-'}</div>
+                            <div class="score" id="team-val-${team.id}">${team.score}</div>
+                            <div style="display:flex; flex-direction:column; gap:5px; margin-top:5px;">
+                                <input type="number" id="customPts${team.id}" data-i18n="adm_pt_ph" placeholder="${t('adm_pt_ph', currentGlobalLang)}" style="margin-bottom:0; text-align:center; padding: 8px; user-select: text;" onkeypress="if(event.key==='Enter') manualChangeInput(${team.id}, 1)">
+                                <div style="display:flex; gap:5px;">
+                                    <button class="btn-green" style="padding: 8px;" onclick="manualChangeInput(${team.id}, 1)" data-i18n="adm_pt_add">${window.t('adm_pt_add', currentGlobalLang)}</button>
+                                    <button class="btn-red" style="padding: 8px;" onclick="manualChangeInput(${team.id}, -1)" data-i18n="adm_pt_sub">${window.t('adm_pt_sub', currentGlobalLang)}</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                // Restore focus after rebuild
+                if (activeId) {
+                    let el = document.getElementById(activeId);
+                    if (el) { el.focus(); el.value = activeVal; }
+                }
+            } else {
+                state.teams.forEach(team => {
+                    let n = document.getElementById(`team-name-${team.id}`);
+                    let s = document.getElementById(`team-buzz-time-${team.id}`);
+                    let v = document.getElementById(`team-val-${team.id}`);
+                    if (n) n.innerText = team.name;
+                    if (s) s.innerText = team.school || '-';
+                    if (v) v.innerText = team.score;
+                });
+            };
+
+            // Update existing cards
+            state.teams.forEach(team => {
+                let isMain = state.currentQuestion && state.currentQuestion.active && state.currentQuestion.mainTeamId === team.id;
+                let isBuzzed = state.buzzedTeam === team.id;
+                
+                let border = isBuzzed ? 'border: 3px solid #ff4757; box-shadow: 0 0 10px #ff4757;' :
+                             isMain ? 'border: 3px solid #3742fa;' : '';
+                             
+                let card = document.getElementById(`team-card-${team.id}`);
+                if (card) card.style.cssText = border;
+                
+                let nameEl = document.getElementById(`team-name-${team.id}`);
+                if (nameEl) nameEl.innerHTML = team.name;
+                
+                let valEl = document.getElementById(`team-val-${team.id}`);
+                if (valEl) valEl.innerText = team.score;
+                
+                let buzzTimeEl = document.getElementById(`team-buzz-time-${team.id}`);
+                if (buzzTimeEl) {
+                    let bTimeNum = state.buzzTimes ? state.buzzTimes[team.id] : undefined;
+                    if (typeof bTimeNum === 'number') {
+                        buzzTimeEl.innerHTML = `⏱ ${(bTimeNum / 1000).toFixed(3)}s`;
+                        buzzTimeEl.style.color = '#feca57';
+                        buzzTimeEl.style.fontWeight = 'bold';
+                    } else {
+                        buzzTimeEl.innerHTML = team.school || '-';
+                        buzzTimeEl.style.color = '#a4b0be';
+                        buzzTimeEl.style.fontWeight = 'normal';
+                    }
+                }
+            });
+
+            // Update scoreLog
+            const logContainer = document.getElementById('scoreLogContainer');
+            if (logContainer) {
+                if (!state.scoreLog || state.scoreLog.length === 0) {
+                    logContainer.innerHTML = '<div style="color: #a4b0be; font-style: italic;">Chưa có lịch sử điểm số.</div>';
+                } else {
+                    let logHtml = '';
+                    state.scoreLog.forEach(log => {
+                        let tName = state.teams.find(t => t.id === log.teamId)?.name || ('Đội ' + log.teamId);
+                        let timeStr = new Date(log.time).toLocaleTimeString('vi-VN');
+                        let isPositive = log.delta > 0;
+                        let color = isPositive ? '#10ac84' : '#ee5253';
+                        logHtml += `<div style="display: flex; justify-content: space-between; align-items: center; padding: 5px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                            <div>
+                                <span style="color:#a4b0be; margin-right: 10px;">${timeStr}</span>
+                                <strong>${tName}:</strong> <span style="color: ${color}; font-weight: bold;">${isPositive ? '+' : ''}${log.delta}</span>
+                                <span style="color: #feca57; margin-left: 10px;">(${log.reason})</span>
+                            </div>
+                            <button class="btn-red" style="padding: 2px 8px; font-size: 11px; width: auto;" onclick="undoScore('${log.id}')">Hoàn tác</button>
+                        </div>`;
+                    });
+                    logContainer.innerHTML = logHtml;
+                }
+            }
+
+            let btnToggleScoreboard = document.getElementById('btnToggleOverallScoreboard');
+            if (btnToggleScoreboard) {
+                if (state.showOverallScoreboard) {
+                    btnToggleScoreboard.className = 'btn-red';
+                    var language = document.getElementById('settingLanguage')?.value || 'vi'; btnToggleScoreboard.innerHTML = t('adm_sb_hide', language);
+                } else {
+                    btnToggleScoreboard.className = 'btn-primary';
+                    var language = document.getElementById('settingLanguage')?.value || 'vi'; btnToggleScoreboard.innerHTML = t('adm_sb_show', language);
+                }
+            }
+
+            // 6. Settings Sync
+            if (state.settings) {
+                if (state.settings.language) applyTranslations(state.settings.language);
+                let turnOrderRuleSelect = document.getElementById('settingTurnOrderRule');
+                if (turnOrderRuleSelect && turnOrderRuleSelect.options.length > 0) {
+                    let teamCount = state.settings?.teamCount || 4;
+                    let lang = state.settings?.language || 'vi';
+                    let template = t('adm_tr_seq', lang);
+                    turnOrderRuleSelect.options[0].text = template.replace('{X}', teamCount);
+                }
+                if (document.getElementById('settingTheme').value !== state.settings.theme) 
+                    document.getElementById('settingTheme').value = state.settings.theme || 'default';
+                if (document.getElementById('settingLanguage') && document.getElementById('settingLanguage').value !== state.settings.language) 
+                    document.getElementById('settingLanguage').value = state.settings.language || 'vi';
+                if (document.getElementById('settingAntiCheat')) {
+                    document.getElementById('settingAntiCheat').value = state.settings.antiCheat ? "1" : "0";
+                    if (document.getElementById('settingBuzzerDelay')) {
+                        let bDelay = state.settings.buzzerDelayMs !== undefined ? state.settings.buzzerDelayMs : 500;
+                        document.getElementById('settingBuzzerDelay').value = bDelay;
+                        if (document.getElementById('settingBuzzerDelaySlider')) {
+                            document.getElementById('settingBuzzerDelaySlider').value = bDelay;
+                        }
+                    }
+                    if (document.getElementById('settingDisableBuzzerTimerBar')) {
+                        document.getElementById('settingDisableBuzzerTimerBar').checked = state.settings.disableBuzzerTimerBar || false;
+                    }
+                    let acStats = document.getElementById('antiCheatStats');
+                    if (acStats) {
+                        acStats.innerHTML = '';
+                        if (state.settings.antiCheat) {
+                            let html = '<strong>Thông tin vi phạm:</strong><br>';
+                            let hasAny = false;
+                            state.teams.forEach(t => {
+                                let violations = state.antiCheatViolations?.[t.id] || 0;
+                                let isBanned = state.bannedTeams?.includes(t.id);
+                                if (violations > 0 || isBanned) {
+                                    hasAny = true;
+                                    html += `<div style="margin-top:5px; padding:5px; background: rgba(0,0,0,0.2); border-radius:4px; display:flex; justify-content:space-between; align-items:center;">
+                                        <span>${t.name}: <span style="color:${isBanned ? '#ff4757' : '#feca57'}">${isBanned ? 'CẤM THI' : violations + ' lần'}</span></span>
+                                        ${isBanned ? `<button class="btn-blue" style="padding: 2px 5px; font-size: 11px; width: auto;" onclick="socket.emit('unbanTeam', ${t.id})">Gỡ Cấm</button>` : ''}
+                                    </div>`;
+                                }
+                            });
+                            if (!hasAny) html += '<span style="color:#2ed573;">Không có vi phạm nào.</span>';
+                            acStats.innerHTML = html;
+                        }
+                    }
+                }
+                if (document.getElementById('settingBrightness').value !== String(state.settings.brightness)) {
+                    document.getElementById('settingBrightness').value = state.settings.brightness || 100;
+                    document.getElementById('lblBright').innerText = state.settings.brightness || 100;
+                }
+                if (document.getElementById('settingScale').value !== String(state.settings.scale)) {
+                    document.getElementById('settingScale').value = state.settings.scale || 100;
+                    document.getElementById('lblScale').innerText = state.settings.scale || 100;
+                }
+                if (document.getElementById('settingGlobalFontEnabled')) {
+                    document.getElementById('settingGlobalFontEnabled').checked = state.settings.globalFontEnabled || false;
+                }
+                
+                // Populate or refresh font dropdowns
+                if (_fontsCache) {
+                    // Fonts already loaded — just re-apply values
+                    populateFontSelects(_fontsCache, state.settings);
+                } else {
+                    // Fonts not yet loaded — trigger load now with current settings
+                    loadFontList(state.settings);
+                }
+                
+                // Toggle display logic based on globalFontEnabled
+                if (typeof toggleFontSettings === 'function') toggleFontSettings();
+            }
+
+            if (state.timerConfig) {
+                let focusedEl = document.activeElement;
+                if (!focusedEl || focusedEl.id !== 'timerPos') document.getElementById('timerPos').value = state.timerConfig.position;
+                if (!focusedEl || focusedEl.id !== 'timerFontSize') document.getElementById('timerFontSize').value = state.timerConfig.fontSize;
+                if (!focusedEl || focusedEl.id !== 'timerFontColor') document.getElementById('timerFontColor').value = state.timerConfig.fontColor;
+                if (!focusedEl || focusedEl.id !== 'timerStrokeColor') document.getElementById('timerStrokeColor').value = state.timerConfig.strokeColor;
+                if (!focusedEl || focusedEl.id !== 'timerStrokeWidth') document.getElementById('timerStrokeWidth').value = state.timerConfig.strokeWidth;
+                if (!focusedEl || focusedEl.id !== 'timerFontFamily') document.getElementById('timerFontFamily').value = state.timerConfig.fontFamily;
+                if (!focusedEl || focusedEl.id !== 'timerBold') document.getElementById('timerBold').checked = state.timerConfig.isBold;
+                if (!focusedEl || focusedEl.id !== 'timerItalic') document.getElementById('timerItalic').checked = state.timerConfig.isItalic;
+                if (!focusedEl || focusedEl.id !== 'timerUnderline') document.getElementById('timerUnderline').checked = state.timerConfig.isUnderline;
+                if (!focusedEl || focusedEl.id !== 'timerSetSeconds') {
+                    if (state.timerConfig.timeSeconds !== undefined) {
+                        document.getElementById('timerSetSeconds').value = state.timerConfig.timeSeconds;
+                    }
+                }
+            }
+
+            // Mini preview bảng điểm
+            renderMiniPreview(state);
+        });
+
+        function renderMiniPreview(state) {
+            let preview = document.getElementById('scoreboardMiniPreview');
+            let hint = document.getElementById('scoreboardPreviewHint');
+            if (!preview || !state || !state.teams) return;
+
+            preview.style.display = 'flex';
+            if (hint) hint.style.display = 'none';
+
+            let fontTeamName = (state.settings && state.settings.fontTeamName) || 'Orbitron';
+            let fontScore = (state.settings && state.settings.fontScore) || 'Myriad Pro';
+            let avatarSize = (state.settings && state.settings.avatarSize !== undefined) ? state.settings.avatarSize : 100;
+            let avatarOverlap = (state.settings && state.settings.avatarOverlap !== undefined) ? state.settings.avatarOverlap : 10;
+            let yOffset = (state.settings && state.settings.scoreboardY !== undefined) ? state.settings.scoreboardY : 50;
+            let title = (state.settings && state.settings.scoreboardTitle) ? state.settings.scoreboardTitle.trim() : '';
+            if (!preview.dataset.observerAttached) {
+                new ResizeObserver(entries => {
+                    for (let entry of entries) {
+                        let w = entry.contentRect.width;
+                        if (w > 0) {
+                            let child = preview.querySelector('.mini-preview-container');
+                            if (child) child.style.transform = `scale(${w / 1920})`;
+                        }
+                    }
+                }).observe(preview);
+                preview.dataset.observerAttached = 'true';
+            }
+            
+            let w = preview.clientWidth;
+            if (w === 0) w = preview.parentElement.clientWidth || 350;
+            let scale = w / 1920;
+
+            let containerHtml = `<div class="mini-preview-container" style="position:absolute; top:0; left:0; width:1920px; height:1080px; transform-origin: top left; transform: scale(${scale}); pointer-events:none;">`;
+
+            let teamHtml = state.teams.map(team => {
+                let avatarUrl = `/Themes/Avatars/${team.id}.png`;
+                if (state.avatarTimestamps && state.avatarTimestamps[team.id]) avatarUrl += `?t=${state.avatarTimestamps[team.id]}`;
+                
+                let tSize = team.avatarSize !== undefined ? team.avatarSize : 100;
+                let tOverlap = team.avatarOverlap !== undefined ? team.avatarOverlap : 10;
+                
+                return `
+                        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; min-width: 0;">
+                            <!-- Ảnh avatar -->
+                            <img src="${avatarUrl}" style="width: ${tSize}%; height: auto; max-height: 65vh; object-fit: contain; z-index: 1; transform: translateX(${team.avatarOffsetX || 0}%);" onerror="this.style.visibility='hidden'">
+                            <!-- Khối chứa Tên + Điểm -->
+                            <div style="width: ${Math.min(tSize, 100)}%; margin-top: -${tOverlap}%; z-index: 2; display: flex; flex-direction: column; border: 3px solid rgba(255, 255, 255, 0.9); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden;">
+                                <div style="background: linear-gradient(180deg, #d2e4f6, #9bc2ea); padding: 8px 10px; text-align: center; border-bottom: 2px solid rgba(255,255,255,0.5); overflow: hidden; display: flex; justify-content: center;">
+                                    <div style="font-family: 'CustomTeamFont', '${fontTeamName}', sans-serif; font-size: 26px; font-weight: normal; color: #012a5e; margin: 0; text-transform: uppercase; white-space: nowrap;">${team.name}</div>
+                                </div>
+                                <div style="background: linear-gradient(180deg, #1059a4, #083466); padding: 12px 10px; text-align: center;">
+                                    <div style="font-family: 'CustomScoreFont', '${fontScore}', sans-serif; font-size: 50px; font-weight: normal; color: #ffffff; margin: 0; line-height: 1;">${team.score}</div>
+                                </div>
+                            </div>
+                        </div>`;
+            }).join('');
+
+            let titleHtml = title 
+                ? `<div style="position:absolute; top: 10%; width: 100%; text-align: center; z-index: 10;">
+                       <span style="font-family:'CustomTeamFont', '${fontTeamName}',sans-serif;font-size:75px;font-weight:normal;color:#fff;text-shadow:0 4px 15px rgba(0,0,0,0.8),0 2px 5px rgba(0,0,0,0.5);letter-spacing:4px;text-transform:uppercase;">${title}</span>
+                   </div>`
+                : '';
+
+            let overallHtml = `
+                ${titleHtml}
+                <div style="position:absolute;width:100%;top:${yOffset}%;transform:translateY(-${yOffset}%);display:flex;justify-content:center;z-index:5;">
+                    <div style="display:flex;gap:40px;width:90%;max-width:1600px;justify-content:space-around;align-items:flex-end;">
+                        ${teamHtml}
+                    </div>
+                </div>
+            `;
+
+            let cleanTeam = fontTeamName.replace(/\s+/g, '');
+            let dashTeam = fontTeamName.replace(/\s+/g, '-');
+            let cleanScore = fontScore.replace(/\s+/g, '');
+            let dashScore = fontScore.replace(/\s+/g, '-');
+
+            let styleEl = document.getElementById('dynamic-font-styles');
+            if (!styleEl) {
+                styleEl = document.createElement('style');
+                styleEl.id = 'dynamic-font-styles';
+                document.head.appendChild(styleEl);
+            }
+            let newStyles = `
+                @font-face { font-family: 'CustomTeamFont'; src: url('/font/${encodeURIComponent(fontTeamName)}?t=${Date.now()}') format('truetype'); }
+                @font-face { font-family: 'CustomScoreFont'; src: url('/font/${encodeURIComponent(fontScore)}?t=${Date.now()}') format('truetype'); }
+            `;
+            if (styleEl.innerHTML !== newStyles) {
+                styleEl.innerHTML = newStyles;
+            }
+
+            preview.innerHTML = containerHtml + overallHtml + '</div>';
+        }
+
+        // Network and Room Controls
+        function toggleOverallScoreboard() {
+            if (currentState) {
+                let show = !currentState.showOverallScoreboard;
+                socket.emit('toggleOverallScoreboard', show);
+            }
+        }
+
+        function uploadScoreboardBg(event) {
+            let file = event.target.files[0];
+            if (file) {
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    socket.emit('updateScoreboardBg', e.target.result);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function uploadTeamAvatar(event, teamId) {
+            let file = event.target.files[0];
+            if (file) {
+                let reader = new FileReader();
+                reader.onload = function(e) {
+                    socket.emit('updateTeamAvatar', { teamId: teamId, base64Data: e.target.result });
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        let connectionTimerId = null;
+        function startPublicServer() {
+            let btn = document.getElementById('btnStartServer');
+            let authtoken = document.getElementById('ngrokAuthtoken').value.trim();
+            let domain = document.getElementById('ngrokDomain').value.trim();
+            let errorArea = document.getElementById('serverErrorArea');
+
+            if (!authtoken) authtoken = "dummy";
+            if (errorArea) errorArea.style.display = 'none';
+
+            localStorage.setItem('ngrok_authtoken', authtoken);
+            localStorage.setItem('ngrok_domain', domain);
+
+            let seconds = 0;
+            var language = document.getElementById('settingLanguage') ? document.getElementById('settingLanguage').value : 'vi';
+            btn.innerText = t('adm_network_creating', language) + seconds + "s)";
+            btn.style.pointerEvents = 'none';
+            btn.style.opacity = '0.7';
+            
+            if (connectionTimerId) clearInterval(connectionTimerId);
+            connectionTimerId = setInterval(() => {
+                seconds++;
+                var language = document.getElementById('settingLanguage') ? document.getElementById('settingLanguage').value : 'vi';
+                btn.innerText = t('adm_network_creating', language) + seconds + "s)";
+            }, 1000);
+
+            socket.emit('startPublicServer', { authtoken, domain });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            // Localtunnel init removed
+        });
+
+        // Nhận danh sách IP LAN/VPN
+        socket.on('serverIPs', (ips) => {
+            const list = document.getElementById('localIpsList');
+            if (list) {
+                let html = '';
+                if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                    html += `<div style="margin-bottom:8px; color:#0abde3;">🌐 <b>Web Host:</b> <a href="${window.location.origin}" target="_blank" style="color:#0abde3; text-decoration:underline;"><b>${window.location.origin}</b></a></div>`;
+                }
+                if (ips && ips.length > 0) {
+                    html += ips.map(ip => `<div style="margin-bottom:5px; color:#10ac84;">👉 <b>http://${ip}:39281</b></div>`).join('');
+                }
+                if (!html) {
+                    html = `<span style="color:#ff4757;">${t('adm_ip_none', currentGlobalLang)}</span>`;
+                }
+                list.innerHTML = html;
+            }
+        });
+
+        // Nhận link Localtunnel
+        socket.on('publicLinkResult', (data) => {
+            let btn = document.getElementById('btnStartServer');
+            let area = document.getElementById('serverLinkArea');
+            let lblLong = document.getElementById('lblLongUrl');
+            let warningArea = document.getElementById('serverWarningArea');
+            let errorArea = document.getElementById('serverErrorArea');
+            
+            if (connectionTimerId) clearInterval(connectionTimerId);
+
+            if (data.success) {
+                btn.style.display = 'none';
+                area.style.display = 'block';
+                if (errorArea) errorArea.style.display = 'none';
+
+                if (warningArea) {
+                    if (data.warning) {
+                        warningArea.innerText = "⚠️ " + data.warning;
+                        warningArea.style.display = 'block';
+                    } else {
+                        warningArea.style.display = 'none';
+                    }
+                } else if (data.warning) {
+                    showAlert(data.warning);
+                }
+                lblLong.innerText = data.url;
+            } else {
+                if (errorArea) {
+                    var language = document.getElementById('settingLanguage') ? document.getElementById('settingLanguage').value : 'vi';
+                    errorArea.innerText = t('adm_network_err', language) + data.message;
+                    errorArea.style.display = 'block';
+                } else {
+                    showAlert(t("adm_net_err", currentGlobalLang) + data.message);
+                }
+                var language = document.getElementById('settingLanguage') ? document.getElementById('settingLanguage').value : 'vi'; btn.innerText = t('adm_ngrok_btn', language);
+                btn.style.pointerEvents = 'auto';
+                btn.style.opacity = '1';
+                btn.style.display = 'block';
+                area.style.display = 'none';
+            }
+        });
+
+        // Request & receive system fonts
+        const POPULAR_FONTS = ["Myriad Pro", "Orbitron", "Arial", "Montserrat", "Roboto", "Times New Roman", "Tahoma", "Courier New", "Impact", "Segoe UI", "Calibri", "Verdana", "Bahnschrift"];
+
+        function buildFontSelect(selectId, currentValue) {
+            let sel = document.getElementById(selectId);
+            if (!sel) return;
+            let savedVal = currentValue || sel.value;
+            // Will be filled by buildFontList
+            sel._pendingValue = savedVal;
+        }
+
+        function buildFontList(fonts) {
+            if (!fonts || fonts.length === 0) return;
+            // Deduplicate and get base family names
+            let allFontSet = new Set(fonts.map(f => f.trim()).filter(f => f.length > 0));
+            let others = Array.from(allFontSet).filter(f => !POPULAR_FONTS.includes(f)).sort();
+
+            // Build option HTML with two groups
+            var language = document.getElementById('settingLanguage') ? document.getElementById('settingLanguage').value : 'vi'; let html = `<optgroup label="${t('adm_font_pop', language)}">`;
+            POPULAR_FONTS.forEach(f => {
+                html += `<option value="${f}">${f}</option>`;
+            });
+            html += '</optgroup>';
+            if (others.length > 0) {
+                html += `<optgroup label="${t('adm_font_all', language)}">`;
+                others.forEach(f => {
+                    html += `<option value="${f}">${f}</option>`;
+                });
+                html += '</optgroup>';
+            }
+
+            // Populate both font selects
+            ['settingFontTeamName', 'settingFontScore'].forEach(id => {
+                let sel = document.getElementById(id);
+                if (!sel) return;
+                let prev = sel._pendingValue || sel.value;
+                sel.innerHTML = html;
+                // Restore saved value if it exists in options
+                if (prev) sel.value = prev;
+                // If value not found in options (custom font), add it
+                if (sel.value !== prev) {
+                    let opt = document.createElement('option');
+                    var language = document.getElementById('settingLanguage') ? document.getElementById('settingLanguage').value : 'vi'; opt.text = prev + t('adm_font_custom', language);
+                    opt.value = prev;
+                    sel.insertBefore(opt, sel.firstChild);
+                    sel.value = prev;
+                }
+            });
+        }
+
+        let fontRetryCount = 0;
+        function requestFonts() {
+            socket.emit('getSystemFonts');
+            fontRetryCount++;
+            if (fontRetryCount < 10) {
+                setTimeout(requestFonts, 1500);
+            }
+        }
+
+        socket.on('connect', () => {
+            fontRetryCount = 0;
+            setTimeout(requestFonts, 500);
+            // Auto re-authenticate on socket reconnect if PIN is available in sessionStorage
+            const adminPin = sessionStorage.getItem('adminAuth');
+            if (adminPin) {
+                socket.emit('adminLogin', adminPin, (res) => {
+                    if (!res.success) {
+                        sessionStorage.removeItem('adminAuth');
+                        window.location.href = './index.html';
+                    }
+                });
+            }
+        });
+        socket.on('systemFonts', (fonts) => {
+            if (fonts && fonts.length > 1) {
+                fontRetryCount = 99; // Stop retrying
+                buildFontList(fonts);
+            }
+        });
+        // Also start immediately in case already connected
+        setTimeout(requestFonts, 300);
+
+        // Custom Modal Logic for Alert/Confirm to fix Electron focus & flash issues
+        function showAlert(msg) {
+            let modal = document.getElementById('customModal');
+            if(!modal) return;
+            document.getElementById('customModalText').innerText = msg;
+            document.getElementById('customModalCancel').style.display = 'none';
+            modal.style.display = 'flex';
+            
+            document.getElementById('customModalOk').onclick = function() {
+                modal.style.display = 'none';
+            };
+        }
+
+        function showConfirm(msg, onOk, onCancel) {
+            let modal = document.getElementById('customModal');
+            if(!modal) return;
+            document.getElementById('customModalText').innerText = msg;
+            document.getElementById('customModalCancel').style.display = 'block';
+            modal.style.display = 'flex';
+            
+            document.getElementById('customModalOk').onclick = function() {
+                modal.style.display = 'none';
+                if (onOk) onOk();
+            };
+            document.getElementById('customModalCancel').onclick = function() {
+                modal.style.display = 'none';
+                if (onCancel) onCancel();
+            };
+        }
+
+        // Override native alert globally
+        window.alert = showAlert;
+
+        // ==========================================
+        // MEDIA PICKER FOR ELECTRON
+        // ==========================================
+        if (window.electronAPI && window.electronAPI.onShowMediaPicker) {
+            window.electronAPI.onShowMediaPicker((sources) => {
+                const modal = document.getElementById('mediaPickerModal');
+                const list = document.getElementById('mediaPickerList');
+                list.innerHTML = '';
+                sources.forEach(source => {
+                    const item = document.createElement('div');
+                    item.style.cssText = 'background: #1e272e; padding: 10px; border-radius: 5px; cursor: pointer; text-align: center; border: 2px solid transparent; transition: border 0.2s;';
+                    item.onmouseover = () => item.style.borderColor = '#00d2d3';
+                    item.onmouseout = () => item.style.borderColor = 'transparent';
+                    item.onclick = () => {
+                        modal.style.display = 'none';
+                        window.electronAPI.sendMediaPickerResult(source.id);
+                    };
+                    
+                    const img = document.createElement('img');
+                    img.src = source.thumbnail;
+                    img.style.cssText = 'width: 100%; height: 120px; object-fit: contain; background: #000; border-radius: 3px; margin-bottom: 8px;';
+                    
+                    const name = document.createElement('div');
+                    name.textContent = source.name;
+                    name.style.cssText = 'color: #fff; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
+                    
+                    item.appendChild(img);
+                    item.appendChild(name);
+                    list.appendChild(item);
+                });
+                modal.style.display = 'flex';
+            });
+        }
+
+        function cancelMediaPicker() {
+            document.getElementById('mediaPickerModal').style.display = 'none';
+            if (window.electronAPI && window.electronAPI.sendMediaPickerResult) {
+                window.electronAPI.sendMediaPickerResult(null);
+            }
+        }
+    </script>
+    
+    <!-- Custom Modal UI -->
+    <div id="customModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center;">
+        <div style="background: #2f3542; padding: 25px; border-radius: 10px; border: 2px solid #576574; max-width: 400px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <h3 id="customModalText" style="margin-top: 0; color: #feca57; font-size: 18px; line-height: 1.5; font-weight: normal;" data-i18n="adm_modal_title">Thông báo</h3>
+            <div style="display: flex; gap: 15px; margin-top: 25px;">
+                <button class="btn-green" id="customModalOk" style="flex: 1; padding: 12px; font-size: 16px;" data-i18n="adm_modal_ok">✅ ĐỒNG Ý</button>
+                <button class="btn-red" id="customModalCancel" style="flex: 1; padding: 12px; font-size: 16px;" data-i18n="adm_modal_cancel">❌ HỦY</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MEDIA PICKER MODAL -->
+    <div id="mediaPickerModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center;">
+        <div style="background: #2f3542; padding: 20px; border-radius: 10px; width: 80%; max-width: 800px; max-height: 80vh; display: flex; flex-direction: column;">
+            <h2 style="margin-top: 0; color: #fff;">Vui lòng chọn Màn hình / Cửa sổ để hiển thị</h2>
+            <div id="mediaPickerList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; overflow-y: auto; flex: 1; padding: 10px;">
+                <!-- Items injected here -->
+            </div>
+            <div style="text-align: right; margin-top: 20px;">
+                <button class="btn-red" onclick="cancelMediaPicker()">HỦY BỎ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE PICKER MODAL -->
+    <div id="slidePickerModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center;">
+        <div style="background: #2f3542; padding: 20px; border-radius: 10px; width: 90%; max-width: 1000px; height: 80vh; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="margin: 0; color: #fff;">📑 Chọn Slide để Nhảy đến (Jump)</h2>
+                <div>
+                    <button class="btn-green" onclick="pptRefreshThumbs()" style="margin-right: 10px;">🔄 Làm mới lưới ảnh</button>
+                    <button class="btn-red" onclick="document.getElementById('slidePickerModal').style.display='none'">❌ ĐÓNG</button>
+                </div>
+            </div>
+            <div id="slidePickerList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; overflow-y: auto; flex: 1; padding: 10px; background: #1e272e; border-radius: 8px;">
+                <!-- Slides injected here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showSlidePicker() {
+            if (pptTotalSlides === 0) {
+                // Tự động đồng bộ thay vì bắt user bấm tay
+                pptSync();
+                showAlert('Đang tự động lấy thông tin từ PowerPoint...\nVui lòng chờ 2 giây rồi bấm NHẢY ĐẾN SLIDE lại nhé!');
+                return;
+            }
+            
+            const modal = document.getElementById('slidePickerModal');
+            const list = document.getElementById('slidePickerList');
+            
+            // Re-render the grid if the number of slides changed or it's empty
+            if (list.children.length !== pptTotalSlides) {
+                list.innerHTML = '';
+                for (let i = 1; i <= pptTotalSlides; i++) {
+                    const item = document.createElement('div');
+                    item.id = 'slide-item-' + i;
+                    item.style.cssText = 'background: #2f3542; padding: 10px; border-radius: 5px; cursor: pointer; text-align: center; border: 3px solid transparent; transition: all 0.2s; position: relative; height: 130px; display: flex; flex-direction: column; justify-content: center; align-items: center;';
+                    item.onmouseover = () => { if (pptCurrentSlide !== i) item.style.borderColor = '#00d2d3'; };
+                    item.onmouseout = () => { if (pptCurrentSlide !== i) item.style.borderColor = 'transparent'; };
+                    item.onclick = () => {
+                        pptJump(i);
+                        modal.style.display = 'none';
+                    };
+                    
+                    const img = document.createElement('img');
+                    img.id = 'thumb-img-' + i;
+                    // Attempt to load from cache immediately
+                    img.src = `temp_thumbs/slide_${i}.jpg?t=${Date.now()}`;
+                    img.style.cssText = 'max-width: 100%; max-height: 90px; object-fit: contain; margin-bottom: 5px; border-radius: 3px;';
+                    // If image not found (not cached yet), show an alt text instead of hiding
+                    img.alt = '⏳ Đang tải...';
+                    img.onerror = () => { 
+                        img.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="160" height="90" viewBox="0 0 160 90"><rect width="160" height="90" fill="%231e1e2f"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23a4b0be" font-family="sans-serif" font-size="14">Đang xuất ảnh...</text></svg>'; 
+                    };
+                    
+                    const name = document.createElement('div');
+                    name.style.color = '#fff';
+                    name.style.fontWeight = 'bold';
+                    name.innerText = 'Slide ' + i;
+                    
+                    item.appendChild(img);
+                    item.appendChild(name);
+                    list.appendChild(item);
+                }
+            } else {
+                // Lưới ảnh đã có sẵn, ta ép tải lại tất cả ảnh từ thư mục temp_thumbs
+                for (let i = 1; i <= pptTotalSlides; i++) {
+                    const img = document.getElementById('thumb-img-' + i);
+                    if (img) {
+                        img.style.display = 'block'; // Bật lại nếu trước đó bị ẩn do lỗi
+                        img.src = `temp_thumbs/slide_${i}.jpg?t=${Date.now()}`;
+                    }
+                }
+            }
+            
+            updateSlidePickerHighlight();
+            modal.style.display = 'flex';
+            
+            // Scroll to current slide automatically
+            setTimeout(() => {
+                const currentEl = document.getElementById('slide-item-' + pptCurrentSlide);
+                if (currentEl) currentEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        }
+
+        function updateSlidePickerHighlight() {
+            for (let i = 1; i <= pptTotalSlides; i++) {
+                const item = document.getElementById('slide-item-' + i);
+                if (item) {
+                    if (i === pptCurrentSlide) {
+                        item.style.borderColor = '#ff9f43';
+                        item.style.background = '#d35400';
+                    } else {
+                        item.style.borderColor = 'transparent';
+                        item.style.background = '#2f3542';
+                    }
+                }
+            }
+        }
+    </script>
+    <script>
+        // EMERGENCY DEBUG: FORCE HIDE ANY BROKEN OVERLAY
+        setInterval(() => {
+            const divs = document.querySelectorAll('div');
+            for (let i = 0; i < divs.length; i++) {
+                const d = divs[i];
+                const s = getComputedStyle(d);
+                if ((s.position === 'fixed' || s.position === 'absolute') && s.display !== 'none') {
+                    if (s.backgroundColor.includes('rgba(0, 0, 0')) {
+                        // If it's a modal, check if its inner box is hidden
+                        const hasVisibleChildren = Array.from(d.children).some(c => getComputedStyle(c).display !== 'none');
+                        if (!hasVisibleChildren) {
+                            d.style.display = 'none';
+                        }
+                    } else if (d.id === '') {
+                        // If it has no ID and covers the screen
+                        if (s.width === '100%' || s.inset === '0px') {
+                            d.style.display = 'none';
+                        }
+                    }
+                }
+            }
+        }, 1000);
+    </script>
+
+    <!-- Modal sửa câu hỏi -->
+    <div id="editQuestionModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center;">
+        <div style="background: #2f3542; padding: 20px; border-radius: 8px; width: 600px; max-width: 90%;">
+            <h2 style="margin-top: 0; color: #fff;">Sửa câu hỏi hiện tại</h2>
+            <label style="color: #fff; margin-bottom: 5px; display: block;">Nội dung câu hỏi:</label>
+            <textarea id="editQText" style="width: 100%; height: 100px; background: #1e272e; color: white; padding: 10px; border: 1px solid #576574; border-radius: 5px; margin-bottom: 10px; font-family: inherit; font-size: 16px; box-sizing: border-box;"></textarea>
+            <label style="color: #fff; margin-bottom: 5px; display: block;">Nội dung đáp án:</label>
+            <textarea id="editAText" style="width: 100%; height: 50px; background: #1e272e; color: white; padding: 10px; border: 1px solid #576574; border-radius: 5px; margin-bottom: 10px; font-family: inherit; font-size: 16px; box-sizing: border-box;"></textarea>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn-green" onclick="saveEditedQuestion()" style="flex: 1; padding: 10px; font-size: 16px;">Lưu & Cập nhật</button>
+                <button class="btn-red" onclick="document.getElementById('editQuestionModal').style.display='none'" style="flex: 1; padding: 10px; font-size: 16px;">Hủy thao tác</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Chỉnh sửa Ngân hàng Đề -->
+    <div id="bankEditModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
+        <div style="background: #2f3542; padding: 20px; border-radius: 8px; width: 800px; max-width: 95%; max-height: 90vh; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="margin: 0; color: #fff;">Quản lý Ngân hàng Đề</h2>
+                <button class="btn-red" onclick="document.getElementById('bankEditModal').style.display='none'" style="width: auto; padding: 5px 15px;">Đóng</button>
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button class="btn-primary" style="flex: 1;" onclick="renderBankEditList(10)">10 ĐIỂM</button>
+                <button class="btn-primary" style="flex: 1;" onclick="renderBankEditList(20)">20 ĐIỂM</button>
+                <button class="btn-primary" style="flex: 1;" onclick="renderBankEditList(40)">40 ĐIỂM</button>
+            </div>
+            
+            <div id="bankEditList" style="flex: 1; overflow-y: auto; background: #1e272e; border-radius: 5px; padding: 10px;">
+                <!-- List renders here -->
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title data-i18n="con_title">Econova Show - Thí Sinh</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/lang.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('auth')) {
+            sessionStorage.setItem('contestantAuth', urlParams.get('auth'));
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (!sessionStorage.getItem('contestantAuth')) {
+            document.write('<h1 style="color:white;text-align:center;margin-top:20%;font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif);">' + t('con_access_denied', currentGlobalLang) + '</h1>');
+            window.stop();
+        }
+    </script>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --bg-primary: #030a1c;
+            --team1: #10ac84; --team2: #f39c12; --team3: #6c5ce7; --team4: #e17055;
+            --buzz-active: #ff4757; --buzz-inactive: #3a3a50;
+        }
+
+        html, body {
+            width: 100%; height: 100%; overflow: hidden;
+            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif); background: var(--bg-primary); color: #fff;
+            touch-action: none; user-select: none; -webkit-user-select: none;
+        }
+
+        body { display: flex; flex-direction: column; }
+
+        /* ===== SCREEN 1: CHỌN ĐỘI ===== */
+        #selectScreen {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100vh; padding: 20px; z-index: 20; position: relative;
+        }
+        #selectScreen h1 {
+            font-size: 32px; font-weight: 700; color: #fff; margin-bottom: 35px;
+            text-transform: uppercase; letter-spacing: 2px; text-align: center;
+        }
+        #teamBtns { display: grid; grid-template-columns: 1fr; gap: 18px; width: 100%; max-width: 450px; }
+        .team-btn {
+            width: 100%; min-height: 92px; border: none; border-radius: 16px;
+            font-size: 26px; font-weight: 700; color: #fff; cursor: pointer;
+            transition: transform 0.15s, opacity 0.3s;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif);
+        }
+        .team-btn span.school { font-size: 16px; color: rgba(255,255,255,0.7); font-weight: 400; margin-top: 5px;}
+        .team-btn:active:not(:disabled) { transform: scale(0.96); }
+        .team-btn:disabled { background: rgba(58, 58, 80, 0.5) !important; box-shadow: none !important; color: #6b6b80; cursor: not-allowed; }
+        .team-btn { background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+
+        /* ===== SCREEN 2: NÚT CHUÔNG ===== */
+        #buzzScreen {
+            display: none; flex-direction: column; height: 100vh; position: relative; z-index: 10;
+        }
+        
+        .top-bar {
+            padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;
+            background: rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .team-info { display: flex; flex-direction: column; }
+        .team-name { font-size: 24px; font-weight: 700; text-transform: uppercase; }
+        .team-school { font-size: 14px; color: rgba(255,255,255,0.6); }
+        .score-display { font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif); font-size: 32px; font-weight: 700; color: #fff; }
+
+        .timer-container {
+            width: 100%; height: 10px; background: rgba(255,255,255,0.1); position: absolute; top: 0; left: 0; z-index: 1000;
+        }
+        .timer-bar {
+            height: 100%; width: 0%; background: #00d2d3; transition: width 0.1s linear;
+        }
+
+        .main-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; position: relative; width: 100%; padding: 10px; box-sizing: border-box; }
+        
+        .status-text {
+            position: absolute; top: -35px; width: 100%; text-align: center;
+            font-size: 20px; font-weight: 600; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 2px;
+        }
+
+        /* Lưới 36 câu (Thu nhỏ cho Mobile) */
+        .grid-container {
+            width: 100%; max-width: 580px; margin: auto;
+            display: flex; gap: 12px; justify-content: center;
+        }
+        .grid-col {
+            flex: 1; background: rgba(10, 25, 54, 0.8);
+            border: 1px solid rgba(0, 210, 211, 0.3); border-radius: 12px;
+            padding: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column;
+        }
+        .grid-header {
+            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif); font-size: 20px; font-weight: 700;
+            text-align: center; margin-bottom: 12px; text-transform: uppercase;
+        }
+        .grid-cells {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+        }
+        .q-cell {
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px; padding: 10px 0; text-align: center;
+            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif); font-size: 16px; font-weight: 700;
+            color: #fff; transition: all 0.3s;
+        }
+        .q-cell.played {
+            background: rgba(0,0,0,0.5); color: rgba(255,255,255,0.2);
+            border-color: rgba(255,255,255,0.05); text-decoration: line-through;
+        }
+        
+        .q-cell.selected-anim {
+            animation: cell-blink 0.3s infinite alternate !important;
+            background: #fff !important; color: #000 !important; transform: scale(1.1) !important;
+            border-color: #00d2d3 !important; box-shadow: 0 0 20px #00d2d3 !important;
+            text-decoration: none !important; z-index: 100; position: relative;
+        }
+        @keyframes cell-blink {
+            0% { transform: scale(1); filter: brightness(1); }
+            100% { transform: scale(1.15); filter: brightness(1.3); }
+        }
+        
+        #buzzerContainer {
+            position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+
+        .buzzer-wrapper {
+            position: relative; width: 320px; height: 320px;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* Vòng nhấp nháy khi chuông mở */
+        .ring {
+            position: absolute; inset: 0; border-radius: 50%;
+            border: 5px solid var(--buzz-active); opacity: 0;
+            transform: scale(1); pointer-events: none;
+        }
+        .ring.animating { animation: ripple 1.5s infinite ease-out; }
+        @keyframes ripple {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.4); opacity: 0; }
+        }
+
+        .buzz-btn {
+            width: 250px; height: 250px; border-radius: 50%; border: none;
+            background: var(--buzz-inactive); color: #fff; font-size: 32px; font-weight: 700;
+            text-transform: uppercase; font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif);
+            box-shadow: 0 12px 0 #1a1a2e, inset 0 6px 18px rgba(255,255,255,0.1);
+            transition: all 0.1s; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 2; position: relative;
+        }
+        
+        .buzz-btn:active:not(.locked) { transform: translateY(10px); box-shadow: 0 0 0 #1a1a2e, inset 0 5px 15px rgba(0,0,0,0.3); }
+        .buzz-btn.unlocked {
+            background: radial-gradient(circle at 30% 30%, #ff6b81, var(--buzz-active));
+            box-shadow: 0 10px 0 #c0392b, 0 15px 40px rgba(255,71,87,0.5);
+            cursor: pointer; animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0% { filter: brightness(1); } 50% { filter: brightness(1.2); } 100% { filter: brightness(1); } }
+        
+        .buzz-btn.locked { background: var(--buzz-inactive); cursor: not-allowed; opacity: 0.8; }
+        
+        .buzz-btn.success {
+            background: radial-gradient(circle at 30% 30%, #2ed573, #10ac84);
+            box-shadow: 0 10px 0 #058564, 0 15px 40px rgba(16,172,132,0.5);
+            animation: none;
+        }
+
+        #antiCheatOverlay {
+            display: none; position: fixed; inset: 0; background: rgba(255,0,0,0.95); z-index: 99999; 
+            flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px;
+        }
+        #antiCheatOverlay h1 { font-size: 40px; color: white; margin-bottom: 20px; }
+        #antiCheatOverlay p { font-size: 20px; color: white; margin-bottom: 30px; }
+        #antiCheatOverlay button { padding: 15px 30px; font-size: 20px; font-weight: bold; background: white; color: red; border: none; border-radius: 10px; cursor: pointer; }
+
+        #videoOverlay { position: fixed; inset: 0; background: #000; z-index: 5000; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        #mainVideo { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+        .volume-container {
+            position: absolute; bottom: 20px; right: 20px; background: rgba(0,0,0,0.5);
+            padding: 10px 20px; border-radius: 20px; display: flex; align-items: center; gap: 10px;
+            backdrop-filter: blur(5px); transition: opacity 0.3s; opacity: 0.5; z-index: 5001;
+        }
+        .volume-container:hover { opacity: 1; }
+        #volumeSlider { width: 150px; cursor: pointer; }
+        
+        #qBox {
+            background: rgba(10, 25, 54, 0.8); backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 210, 211, 0.3); border-radius: 12px;
+            width: 95%; max-width: 1200px; padding: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            display: none; flex-direction: column; align-items: center; text-align: center; justify-content: center;
+            height: 300px; overflow: hidden; z-index: 100;
+            margin-top: 20px; flex-shrink: 0;
+        }
+        #qPoints {
+            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif); font-size: 26px; font-weight: 700; color: #ff9f43; margin-bottom: 15px; flex-shrink: 0;
+        }
+        #qTextContainer {
+            width: 100%; flex: 1; display: flex; align-items: flex-start; justify-content: flex-start; overflow: hidden;
+        }
+        #qText {
+            font-size: 60px; font-weight: 700; color: #fff; text-shadow: 0 2px 5px rgba(0,0,0,0.8); word-break: break-word; line-height: 1.4; text-align: left;
+        }
+        
+        #buzzerContainer {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            flex: 1; width: 100%;
+        }
+        .buzzer-wrapper {
+            position: relative;
+            width: 25vh; height: 25vh; min-width: 150px; min-height: 150px; max-width: 250px; max-height: 250px;
+            display: flex; justify-content: center; align-items: center;
+            border-radius: 50%; background: radial-gradient(circle, rgba(16,211,159,0.2) 0%, rgba(0,0,0,0) 70%);
+        }
+        .buzz-btn {
+            width: 80%; height: 80%; border-radius: 50%; border: none; cursor: pointer;
+            font-size: clamp(16px, 4vh, 32px); font-weight: bold; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 10px 25px rgba(0,0,0,0.5), inset 0 5px 15px rgba(255,255,255,0.3);
+            text-transform: uppercase; letter-spacing: 2px;
+        }
+        
+        /* Removed old shrink overrides since buzzer is now explicitly positioned and sized */
+        
+        .status-text {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            font-size: 26px; font-weight: bold; color: #10d39f; text-shadow: 0 0 10px rgba(16,211,159,0.8);
+            white-space: nowrap; text-transform: uppercase; transition: all 0.3s ease; width: 100%; text-align: center; z-index: 101; pointer-events: none;
+        }
+        
+        body { user-select: none; -webkit-user-select: none; }
+        input, textarea { user-select: text; -webkit-user-select: text; }
+    </style>
+</head>
+<body>
+    <!-- VIDEO CHỈNH ÂM LƯỢNG ĐỘC LẬP -->
+    <div id="videoOverlay">
+        <video id="mainVideo" src=""></video>
+        <div class="volume-container">
+            <span style="font-size: 20px;">🔊</span>
+            <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1">
+        </div>
+    </div>
+
+    <!-- CHỐNG GIAN LẬN -->
+    <div id="antiCheatOverlay">
+        <h1 id="acTitle" data-i18n="con_cheat_title">🚨 CẢNH BÁO GIAN LẬN!</h1>
+        <p id="acDesc" data-i18n="con_cheat_desc">Bạn đã rời khỏi màn hình thi hoặc bấm nhầm phím cấm. Thao tác này đã bị chặn lại.</p>
+        <button id="acBtn" data-i18n="con_cheat_btn" onclick="document.getElementById('antiCheatOverlay').style.display='none';">TÔI ĐÃ HIỂU</button>
+    </div>
+
+    <!-- BẮT ĐẦU VÀ KÍCH HOẠT FULLSCREEN -->
+    <div id="startOverlay" style="display: none; position: fixed; inset: 0; background: #030a1c; z-index: 999999; flex-direction: column; align-items: center; justify-content: center; text-align: center; cursor: pointer;" onclick="startApp()">
+        <h1 style="font-size: 40px; color: #00d2d3;" data-i18n="con_click_start">BẤM VÀO ĐÂY ĐỂ BẮT ĐẦU</h1>
+        <p style="color: #fff; margin-top: 10px;" data-i18n="con_req_full">Yêu cầu bật chế độ Toàn Màn Hình</p>
+    </div>
+
+    <!-- CHỌN ĐỘI -->
+    <div id="selectScreen">
+        <h1 data-i18n="con_choose">CHỌN ĐỘI CỦA BẠN</h1>
+        <div id="teamBtns"></div>
+    </div>
+
+    <!-- MÀN HÌNH CHUÔNG -->
+    <div id="buzzScreen">
+        <div class="top-bar">
+            <div class="team-info">
+                <span class="team-name" id="myName" data-i18n="con_team_placeholder">TEAM</span>
+                <span class="team-school" id="mySchool" data-i18n="con_school_placeholder">Trường</span>
+            </div>
+            <div class="score-display" id="myScore">0</div>
+        </div>
+        
+        <div class="timer-container" id="timerContainer" style="display: none;">
+            <div class="timer-bar" id="timerBar"></div>
+        </div>
+
+        <div class="main-area">
+            <!-- Bảng lưới 36 câu -->
+            <div class="grid-container" id="qGrid" style="display: flex;">
+                <div class="grid-col">
+                    <div class="grid-header" style="color: #10ac84" data-i18n="con_pts_10">10 ĐIỂM</div>
+                    <div class="grid-cells" id="grid10"></div>
+                </div>
+                <div class="grid-col">
+                    <div class="grid-header" style="color: #f39c12" data-i18n="con_pts_20">20 ĐIỂM</div>
+                    <div class="grid-cells" id="grid20"></div>
+                </div>
+                <div class="grid-col">
+                    <div class="grid-header" style="color: #e17055" data-i18n="con_pts_40">40 ĐIỂM</div>
+                    <div class="grid-cells" id="grid40"></div>
+                </div>
+            </div>
+            
+            <!-- Hộp câu hỏi -->
+            <div id="qBox">
+                <div id="qPoints"></div>
+                <div id="qTextContainer">
+                    <div id="qText"></div>
+                </div>
+            </div>
+            
+            <!-- Chuông -->
+            <div id="buzzerContainer" style="display: none;">
+                <div class="status-text" id="statusText" data-i18n="con_locked">CHUÔNG KHÓA</div>
+                <div class="buzzer-wrapper">
+                    <div class="ring" id="buzzRing"></div>
+                    <button class="buzz-btn locked" id="buzzBtn">
+                        <span id="btnIcon" data-i18n="con_buzz">🔔 BẤM CHUÔNG</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io({ transports: ['websocket'] });
+        let myTeamId = null;
+        let isSelected = false;
+        let currentTeamCount = null;
+        
+        let myClientId = sessionStorage.getItem('clientId');
+        if (!myClientId) {
+            myClientId = Math.random().toString(36).substring(2);
+            sessionStorage.setItem('clientId', myClientId);
+        }
+
+        socket.on('connect', () => {
+            if (isSelected && myTeamId !== null) {
+                socket.emit('claimTeam', { teamId: myTeamId, clientId: myClientId });
+            }
+        });
+        
+        let timerInterval = null;
+        const timerContainer = document.getElementById('timerContainer');
+        const timerBar = document.getElementById('timerBar');
+
+        const selectScreen = document.getElementById('selectScreen');
+        const buzzScreen = document.getElementById('buzzScreen');
+        const teamBtns = document.getElementById('teamBtns');
+        
+        const myName = document.getElementById('myName');
+        const mySchool = document.getElementById('mySchool');
+        const myScore = document.getElementById('myScore');
+        
+        const buzzBtn = document.getElementById('buzzBtn');
+        const btnIcon = document.getElementById('btnIcon');
+        const buzzRing = document.getElementById('buzzRing');
+        const statusText = document.getElementById('statusText');
+        
+        const videoOverlay = document.getElementById('videoOverlay');
+        const mainVideo = document.getElementById('mainVideo');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const qBox = document.getElementById('qBox');
+        const qPoints = document.getElementById('qPoints');
+        const qText = document.getElementById('qText');
+        const qTextContainer = document.getElementById('qTextContainer');
+
+        function fitText(text) {
+            qText.innerHTML = text;
+            let size = 32;
+            qText.style.fontSize = size + 'px';
+            // Decrease font size until it fits container limits vertically
+            while (qText.offsetHeight > qTextContainer.clientHeight - 4 && size > 14) {
+                size -= 1;
+                qText.style.fontSize = size + 'px';
+            }
+        }
+
+        volumeSlider.addEventListener('input', (e) => {
+            mainVideo.volume = e.target.value;
+        });
+
+        socket.on('playVideo', (url) => {
+            if (url) {
+                videoOverlay.style.display = 'flex';
+                if (url.includes(':\\') || url.startsWith('C:') || url.startsWith('D:')) {
+                    mainVideo.src = '/api/video?path=' + encodeURIComponent(url);
+                } else {
+                    mainVideo.src = url;
+                }
+                mainVideo.play().catch(e => {});
+            }
+        });
+
+        socket.on('closeVideo', () => {
+            mainVideo.pause(); mainVideo.src = ""; videoOverlay.style.display = 'none';
+        });
+        
+        let antiCheatEnabled = false;
+        let isBanned = false;
+        let lastReportTime = 0;
+
+        function reportCheat(reason) {
+            if (!antiCheatEnabled || isBanned) return;
+            
+            // Chống báo cáo đúp (debounce) trong vòng 2 giây
+            if (Date.now() - lastReportTime < 2000) return;
+            lastReportTime = Date.now();
+            
+            try {
+                let ctx = new (window.AudioContext || window.webkitAudioContext)();
+                let osc = ctx.createOscillator();
+                let gain = ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(800, ctx.currentTime);
+                gain.gain.setValueAtTime(0.5, ctx.currentTime);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                setTimeout(() => osc.stop(), 500);
+            } catch(e) {}
+
+            if (!myTeamId) {
+                const overlay = document.getElementById('antiCheatOverlay');
+                document.getElementById('acTitle').innerText = '🚨 CẢNH BÁO GIAN LẬN (CHƯA CHỌN ĐỘI)';
+                document.getElementById('acDesc').innerText = 'Hệ thống phát hiện hành vi: ' + reason;
+                document.getElementById('acBtn').style.display = 'block';
+                overlay.style.background = 'rgba(255,165,0,0.95)';
+                overlay.style.display = 'flex';
+                return;
+            }
+            socket.emit('antiCheatViolation', { teamId: myTeamId, reason });
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(e => {});
+            }
+            document.getElementById('startOverlay').style.display = 'none';
+        }
+
+        function startApp() {
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(e => {});
+            }
+            document.getElementById('startOverlay').style.display = 'none';
+        }
+
+        document.addEventListener('fullscreenchange', () => {
+            if (antiCheatEnabled) {
+                if (!document.fullscreenElement) {
+                    document.getElementById('startOverlay').style.display = 'flex';
+                    if (isBanned) {
+                        setTimeout(() => {
+                            if (document.documentElement.requestFullscreen) {
+                                document.documentElement.requestFullscreen().catch(e => {});
+                            }
+                            if (window.electronAPI && window.electronAPI.focusWindow) {
+                                window.electronAPI.focusWindow();
+                            }
+                        }, 500);
+                    }
+                } else {
+                    document.getElementById('startOverlay').style.display = 'none';
+                }
+            }
+        }); // <-- FIXED MISSING CLOSING BRACKET
+
+        socket.on('approveSecretExit', () => {
+            if (window.electronAPI && window.electronAPI.forceQuit) {
+                window.electronAPI.forceQuit();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F11') {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // Bí mật 5 clicks thoát khẩn cấp
+        let secretClickCount = 0;
+        let secretClickTimeout = null;
+
+        document.addEventListener('click', (e) => {
+            const isTopLeft = e.clientX <= 50 && e.clientY <= 50;
+            const isTopRight = e.clientX >= window.innerWidth - 50 && e.clientY <= 50;
+            
+            if (isTopLeft || isTopRight) {
+                secretClickCount++;
+                if (secretClickTimeout) clearTimeout(secretClickTimeout);
+                
+                if (secretClickCount >= 5) {
+                    secretClickCount = 0;
+                    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                    if (isLocal) {
+                        if (window.electronAPI && window.electronAPI.forceQuit) {
+                            window.electronAPI.forceQuit();
+                        }
+                    } else {
+                        socket.emit('secretExitRequest', { teamId: myTeamId });
+                    }
+                } else {
+                    secretClickTimeout = setTimeout(() => { secretClickCount = 0; }, 1000);
+                }
+            } else {
+                secretClickCount = 0;
+            }
+        });
+
+        // ANTI-CHEAT Blur/Focus
+        let blurTimeout = null;
+
+        window.addEventListener('blur', () => {
+            if (antiCheatEnabled) {
+                let waitTime = isBanned ? 500 : 1250;
+                blurTimeout = setTimeout(() => {
+                    if (window.electronAPI && window.electronAPI.focusWindow) {
+                        window.electronAPI.focusWindow();
+                    }
+                    if (isBanned) {
+                        if (document.documentElement.requestFullscreen) {
+                            document.documentElement.requestFullscreen().catch(e => {});
+                        }
+                    } else {
+                        reportCheat('Chuyển qua cửa sổ khác');
+                    }
+                }, waitTime);
+            }
+        });
+
+        window.addEventListener('focus', () => {
+            if (blurTimeout) {
+                clearTimeout(blurTimeout);
+                blurTimeout = null;
+            }
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (antiCheatEnabled) {
+                if (document.visibilityState === 'hidden') {
+                    let waitTime = isBanned ? 500 : 1250;
+                    blurTimeout = setTimeout(() => {
+                        if (window.electronAPI && window.electronAPI.focusWindow) {
+                            window.electronAPI.focusWindow();
+                        }
+                        if (isBanned) {
+                            if (document.documentElement.requestFullscreen) {
+                                document.documentElement.requestFullscreen().catch(e => {});
+                            }
+                        } else {
+                            reportCheat('Chuyển qua thẻ/cửa sổ khác');
+                        }
+                    }, waitTime);
+                } else {
+                    if (blurTimeout) {
+                        clearTimeout(blurTimeout);
+                        blurTimeout = null;
+                    }
+                }
+            }
+        });
+
+        document.addEventListener('contextmenu', event => {
+            if (antiCheatEnabled) event.preventDefault();
+        });
+        document.addEventListener('keydown', (e) => {
+            // Đã gỡ bỏ các kiểm tra khắt khe theo yêu cầu, chỉ cảnh báo khi mất Focus hoặc thoát Fullscreen thực sự.
+        });
+
+        if (window.electronAPI && window.electronAPI.onForceReportCheat) {
+            window.electronAPI.onForceReportCheat((reason) => {
+                reportCheat(reason);
+            });
+        }
+
+        // Socket listeners for Anti-Cheat
+        socket.on('antiCheatWarning', (data) => {
+            if (data.teamId === myTeamId) {
+                const overlay = document.getElementById('antiCheatOverlay');
+                document.getElementById('acTitle').innerText = '🚨 CẢNH BÁO GIAN LẬN (' + data.count + '/3)';
+                document.getElementById('acDesc').innerText = 'Hệ thống phát hiện hành vi: ' + data.reason;
+                document.getElementById('acBtn').style.display = 'block';
+                overlay.style.background = 'rgba(255,165,0,0.95)';
+                overlay.style.display = 'flex';
+            }
+        });
+
+        
+        socket.on('antiCheatBanned', (data) => {
+            if (data.teamId === myTeamId) {
+                isBanned = true;
+                const overlay = document.getElementById('antiCheatOverlay');
+                document.getElementById('acTitle').innerText = '⛔ BẠN ĐÃ BỊ CẤM THI';
+                document.getElementById('acDesc').innerText = 'Vi phạm quá nhiều lần. Vui lòng liên hệ Admin.';
+                document.getElementById('acBtn').style.display = 'none';
+                overlay.style.background = 'rgba(255,0,0,1)';
+                overlay.style.display = 'flex';
+                
+                
+            }
+        });
+
+
+        socket.on('antiCheatUnbanned', (data) => {
+            if (data.teamId === myTeamId) {
+                isBanned = false;
+                document.getElementById('antiCheatOverlay').style.display = 'none';
+            }
+        });
+
+        // Render nút chọn đội
+        function renderSelect(teams, claimed) {
+            const lang = (window.currentState && window.currentState.settings && window.currentState.settings.language) || currentGlobalLang;
+            teamBtns.innerHTML = '';
+            teams.forEach(tObj => {
+                let isClaimed = false;
+                for (let k in claimed) { if (parseInt(k) === tObj.id) isClaimed = true; }
+                
+                let btn = document.createElement('button');
+                btn.className = 'team-btn';
+                btn.dataset.t = tObj.id;
+                btn.disabled = isClaimed;
+                let claimedText = isClaimed ? t('con_claimed', lang) : '';
+                btn.innerHTML = `${tObj.name}${claimedText}<span class="school">${tObj.school || ''}</span>`;
+                
+                btn.addEventListener('click', () => {
+                    myTeamId = tObj.id;
+                    isSelected = true;
+                    socket.emit('claimTeam', { teamId: tObj.id, clientId: myClientId });
+                    selectScreen.style.display = 'none';
+                    buzzScreen.style.display = 'flex';
+                    statusText.innerText = t('con_wait_admin', lang);
+                    btnIcon.innerText = "⏳";
+                    buzzBtn.classList.add('locked');
+                });
+                
+                teamBtns.appendChild(btn);
+            });
+        }
+
+        // Xử lý đếm ngược
+        socket.on('startCountdown', (seconds) => {
+            if (!isSelected) return;
+            timerContainer.style.display = 'block';
+            let startTime = Date.now();
+            let duration = seconds * 1000;
+            
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                let elapsed = Date.now() - startTime;
+                let percent = (elapsed / duration) * 100;
+                if (percent >= 100) {
+                    percent = 100;
+                    clearInterval(timerInterval);
+                    setTimeout(() => { timerContainer.style.display = 'none'; timerBar.style.width = '0%'; }, 500);
+                }
+                timerBar.style.width = percent + '%';
+            }, 50);
+        });
+
+        // Xử lý Bấm Chuông
+        const handleBuzz = (e) => {
+            if (e) {
+                if (typeof e.preventDefault === 'function') e.preventDefault();
+                if (typeof e.stopPropagation === 'function') e.stopPropagation();
+            }
+            tryBuzz();
+        };
+
+        if (window.PointerEvent) {
+            buzzBtn.addEventListener('pointerdown', handleBuzz);
+        } else {
+            buzzBtn.addEventListener('touchstart', handleBuzz, {passive: false});
+            buzzBtn.addEventListener('mousedown', handleBuzz);
+        }
+
+        function tryBuzz() {
+            if (myTeamId !== null && !isBanned) {
+                const token = window.currentState ? window.currentState.buzzToken : null;
+                socket.emit('buzz', myTeamId, token);
+            }
+        }
+
+        socket.on('updateState', (state) => {
+            // ================= FONT LOGIC =================
+            if (state.settings) {
+                let s = state.settings;
+                let globalEnabled = s.globalFontEnabled || false;
+                let fGlobal = s.fontGlobal || 'SF Pro Display Bold';
+                let fGeneral = s.fontGeneral || 'SF Pro Display Bold';
+                let fQuestion = s.fontQuestion || 'SF Pro Display Bold';
+                let fTeam = s.fontTeamName || 'SF Pro Display Bold';
+                let fScore = s.fontScore || 'Orbitron';
+                
+                let styleEl = document.getElementById('dynamic-font-styles-global');
+                if (!styleEl) {
+                    styleEl = document.createElement('style');
+                    styleEl.id = 'dynamic-font-styles-global';
+                    document.head.appendChild(styleEl);
+                }
+                
+                let rules = '';
+                if (globalEnabled) {
+                    rules += `@font-face { font-family: 'CustomFontGlobal'; src: url('/font/${encodeURIComponent(fGlobal)}') format('truetype'); }\n`;
+                    rules += `:root { 
+                        --font-general: 'CustomFontGlobal', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-team-name: 'CustomFontGlobal', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-score: 'CustomFontGlobal', 'Orbitron', sans-serif;
+                        --font-question: 'CustomFontGlobal', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                    }`;
+                } else {
+                    rules += `@font-face { font-family: 'CustomFontGeneral'; src: url('/font/${encodeURIComponent(fGeneral)}') format('truetype'); }\n`;
+                    rules += `@font-face { font-family: 'CustomFontQuestion'; src: url('/font/${encodeURIComponent(fQuestion)}') format('truetype'); }\n`;
+                    rules += `@font-face { font-family: 'CustomFontTeamName'; src: url('/font/${encodeURIComponent(fTeam)}') format('truetype'); }\n`;
+                    rules += `@font-face { font-family: 'CustomFontScore'; src: url('/font/${encodeURIComponent(fScore)}') format('truetype'); }\n`;
+                    
+                    rules += `:root { 
+                        --font-general: 'CustomFontGeneral', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-team-name: 'CustomFontTeamName', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-score: 'CustomFontScore', 'Orbitron', sans-serif;
+                        --font-question: 'CustomFontQuestion', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                    }`;
+                }
+                
+                if (styleEl.innerHTML !== rules) {
+                    styleEl.innerHTML = rules;
+                }
+            }
+            // ===============================================
+
+            // Check if room is still open and PIN matches (only if contestant already logged in)
+            let currentAuth = sessionStorage.getItem('contestantAuth');
+            if (currentAuth) {
+                // Contestant was logged in — check if session is still valid
+                if (state.isRoomOpen === false || state.roomPIN !== currentAuth) {
+                    sessionStorage.removeItem('contestantAuth');
+                    const lang = (window.currentState && window.currentState.settings && window.currentState.settings.language) || currentGlobalLang;
+                    alert(t('con_session_ended', lang));
+                    return;
+                }
+            }
+
+            if (!state.teams) return;
+            
+            if (currentTeamCount !== null && currentTeamCount !== state.teams.length) {
+                myTeamId = null;
+                isSelected = false;
+                selectScreen.style.display = 'flex';
+                buzzScreen.style.display = 'none';
+                const lang = (window.currentState && window.currentState.settings && window.currentState.settings.language) || currentGlobalLang;
+                alert(t('con_team_count_changed', lang));
+            }
+            currentTeamCount = state.teams.length;
+            
+            if (state.settings) {
+                let newAntiCheat = !!state.settings.antiCheat;
+                if (newAntiCheat !== antiCheatEnabled) {
+                    antiCheatEnabled = newAntiCheat;
+                    if (window.electronAPI && window.electronAPI.setAntiCheat) {
+                        window.electronAPI.setAntiCheat(antiCheatEnabled);
+                    }
+                    if (antiCheatEnabled && !document.fullscreenElement) {
+                        document.getElementById('startOverlay').style.display = 'flex';
+                    } else if (!antiCheatEnabled) {
+                        document.getElementById('startOverlay').style.display = 'none';
+                        document.getElementById('antiCheatOverlay').style.display = 'none';
+                        isBanned = false;
+                    }
+                }
+                if (state.settings.language) {
+                    applyTranslations(state.settings.language);
+                }
+            }
+
+            if (!isSelected) {
+                renderSelect(state.teams, state.claimedTeams);
+            } else {
+                // Check if banned
+                if (state.bannedTeams && state.bannedTeams.includes(myTeamId)) {
+                    isBanned = true;
+                    const overlay = document.getElementById('antiCheatOverlay');
+                    document.getElementById('acTitle').innerText = '⛔ BẠN ĐÃ BỊ CẤM THI';
+                    document.getElementById('acDesc').innerText = 'Vi phạm quá nhiều lần. Vui lòng liên hệ Admin.';
+                    document.getElementById('acBtn').style.display = 'none';
+                    overlay.style.background = 'rgba(255,0,0,1)';
+                    overlay.style.display = 'flex';
+                } else if (isBanned) {
+                    isBanned = false;
+                    document.getElementById('antiCheatOverlay').style.display = 'none';
+                }
+
+                let me = state.teams.find(t => t.id === myTeamId);
+                if (!me) return;
+                
+                let isMain = false;
+                if (state.currentQuestion.active) {
+                    isMain = (state.currentQuestion.mainTeamId === me.id);
+                } else {
+                    isMain = (state.turnOrder && state.turnOrder.length > 0 && state.turnOrder[0] === me.id);
+                }
+
+                myName.textContent = me.name;
+                mySchool.textContent = me.school || '';
+                myScore.textContent = me.score;
+                
+                // Cập nhật Lưới 36 câu
+                const ptsList = [10, 20, 40];
+                ptsList.forEach(pts => {
+                    const container = document.getElementById('grid' + pts);
+                    if (container) {
+                        container.innerHTML = '';
+                        for (let i = 0; i < 12; i++) {
+                            let isPlayed = false;
+                            if (state.playedQuestions && state.playedQuestions[pts] && state.playedQuestions[pts].includes(i)) {
+                                isPlayed = true;
+                            }
+                            container.innerHTML += `<div class="q-cell ${isPlayed ? 'played' : ''}">${i + 1}</div>`;
+                        }
+                    }
+                });
+                
+                const qGrid = document.getElementById('qGrid');
+                const buzzerContainer = document.getElementById('buzzerContainer');
+                
+                let q = state.currentQuestion;
+
+                function applyVisibility() {
+                    if (!q.active) {
+                        qGrid.style.display = 'flex';
+                        qBox.style.display = 'none';
+                        buzzerContainer.style.display = 'none';
+                        statusText.style.display = 'none';
+                    } else {
+                        qGrid.style.display = 'none';
+                        // Update question text and points
+                        let textPts = typeof t === 'function' ? t("scr_pts", window.currentGlobalLang) : "ĐIỂM";
+                        qPoints.textContent = `${q.points} ${textPts}`;
+                        
+                        let newText = q.isHidden ? "" : (q.mode === 3 ? (q.text || "") : (q.text || (typeof t === 'function' ? t('scr_wait', window.currentGlobalLang) : "Đang chờ câu hỏi...")));
+                        
+                        qBox.style.display = 'flex';
+                        buzzerContainer.style.display = 'flex';
+                        
+                        fitText(newText);
+                        statusText.style.display = 'block';
+                    }
+                }
+
+                if (q.active && !window.lastActiveState && q.idx !== null) {
+                    window.isAnimating = true;
+                    qGrid.style.display = 'flex';
+                    qBox.style.display = 'none';
+                    buzzerContainer.style.display = 'none';
+                    statusText.style.display = 'none';
+                    
+                    const container = document.getElementById('grid' + q.points);
+                    let cell = null;
+                    if (container && container.children[q.idx]) {
+                        cell = container.children[q.idx];
+                        cell.classList.add('selected-anim');
+                    }
+
+                    setTimeout(() => {
+                        window.isAnimating = false;
+                        if (cell) cell.classList.remove('selected-anim');
+                        if (window.currentState && !window.currentState.currentQuestion.active) {
+                            // ignore
+                        } else {
+                            applyVisibility();
+                        }
+                    }, 1000);
+                } else if (!window.isAnimating) {
+                    applyVisibility();
+                }
+
+                window.lastActiveState = q.active;
+                window.currentState = state;
+
+                // NẾU ĐÃ CÓ ĐỘI BẤM CHUÔNG
+                if (state.buzzedTeam) {
+                    buzzBtn.classList.remove('unlocked');
+                    buzzRing.classList.remove('animating');
+                    
+                    if (state.buzzedTeam === myTeamId) {
+                        let bTimeNum = state.buzzTimes ? state.buzzTimes[myTeamId] : undefined;
+                        let myTime = typeof bTimeNum === 'number' ? (bTimeNum / 1000).toFixed(3) + 's' : '✅';
+                        buzzBtn.classList.add('success');
+                        buzzBtn.classList.remove('locked');
+                        btnIcon.textContent = '⏱ ' + myTime;
+                        statusText.textContent = t('con_you', state.settings.language);
+                        buzzRing.classList.add('active-success');
+                    } else {
+                        buzzBtn.classList.add('locked');
+                        buzzBtn.classList.remove('success');
+                        btnIcon.textContent = '🔒';
+                        statusText.textContent = t('con_other', state.settings.language);
+                        buzzRing.classList.remove('active-success');
+                    }
+                } 
+                // NẾU CHUÔNG ĐANG MỞ (VÀ CHƯA CÓ AI BẤM)
+                else if (!state.isBuzzerLocked) {
+                    if (state.currentQuestion.active && state.currentQuestion.mainTeamId === myTeamId) {
+                        buzzBtn.classList.add('locked');
+                        buzzBtn.classList.remove('unlocked', 'success');
+                        buzzRing.classList.remove('animating');
+                        btnIcon.textContent = '🚫';
+                        statusText.textContent = t('con_no_buzz', state.settings.language);
+                    } else {
+                        buzzBtn.classList.remove('locked', 'success');
+                        buzzBtn.classList.add('unlocked');
+                        buzzRing.classList.add('animating');
+                        btnIcon.textContent = t('con_buzz_exclaim', state.settings.language);
+                        statusText.textContent = t('con_buzz_open', state.settings.language);
+                        statusText.style.color = '#10ac84';
+                    }
+                } 
+                // NẾU CHUÔNG KHÓA (CHỜ CÂU HỎI)
+                else {
+                    buzzBtn.classList.add('locked');
+                    buzzBtn.classList.remove('unlocked', 'success');
+                    buzzRing.classList.remove('animating');
+                    btnIcon.textContent = '🔒';
+                    statusText.textContent = t('con_locked', state.settings.language);
+                    statusText.style.color = 'rgba(255,255,255,0.5)';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+

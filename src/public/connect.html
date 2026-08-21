@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Bảo Mật Ứng Dụng</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #1e1e2f;
+            color: white;
+            font-family: 'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        .container {
+            background: #2f3542;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border-top: 5px solid #3742fa;
+            max-width: 500px;
+            width: 100%;
+        }
+        h2 { margin-top: 0; color: #ffeb3b; }
+        p { color: #a4b0be; font-size: 16px; margin-bottom: 20px; }
+        input {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            border: 2px solid #576574;
+            border-radius: 5px;
+            background: #1e1e2f;
+            color: white;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        input:focus { outline: none; border-color: #3742fa; }
+        button {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            background: #3742fa;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button:hover { background: #5352ed; transform: translateY(-2px); }
+        #loading {
+            color: #10ac84;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .error-msg {
+            color: #ff4757;
+            margin-bottom: 15px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        ⏳ Đang tự động kết nối máy chủ...
+    </div>
+
+    <!-- Màn hình nhập IP (chỉ hiện khi không tìm thấy máy chủ localhost) -->
+    <div class="container" id="network-container" style="display: none;">
+        <h2>🔗 Kết nối Mạng</h2>
+        <p>Không tìm thấy máy chủ Quản trị trên máy tính này. Vui lòng nhập địa chỉ IP hoặc link Public của máy chủ:</p>
+        <input type="text" id="ipInput" placeholder="VD: 192.168.1.10:39281 hoặc link loca.lt" value="localhost:39281">
+        <div id="networkError" class="error-msg">Không thể kết nối!</div>
+        <button onclick="connectManual()">KẾT NỐI NGAY</button>
+    </div>
+    
+    <!-- Màn hình Xác thực (hiện sau khi đã kết nối IP thành công) -->
+    <div class="container" id="auth-container" style="display: none;">
+        <h2 id="authTitle">🔒 Xác thực Bảo mật</h2>
+        <p id="authDesc">Vui lòng nhập mật khẩu để truy cập.</p>
+        <input type="password" id="authInput" placeholder="Nhập tại đây...">
+        <div id="authError" class="error-msg">Sai thông tin xác thực!</div>
+        <button onclick="authenticate()">ĐĂNG NHẬP</button>
+        <div style="margin-top: 20px; font-size: 14px;">
+            <a href="#" onclick="showNetworkScreen()" style="color: #00d2d3; text-decoration: underline;">⚙️ Đổi máy chủ kết nối (Đang dùng: <span id="currentIpSpan">Local</span>)</a>
+        </div>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const role = params.get('role') || 'index';
+        const defaultIp = 'http://localhost:39281';
+        let connectedIp = '';
+
+        // Tự động tìm kiếm ở localhost (nếu chạy cùng máy với Admin)
+        fetch(defaultIp + '/ping')
+            .then(r => {
+                if(r.ok) {
+                    if (role !== 'contestant') {
+                        // Thử lấy mã PIN tự động
+                        fetch(defaultIp + '/api/admin_pin')
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.success) {
+                                    window.location.href = defaultIp + '/' + role + '.html?auth=' + encodeURIComponent(data.pin);
+                                } else {
+                                    showAuthScreen(defaultIp);
+                                }
+                            })
+                            .catch(() => showAuthScreen(defaultIp));
+                    } else {
+                        showAuthScreen(defaultIp);
+                    }
+                } else throw new Error("Not OK");
+            })
+            .catch(e => {
+                // Không tìm thấy, hiện form để nhập IP
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('network-container').style.display = 'block';
+            });
+
+        function connectManual() {
+            let ip = document.getElementById('ipInput').value.trim();
+            if (!ip) return;
+            if (!ip.startsWith('http://') && !ip.startsWith('https://')) {
+                ip = 'http://' + ip;
+            }
+            
+            document.getElementById('networkError').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('loading').innerText = '⏳ Đang thử kết nối...';
+            document.getElementById('network-container').style.display = 'none';
+
+            fetch(ip + '/ping')
+                .then(r => {
+                    if(r.ok) {
+                        showAuthScreen(ip);
+                    } else throw new Error("Bad response");
+                })
+                .catch(e => {
+                    document.getElementById('networkError').innerText = "❌ Không thể kết nối tới máy chủ!";
+                    document.getElementById('networkError').style.display = 'block';
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('network-container').style.display = 'block';
+                });
+        }
+
+        function showAuthScreen(ip) {
+            connectedIp = ip;
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('network-container').style.display = 'none';
+            document.getElementById('auth-container').style.display = 'block';
+            const ipSpan = document.getElementById('currentIpSpan');
+            if (ipSpan) ipSpan.innerText = ip;
+
+            const input = document.getElementById('authInput');
+            if (role === 'contestant') {
+                document.getElementById('authTitle').innerText = '📝 Tham gia Phòng thi';
+                document.getElementById('authDesc').innerText = 'Vui lòng nhập Mã PIN của phòng thi để truy cập màn hình dành cho Thí sinh.';
+                input.type = 'text';
+                input.placeholder = 'Ví dụ: 123456';
+            } else if (role === 'mc') {
+                document.getElementById('authTitle').innerText = '🎤 Đăng nhập MC';
+                document.getElementById('authDesc').innerText = 'Vui lòng nhập Mã PIN Quản trị để truy cập bảng điều khiển MC.';
+                input.type = 'password';
+                input.placeholder = 'Nhập mã PIN quản trị...';
+            } else {
+                document.getElementById('authTitle').innerText = '🔒 Xác thực Quản trị';
+                document.getElementById('authDesc').innerText = 'Vui lòng nhập Mật khẩu hệ thống để vào phần mềm này.';
+                input.type = 'password';
+                input.placeholder = 'Nhập mật khẩu...';
+            }
+            input.focus();
+        }
+
+        function showNetworkScreen() {
+            document.getElementById('auth-container').style.display = 'none';
+            document.getElementById('network-container').style.display = 'block';
+            document.getElementById('ipInput').value = connectedIp || defaultIp;
+        }
+
+        // Bắt sự kiện Enter
+        document.getElementById('authInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') authenticate();
+        });
+
+        function authenticate() {
+            const val = document.getElementById('authInput').value.trim();
+            if (!val) return;
+
+            document.getElementById('authError').style.display = 'none';
+
+            if (role === 'contestant') {
+                fetch(connectedIp + '/api/verify_pin', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ pin: val })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = connectedIp + '/contestant.html?auth=' + encodeURIComponent(val);
+                    } else {
+                        showAuthError('Mã PIN không chính xác hoặc phòng chưa mở!');
+                    }
+                }).catch(e => showAuthError('Lỗi kết nối khi xác thực!'));
+            } else {
+                fetch(connectedIp + '/api/admin_login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ pass: val })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = connectedIp + '/' + role + '.html?auth=' + encodeURIComponent(val);
+                    } else {
+                        showAuthError('Mật khẩu quản trị không chính xác!');
+                    }
+                }).catch(e => showAuthError('Lỗi kết nối khi xác thực!'));
+            }
+        }
+
+        function showAuthError(msg) {
+            const err = document.getElementById('authError');
+            err.innerText = msg;
+            err.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

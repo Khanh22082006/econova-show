@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <script>
+    window.onerror = function(message, source, lineno, colno, error) {
+        if (message === 'Script error.' && (!source || source === '')) {
+            console.warn('Ignored generic CORS Script error.');
+            return false;
+        }
+        var errBox = document.getElementById('debug-error-box');
+        if (!errBox) {
+            errBox = document.createElement('div');
+            errBox.id = 'debug-error-box';
+            errBox.style.position = 'fixed';
+            errBox.style.top = '10px';
+            errBox.style.left = '10px';
+            errBox.style.backgroundColor = 'rgba(255, 0, 0, 0.9)';
+            errBox.style.color = 'white';
+            errBox.style.padding = '20px';
+            errBox.style.zIndex = '999999';
+            errBox.style.fontSize = '20px';
+            errBox.style.maxWidth = '80%';
+            errBox.style.wordWrap = 'break-word';
+            const mountTarget = document.body || document.documentElement;
+            if (mountTarget) {
+                mountTarget.appendChild(errBox);
+            }
+        }
+        errBox.innerHTML += `<b>ERROR:</b> ${message} at ${source}:${lineno}:${colno}<br>`;
+    };
+    window.addEventListener('unhandledrejection', function(event) {
+        window.onerror(event.reason, 'Promise', 0, 0, event.reason);
+    });
+    </script>
+    <script src="/lang.js"></script>
+    <script>
+        var urlParams = new URLSearchParams(window.location.search);
+        var authParam = urlParams.get('auth');
+        if (authParam) {
+            sessionStorage.setItem('adminAuth', authParam);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (!sessionStorage.getItem('adminAuth') && urlParams.get('pass') !== 'obs_screen') {
+            const l = localStorage.getItem('econova_lang') || 'vi';
+            const message = (typeof I18N !== 'undefined' && I18N[l] && I18N[l].con_access_denied) ? I18N[l].con_access_denied : 'Access denied';
+            document.write('<h1 style="color:white;text-align:center;margin-top:20%;font-family: \'SF Pro Display Bold\', \'SF Pro Text\', -apple-system, BlinkMacSystemFont, sans-serif">' + message + '</h1>');
+            window.stop();
+        }
+    </script>
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <!-- Dynamic theme link -->
+    <link id="econova-theme-styles" rel="stylesheet" href="/public_v2/Themes/default.css">
+    
+    <script src="/public_v2/core-logic.js"></script>
+</head>
+<body class="default">
+    <div id="audioUnlockOverlay" onclick="unlockAudio()">
+        <h1 data-i18n="scr_audio_start">🔊 BẤM VÀO ĐÂY ĐỂ BẮT ĐẦU</h1>
+        <p data-i18n="scr_unlock_audio">Thao tác này giúp mở khoá hệ thống âm thanh của trình duyệt.</p>
+    </div>
+    <div id="videoOverlay">
+        <video id="mainVideo" src=""></video>
+    </div>
+
+    <div id="main-container" style="width: 1920px; height: 1080px; position: absolute; bottom: 0; left: 50%; margin-left: -960px; transform-origin: bottom center; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 75px;">
+        <div class="bg-grid default-only"></div>
+        <div class="header default-only" style="display: none !important;">
+            <div class="round-title" data-i18n="scr_round">ROUND 3.2: MYSTERY BOX</div>
+        </div>
+
+        <div class="ascend-frame" id="ascendFrame" style="display: none;">
+            <div class="ascend-top-bar ascend-only">
+                <div class="ascend-pts-box" id="ascendPtsBox"></div>
+                <div class="ascend-scoreboard" id="ascendScoreboard"></div>
+            </div>
+
+            <div class="question-area" id="qArea">
+                <div id="packagePointsContainer"></div>
+
+                <div class="question-box" id="qBox">
+                    <div class="q-meta" id="qPoints">- <span data-i18n="scr_pts">ĐIỂM</span></div>
+                    <div class="compact-scoreboard default-only" id="compactScoreboard"></div>
+                    <div id="hopeStarBadge" class="hope-star-badge" style="display: none;"></div>
+                    <div class="question-text" id="qText" data-i18n="scr_wait">Đang chờ câu hỏi...</div>
+                </div>
+
+                <div id="timerContainerDefault" class="default-only" style="margin-top: 20px;">
+                    <div id="timerBarDefault"></div>
+                </div>
+            </div>
+
+            <div id="timerContainerAscend" class="ascend-only">
+                <div id="timerBarAscend"></div>
+            </div>
+        </div>
+
+        <div class="scoreboard-area default-only" id="defaultScoreboard" style="display: none !important;"></div>
+
+        <div class="grid-container" id="qGrid" style="display: none; position: absolute; bottom: 120px; left: 0; right: 0; margin: auto; z-index: 50;">
+            <div class="grid-col"><div class="grid-header" id="gh10" style="color: #10ac84">10&nbsp;<span data-i18n="scr_pts">ĐIỂM</span></div><div class="grid-cells" id="grid10"></div></div>
+            <div class="grid-col"><div class="grid-header" id="gh20" style="color: #f39c12">20&nbsp;<span data-i18n="scr_pts">ĐIỂM</span></div><div class="grid-cells" id="grid20"></div></div>
+            <div class="grid-col"><div class="grid-header" id="gh40" style="color: #e17055">40&nbsp;<span data-i18n="scr_pts">ĐIỂM</span></div><div class="grid-cells" id="grid40"></div></div>
+        </div>
+    </div>
+
+    <audio id="snd_choose_each_question" src="/sounds/choose_each_question.mp3" preload="auto"></audio>
+    <audio id="snd_question_open" src="/sounds/open_question.mp3" preload="auto"></audio>
+    <audio id="snd_question_open_mode1" src="/sounds/question_open.mp3" preload="auto"></audio>
+    <audio id="snd_buzzer_5s" src="/sounds/buzzer_5s.mp3" preload="auto"></audio>
+    <audio id="snd_buzzed" src="/sounds/buzzed.mp3" preload="auto"></audio>
+    <audio id="snd_correct" src="/sounds/correct.mp3" preload="auto"></audio>
+    <audio id="snd_wrong" src="/sounds/wrong.mp3" preload="auto"></audio>
+    <audio id="snd_hope_star" src="/sounds/hope_star.mp3" preload="auto"></audio>
+    <audio id="snd_countdown_10s" src="/sounds/countdown_10s.mp3" preload="auto"></audio>
+    <audio id="snd_countdown_15s" src="/sounds/countdown_15s.mp3" preload="auto"></audio>
+    <audio id="snd_finish_turn" src="/sounds/finish_turn.mp3" preload="auto"></audio>
+    <audio id="snd_on_stage" src="/sounds/on_stage.mp3" preload="auto"></audio>
+    <audio id="snd_choose_package" src="/sounds/choose_package.mp3" preload="auto"></audio>
+
+    <div id="v3-wrapper-overlay" style="display: none; position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%); width: 1600px; height: 420px; z-index: 5000;">
+        <div id="v3MasterContainer" class="v3-new-root overlay-mode" style="display: none;">
+            <!-- Shared Arrows -->
+            <!-- Left Arrows -->
+            <div class="v3-arrow-group ghost-l1 left-dir"><div class="arrow-navy"><svg preserveAspectRatio="none"><path d="M 0,0 L 44,0 L 44,200 L 0,200 Z" fill="#0a1936" /></svg></div><div class="arrow-cyan"><svg preserveAspectRatio="none"><path d="M 0,0 L 33,0 L 33,150 L 0,150 Z" fill="#00cfff" /></svg></div></div>
+            <div class="v3-arrow-group ghost-l2 left-dir"><div class="arrow-navy"><svg preserveAspectRatio="none"><path d="M 0,0 L 44,0 L 44,200 L 0,200 Z" fill="#0a1936" /></svg></div><div class="arrow-cyan"><svg preserveAspectRatio="none"><path d="M 0,0 L 33,0 L 33,150 L 0,150 Z" fill="#00cfff" /></svg></div></div>
+            <div class="v3-arrow-group l3 left-dir"><div class="arrow-navy"><svg preserveAspectRatio="none"><path d="M 0,0 L 44,0 L 44,200 L 0,200 Z" fill="#0a1936" /></svg></div><div class="arrow-cyan"><svg preserveAspectRatio="none"><path d="M 0,0 L 33,0 L 33,150 L 0,150 Z" fill="#00cfff" /></svg></div></div>
+
+            <div style="position:relative; width:100%; height:100%; flex:1; display:flex; align-items:center; justify-content:center;">
+                <!-- Question Box Layer -->
+                <div class="center-box" id="qBoxV3" style="position:absolute; width:100%; height:100%; display:none; flex-direction:row; background:linear-gradient(180deg, #001122, #003355); padding:0; box-sizing:border-box; overflow:hidden;">
+                    <!-- Left Side: Teams -->
+                    <div id="v3TeamArea" style="width:25%; height:100%; display:flex; flex-direction:column; justify-content:center; gap:20px; padding-left:40px; padding-right:20px; z-index:2;">
+                    </div>
+                    
+                    <!-- Divider -->
+                    <div style="position:absolute; left:25%; top:-10%; width:6px; height:120%; background:#00cfff; transform:skewX(-20deg); z-index:5;"></div>
+
+                    <!-- Right Side: Question & Points -->
+                    <div style="flex:1; display:flex; flex-direction:column; padding-left:50px; z-index:2; height:100%; position:relative;">
+                        <div id="qTextV3" style="flex:1; display:flex; justify-content:flex-start; align-items:flex-start; font-size:48px; font-weight:bold; color:white; text-align:left; padding-top:40px; padding-right:20px; line-height:1.4;"></div>
+                        
+                        <div style="height:80px; display:flex; flex-direction:row; gap:10px; margin-bottom:20px; align-items:flex-end; width:100%;">
+                            <div id="v3PointsArea" style="display:flex; flex-direction:row; gap:10px; flex:1;"></div>
+                            <div id="qBoxClockV3" style="font-size:80px; color:#ffcc00; font-weight:bold; font-family:monospace; padding-right:40px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="v3-oly-timer-container" id="timerContainerV3" style="height:20px; background:#111; position:absolute; bottom:0; left:20px; right:20px; display:none; z-index:20;">
+                    <div id="timerBarV3" class="time-bar-fill" style="height:100%; width:0%; background:linear-gradient(90deg, #ccc, #fff); transition:width 1s linear;">
+                    </div>
+                </div>
+
+                <!-- Grid Layer -->
+                <div class="center-box grid-center" id="qGridV3" style="position:absolute; width:100%; height:100%; display:none; justify-content:center; align-items:center;">
+                    <div class="grid-content-wrapper qGrid v3-grid-wrapper" style="flex-direction: column; width: 100%; height: 100%; display: flex;">
+                        <div class="v3-grid-row" id="grid10-v3" style="flex: 1; display: flex; width: 100%;"></div>
+                        <div class="v3-grid-row" id="grid20-v3" style="flex: 1; display: flex; width: 100%; display: none;"></div>
+                        <div class="v3-grid-row" id="grid40-v3" style="flex: 1; display: flex; width: 100%; display: none;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Arrows -->
+            <div class="v3-arrow-group ghost-l1 right-dir"><div class="arrow-navy"><svg preserveAspectRatio="none"><path d="M 0,0 L 44,0 L 44,200 L 0,200 Z" fill="#0a1936" /></svg></div><div class="arrow-cyan"><svg preserveAspectRatio="none"><path d="M 0,0 L 33,0 L 33,150 L 0,150 Z" fill="#00cfff" /></svg></div></div>
+            <div class="v3-arrow-group ghost-l2 right-dir"><div class="arrow-navy"><svg preserveAspectRatio="none"><path d="M 0,0 L 44,0 L 44,200 L 0,200 Z" fill="#0a1936" /></svg></div><div class="arrow-cyan"><svg preserveAspectRatio="none"><path d="M 0,0 L 33,0 L 33,150 L 0,150 Z" fill="#00cfff" /></svg></div></div>
+            <div class="v3-arrow-group l3 right-dir"><div class="arrow-navy"><svg preserveAspectRatio="none"><path d="M 0,0 L 44,0 L 44,200 L 0,200 Z" fill="#0a1936" /></svg></div><div class="arrow-cyan"><svg preserveAspectRatio="none"><path d="M 0,0 L 33,0 L 33,150 L 0,150 Z" fill="#00cfff" /></svg></div></div>
+        </div>
+    </div>
+
+    <script>
+        const displayController = new EconovaDisplayController(false);
+        displayController.init();
+    </script>
+</body>
+</html>

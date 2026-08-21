@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Econova Show - Cổng Thi Đấu Trực Tuyến 2026</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        :root {
+            --primary: #00d2d3;
+            --primary-gradient: linear-gradient(135deg, #00d2d3, #0984e3);
+            --gold-gradient: linear-gradient(135deg, #ffd700, #ff9f43);
+            --admin-gradient: linear-gradient(135deg, #ff4757, #ff6b81);
+            --bg-dark: #0a0a1a;
+            --card-bg: rgba(255, 255, 255, 0.06);
+            --card-border: rgba(255, 255, 255, 0.12);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at top, #1a1a3a, #0a0a1a 80%);
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #ffffff;
+            padding: 20px 15px;
+            user-select: none;
+            overflow-x: hidden;
+        }
+
+        .portal-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .portal-title {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(32px, 5vw, 48px);
+            font-weight: 900;
+            background: linear-gradient(135deg, #ffffff, #00d2d3, #ffd700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(0, 210, 211, 0.3);
+            margin-bottom: 8px;
+        }
+
+        .portal-subtitle {
+            font-size: 15px;
+            color: #a4b0be;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        /* TAB NAVIGATION */
+        .tab-switcher {
+            display: flex;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--card-border);
+            border-radius: 30px;
+            padding: 4px;
+            margin-bottom: 25px;
+            gap: 6px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: #a4b0be;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 700;
+            padding: 10px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .tab-btn.active {
+            background: var(--primary-gradient);
+            color: #05020c;
+            box-shadow: 0 0 15px rgba(0, 210, 211, 0.4);
+        }
+
+        /* MAIN CONTAINER */
+        .portal-panel {
+            width: 100%;
+            max-width: 880px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(15px);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* TAB CONTENT 1: JOIN ROOM */
+        .pin-box-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 420px;
+            margin-bottom: 25px;
+        }
+
+        .pin-input {
+            width: 100%;
+            padding: 16px 20px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px solid #576574;
+            border-radius: 16px;
+            color: #ffd700;
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 4px;
+            text-align: center;
+            outline: none;
+            transition: all 0.2s;
+            margin-bottom: 12px;
+        }
+
+        .pin-input:focus {
+            border-color: #00d2d3;
+            box-shadow: 0 0 20px rgba(0, 210, 211, 0.3);
+        }
+
+        /* ROLE TILES GRID */
+        .role-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .role-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 20px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .role-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--primary);
+            box-shadow: 0 10px 25px rgba(0, 210, 211, 0.25);
+        }
+
+        .role-card.admin:hover {
+            border-color: #ff4757;
+            box-shadow: 0 10px 25px rgba(255, 71, 87, 0.25);
+        }
+
+        .role-icon { font-size: 34px; margin-bottom: 10px; }
+        .role-title { font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+        .role-desc { font-size: 12px; color: #a4b0be; line-height: 1.4; }
+
+        /* TAB CONTENT 2: CREATE ROOM */
+        .form-row {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 500px;
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .form-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #00d2d3;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1.5px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            color: white;
+            font-size: 15px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus { border-color: var(--primary); }
+
+        .btn-create-room {
+            width: 100%;
+            max-width: 500px;
+            padding: 14px 20px;
+            background: var(--gold-gradient);
+            color: #05020c;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 900;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.2s;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+        .btn-create-room:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+        }
+
+        /* MODAL */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
+            display: none; justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-card {
+            background: #141024;
+            border: 1.5px solid var(--card-border);
+            border-radius: 20px;
+            padding: 30px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+        }
+        .modal-title { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 8px; }
+        .modal-desc { font-size: 13px; color: #a4b0be; margin-bottom: 20px; }
+        .btn-modal {
+            width: 100%; padding: 12px; border-radius: 12px; border: none;
+            font-weight: 800; font-size: 15px; cursor: pointer; margin-top: 10px;
+        }
+        .error-toast { color: #ff4757; font-size: 13px; font-weight: 700; margin-top: 8px; display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="portal-header">
+        <h1 class="portal-title">🎮 ECONOVA SHOW 2026</h1>
+        <p class="portal-subtitle">Hệ Thống Game Show Đa Phòng Trực Tuyến & Đồng Bộ Thời Gian Thực</p>
+    </div>
+
+    <!-- TAB SWITCHER -->
+    <div class="tab-switcher">
+        <button class="tab-btn active" id="tab-btn-join" onclick="switchTab('join')">🚀 Tham Gia Phòng Đấu</button>
+        <button class="tab-btn" id="tab-btn-create" onclick="switchTab('create')">➕ Tạo Phòng Thi Mới</button>
+    </div>
+
+    <!-- MAIN PANEL -->
+    <div class="portal-panel">
+        
+        <!-- PANEL 1: JOIN ROOM -->
+        <div id="panel-join" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+            <div class="pin-box-wrapper">
+                <label class="form-label" style="text-align:center;">🔑 NHẬP MÃ PIN PHÒNG THI ĐẤU</label>
+                <input type="text" id="joinPinInput" class="pin-input" placeholder="VD: 889922" maxlength="8" value="DEFAULT">
+                <span style="font-size: 12px; color: #a4b0be;">(Mặc định: <b>DEFAULT</b> dành cho thi đấu phòng chính)</span>
+            </div>
+
+            <!-- ROLES TILES -->
+            <div class="role-grid">
+                <div class="role-card" onclick="joinAsRole('contestant')">
+                    <div class="role-icon">📱</div>
+                    <div class="role-title">Thí Sinh Bấm Chuông</div>
+                    <div class="role-desc">Dành cho các đội thi trả lời câu hỏi và bấm chuông giành quyền.</div>
+                </div>
+
+                <div class="role-card" onclick="joinAsRole('screen')">
+                    <div class="role-icon">📺</div>
+                    <div class="role-title">Màn Hình LED Lớn</div>
+                    <div class="role-desc">Hiển thị câu hỏi, gói điểm, đồng hồ và hiệu ứng cho khán giả.</div>
+                </div>
+
+                <div class="role-card" onclick="joinAsRole('overlay')">
+                    <div class="role-icon">🎥</div>
+                    <div class="role-title">OBS Livestream</div>
+                    <div class="role-desc">Đồ họa trong suốt tích hợp luồng phát sóng trực tiếp vMix / OBS.</div>
+                </div>
+
+                <div class="role-card" onclick="joinAsRole('scoreboard')">
+                    <div class="role-icon">🏆</div>
+                    <div class="role-title">Bảng Điểm Tổng</div>
+                    <div class="role-desc">Bảng tổng kết điểm số 4 đội thi đấu theo thời gian thực.</div>
+                </div>
+
+                <div class="role-card" onclick="joinAsRole('mc')">
+                    <div class="role-icon">🎙️</div>
+                    <div class="role-title">Màn Hình MC</div>
+                    <div class="role-desc">Kịch bản, câu hỏi đang mở, đáp án và gợi ý dẫn chương trình.</div>
+                </div>
+
+                <div class="role-card admin" onclick="joinAsRole('admin')">
+                    <div class="role-icon">⚙️</div>
+                    <div class="role-title" style="color: #ff6b81;">Quản Trị Viên (Host)</div>
+                    <div class="role-desc">Bảng điều khiển toàn diện: điểm số, âm thanh, gói câu và đồng hồ.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL 2: CREATE ROOM -->
+        <div id="panel-create" style="width: 100%; display: none; flex-direction: column; align-items: center;">
+            <div class="form-row">
+                <label class="form-label">Tên Cuộc Thi / Phòng Đấu</label>
+                <input type="text" id="createNameInput" class="form-input" placeholder="VD: Chung Kết Econova Show 2026">
+            </div>
+
+            <div class="form-row">
+                <label class="form-label">Mã PIN Phòng (6 Chữ Số)</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="createPinInput" class="form-input" placeholder="Tự động sinh hoặc tự đặt" maxlength="8">
+                    <button type="button" onclick="generateRandomPin()" style="padding:0 16px; border-radius:12px; background:rgba(0,210,211,0.2); border:1px solid #00d2d3; color:#00d2d3; cursor:pointer; font-weight:bold;">🎲 Ngẫu Nhiên</button>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <label class="form-label">Mật Khẩu Quản Trị Viên (Admin)</label>
+                <input type="password" id="createPassInput" class="form-input" placeholder="Đặt mật khẩu để vào Admin" value="admin123">
+            </div>
+
+            <div class="form-row">
+                <label class="form-label">Mật Khẩu Dành Cho MC</label>
+                <input type="password" id="createMcPassInput" class="form-input" placeholder="Đặt mật khẩu để vào màn hình MC" value="mc123">
+            </div>
+
+            <div class="form-row">
+                <label class="form-label">Giao Diện Theme Khởi Tạo</label>
+                <select id="createThemeInput" class="form-input" style="background:#0a0a1a;">
+                    <option value="v3">✨ Theme Diagonal V3 (Mũi tên xanh & Đồ họa hiện đại nhất)</option>
+                    <option value="v2">🚀 Theme Ascend (Khung điểm ngang nổi bật)</option>
+                    <option value="v1">🏛️ Theme Cổ Điển (Classic Olympia 3 cột)</option>
+                </select>
+            </div>
+
+            <button class="btn-create-room" onclick="handleCreateRoom()">🚀 KHỞI TẠO PHÒNG ĐẤU NGAY</button>
+            <div class="error-toast" id="createError"></div>
+        </div>
+
+    </div>
+
+    <!-- MODAL AUTHENTICATION (ADMIN / MC) -->
+    <div class="modal-overlay" id="authModal">
+        <div class="modal-card">
+            <h3 class="modal-title" id="authModalTitle">XÁC THỰC QUẢN TRỊ</h3>
+            <p class="modal-desc" id="authModalDesc">Vui lòng nhập mật khẩu để truy cập.</p>
+            <input type="password" id="authModalPass" class="form-input" placeholder="Nhập mật khẩu..." onkeypress="if(event.key==='Enter') confirmAuth()">
+            <div class="error-toast" id="authModalError">Mật khẩu không chính xác!</div>
+            <button class="btn-modal" id="btnModalSubmit" style="background:var(--primary-gradient); color:#000;" onclick="confirmAuth()">XÁC NHẬN ➔</button>
+            <button class="btn-modal" style="background:transparent; color:#aaa; margin-top:6px;" onclick="closeAuthModal()">Đóng</button>
+        </div>
+    </div>
+
+    <script>
+        let currentTargetRole = '';
+
+        function switchTab(tab) {
+            document.getElementById('tab-btn-join').classList.toggle('active', tab === 'join');
+            document.getElementById('tab-btn-create').classList.toggle('active', tab === 'create');
+            document.getElementById('panel-join').style.display = tab === 'join' ? 'flex' : 'none';
+            document.getElementById('panel-create').style.display = tab === 'create' ? 'flex' : 'none';
+        }
+
+        function generateRandomPin() {
+            const pin = Math.floor(100000 + Math.random() * 900000).toString();
+            document.getElementById('createPinInput').value = pin;
+        }
+
+        function joinAsRole(role) {
+            const pin = document.getElementById('joinPinInput').value.trim() || 'DEFAULT';
+            currentTargetRole = role;
+
+            if (role === 'admin') {
+                document.getElementById('authModalTitle').innerText = '⚙️ XÁC THỰC QUẢN TRỊ VIÊN';
+                document.getElementById('authModalDesc').innerText = 'Nhập mật khẩu Admin của phòng ' + pin;
+                document.getElementById('authModal').classList.add('active');
+                document.getElementById('authModalPass').focus();
+            } else if (role === 'mc') {
+                document.getElementById('authModalTitle').innerText = '🎙️ XÁC THỰC MC';
+                document.getElementById('authModalDesc').innerText = 'Nhập mật khẩu MC của phòng ' + pin;
+                document.getElementById('authModal').classList.add('active');
+                document.getElementById('authModalPass').focus();
+            } else {
+                // Public screen, overlay, contestant, scoreboard
+                window.location.href = `./${role}.html?pin=${encodeURIComponent(pin)}`;
+            }
+        }
+
+        function closeAuthModal() {
+            document.getElementById('authModal').classList.remove('active');
+            document.getElementById('authModalPass').value = '';
+            document.getElementById('authModalError').style.display = 'none';
+        }
+
+        async function confirmAuth() {
+            const pin = document.getElementById('joinPinInput').value.trim() || 'DEFAULT';
+            const pass = document.getElementById('authModalPass').value;
+            const errEl = document.getElementById('authModalError');
+
+            if (!pass) return;
+
+            const endpoint = currentTargetRole === 'admin' ? '/api/room/verify_admin' : '/api/room/verify_mc';
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pin, password: pass })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    sessionStorage.setItem(currentTargetRole + 'Auth', pass);
+                    sessionStorage.setItem('currentRoomPin', pin);
+                    window.location.href = `./${currentTargetRole}.html?pin=${encodeURIComponent(pin)}`;
+                } else {
+                    errEl.innerText = data.message || 'Mật khẩu không chính xác!';
+                    errEl.style.display = 'block';
+                }
+            } catch (e) {
+                errEl.innerText = 'Lỗi kết nối máy chủ!';
+                errEl.style.display = 'block';
+            }
+        }
+
+        async function handleCreateRoom() {
+            const name = document.getElementById('createNameInput').value.trim() || 'Phòng Thi Đấu Econova';
+            const pin = document.getElementById('createPinInput').value.trim();
+            const password = document.getElementById('createPassInput').value.trim();
+            const mcPassword = document.getElementById('createMcPassInput').value.trim();
+            const theme = document.getElementById('createThemeInput').value;
+            const errEl = document.getElementById('createError');
+
+            try {
+                const res = await fetch('/api/room/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, pin, password, mcPassword, theme })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert(`🎉 Tạo phòng thành công!\n\nTên phòng: ${data.room.name}\nMã PIN: ${data.room.pin}\n\nBạn sẽ được chuyển ngay đến giao diện tham gia phòng!`);
+                    document.getElementById('joinPinInput').value = data.room.pin;
+                    switchTab('join');
+                } else {
+                    errEl.innerText = data.message || 'Không thể tạo phòng!';
+                    errEl.style.display = 'block';
+                }
+            } catch (e) {
+                errEl.innerText = 'Lỗi kết nối máy chủ khi tạo phòng!';
+                errEl.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
