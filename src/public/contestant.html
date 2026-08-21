@@ -43,17 +43,55 @@
             text-transform: uppercase; letter-spacing: 2px; text-align: center;
         }
         #teamBtns { display: grid; grid-template-columns: 1fr; gap: 18px; width: 100%; max-width: 450px; }
+        
+        /* Skeleton Loading Animation */
+        .skeleton-card {
+            width: 100%; min-height: 88px; border-radius: 16px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.04) 75%);
+            background-size: 200% 100%;
+            animation: skeleton-shimmer 1.5s infinite linear;
+            border: 1px solid rgba(255,255,255,0.08);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+            padding: 15px; box-sizing: border-box;
+        }
+        @keyframes skeleton-shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .skeleton-bar-title {
+            width: 140px; height: 22px; border-radius: 6px;
+            background: rgba(255,255,255,0.15);
+        }
+        .skeleton-bar-sub {
+            width: 90px; height: 14px; border-radius: 4px;
+            background: rgba(255,255,255,0.08);
+        }
+        
         .team-btn {
-            width: 100%; min-height: 92px; border: none; border-radius: 16px;
-            font-size: 26px; font-weight: 700; color: #fff; cursor: pointer;
-            transition: transform 0.15s, opacity 0.3s;
+            width: 100%; min-height: 88px; border: none; border-radius: 16px;
+            font-size: 24px; font-weight: 700; color: #fff; cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05));
+            border: 2px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+            animation: fadeIn 0.3s ease-out;
         }
-        .team-btn span.school { font-size: 16px; color: rgba(255,255,255,0.7); font-weight: 400; margin-top: 5px;}
-        .team-btn:active:not(:disabled) { transform: scale(0.96); }
-        .team-btn:disabled { background: rgba(58, 58, 80, 0.5) !important; box-shadow: none !important; color: #6b6b80; cursor: not-allowed; }
-        .team-btn { background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .team-btn:active:not(:disabled) { transform: scale(0.97); }
+        .team-btn:disabled {
+            background: rgba(40, 40, 60, 0.4) !important;
+            border-color: rgba(255, 255, 255, 0.05) !important;
+            box-shadow: none !important;
+            color: #718093 !important;
+            cursor: not-allowed;
+        }
+        .team-btn span.school { font-size: 14px; color: rgba(255,255,255,0.65); font-weight: 400; margin-top: 4px; }
+
 
         /* ===== SCREEN 2: NÚT CHUÔNG ===== */
         #buzzScreen {
@@ -258,22 +296,14 @@
         <p style="color: #fff; margin-top: 10px;" data-i18n="con_req_full">Yêu cầu bật chế độ Toàn Màn Hình</p>
     </div>
 
-    <!-- CHỌN ĐỘI -->
+        <!-- CHỌN ĐỘI -->
     <div id="selectScreen">
         <h1 data-i18n="con_choose">CHỌN ĐỘI CỦA BẠN</h1>
         <div id="teamBtns">
-            <button class="team-btn" data-t="1" onclick="chooseTeam(1)">
-                <span id="tName1">Đội 1</span><span class="school" id="tSchool1"></span>
-            </button>
-            <button class="team-btn" data-t="2" onclick="chooseTeam(2)">
-                <span id="tName2">Đội 2</span><span class="school" id="tSchool2"></span>
-            </button>
-            <button class="team-btn" data-t="3" onclick="chooseTeam(3)">
-                <span id="tName3">Đội 3</span><span class="school" id="tSchool3"></span>
-            </button>
-            <button class="team-btn" data-t="4" onclick="chooseTeam(4)">
-                <span id="tName4">Đội 4</span><span class="school" id="tSchool4"></span>
-            </button>
+            <div class="skeleton-card"><div class="skeleton-bar-title"></div><div class="skeleton-bar-sub"></div></div>
+            <div class="skeleton-card"><div class="skeleton-bar-title"></div><div class="skeleton-bar-sub"></div></div>
+            <div class="skeleton-card"><div class="skeleton-bar-title"></div><div class="skeleton-bar-sub"></div></div>
+            <div class="skeleton-card"><div class="skeleton-bar-title"></div><div class="skeleton-bar-sub"></div></div>
         </div>
     </div>
 
@@ -628,7 +658,7 @@
             }
         });
 
-        function chooseTeam(id) {
+                function chooseTeam(id) {
             myTeamId = parseInt(id);
             isSelected = true;
             sessionStorage.setItem('claimedTeamId', myTeamId.toString());
@@ -642,13 +672,14 @@
             if (buzzBtn) buzzBtn.classList.add('locked');
         }
 
-        // Render / cập nhật nút chọn đội
+        // Render / cập nhật nút chọn đội từ dữ liệu phòng thi
         function renderSelect(teams, claimed) {
             const lang = (window.currentState && window.currentState.settings && window.currentState.settings.language) || currentGlobalLang;
             const container = document.getElementById('teamBtns');
             if (!container) return;
             
             if (!teams || !Array.isArray(teams) || teams.length === 0) {
+                // Fallback nếu phòng chưa có danh sách đội
                 teams = [
                     { id: 1, name: "Đội 1", school: "" },
                     { id: 2, name: "Đội 2", school: "" },
@@ -671,60 +702,11 @@
                 btn.className = 'team-btn';
                 btn.dataset.t = tObj.id;
                 btn.disabled = isClaimed;
-                let claimedText = isClaimed ? ' ' + (typeof t === 'function' ? t('con_claimed', lang) : '(Đã chọn)') : '';
+                let claimedText = isClaimed ? ' ' + (typeof t === 'function' ? t('con_claimed', lang) : '(Đã có người chọn)') : '';
                 btn.innerHTML = `<span>${tObj.name || ('Đội ' + tObj.id)}${claimedText}</span><span class="school">${tObj.school || ''}</span>`;
                 btn.onclick = () => chooseTeam(tObj.id);
                 container.appendChild(btn);
             });
-        }
-            const lang = (window.currentState && window.currentState.settings && window.currentState.settings.language) || currentGlobalLang;
-            if (!teamBtns) return;
-            teamBtns.innerHTML = '';
-            
-            if (!teams || !Array.isArray(teams) || teams.length === 0) {
-                teams = [
-                    { id: 1, name: "Đội 1", school: "" },
-                    { id: 2, name: "Đội 2", school: "" },
-                    { id: 3, name: "Đội 3", school: "" },
-                    { id: 4, name: "Đội 4", school: "" }
-                ];
-            }
-            claimed = claimed || (window.currentState ? window.currentState.claimedTeams : {});
-            
-            teams.forEach(tObj => {
-                let isClaimed = false;
-                if (claimed) {
-                    for (let k in claimed) { 
-                        if (parseInt(k) === tObj.id) isClaimed = true; 
-                    }
-                }
-                
-                let btn = document.createElement('button');
-                btn.className = 'team-btn';
-                btn.dataset.t = tObj.id;
-                btn.disabled = isClaimed;
-                let claimedText = isClaimed ? ' ' + (typeof t === 'function' ? t('con_claimed', lang) : '(Đã có người chọn)') : '';
-                btn.innerHTML = `<span>${tObj.name || ('Đội ' + tObj.id)}${claimedText}</span><span class="school">${tObj.school || ''}</span>`;
-                
-                btn.addEventListener('click', () => {
-                    myTeamId = tObj.id;
-                    isSelected = true;
-                    sessionStorage.setItem('claimedTeamId', tObj.id.toString());
-                    socket.emit('claimTeam', { teamId: tObj.id, clientId: myClientId });
-                    selectScreen.style.display = 'none';
-                    buzzScreen.style.display = 'flex';
-                    statusText.innerText = typeof t === 'function' ? t('con_wait_admin', lang) : '⏳ ĐANG CHỜ CÂU HỎI...';
-                    btnIcon.innerText = "⏳";
-                    buzzBtn.classList.add('locked');
-                });
-                
-                teamBtns.appendChild(btn);
-            });
-        }
-
-        // Tự động render 4 nút đội thi ngay lập tức khi mở trang
-        if (!isSelected) {
-            setTimeout(() => { renderSelect(); }, 50);
         }
 
         // Xử lý đếm ngược
@@ -785,6 +767,7 @@
         function handleUpdateState(state) {
             if (!state) return;
             window.currentState = state;
+
             // ================= FONT LOGIC =================
             if (state.settings) {
                 let s = state.settings;
@@ -829,9 +812,6 @@
                     styleEl.innerHTML = rules;
                 }
             }
-            // ===============================================
-
-// Room session active
 
             if (!state.teams) return;
             
@@ -908,7 +888,7 @@
                 myScore.textContent = me.score;
                 
                 const qGrid = document.getElementById('qGrid');
-                if (qGrid) qGrid.style.display = 'none'; // Luôn ẩn lưới chọn câu cũ trên giao diện thí sinh
+                if (qGrid) qGrid.style.display = 'none';
                 
                 const buzzerContainer = document.getElementById('buzzerContainer');
                 let q = state.currentQuestion || { active: false };
@@ -935,27 +915,18 @@
 
                 if (q.active && !window.lastActiveState && q.idx !== null) {
                     window.isAnimating = true;
-                    qGrid.style.display = 'flex';
                     qBox.style.display = 'none';
                     buzzerContainer.style.display = 'none';
                     statusText.style.display = 'none';
-                    
-                    const container = document.getElementById('grid' + q.points);
-                    let cell = null;
-                    if (container && container.children[q.idx]) {
-                        cell = container.children[q.idx];
-                        cell.classList.add('selected-anim');
-                    }
 
                     setTimeout(() => {
                         window.isAnimating = false;
-                        if (cell) cell.classList.remove('selected-anim');
                         if (window.currentState && !window.currentState.currentQuestion.active) {
                             // ignore
                         } else {
                             applyVisibility();
                         }
-                    }, 1000);
+                    }, 500);
                 } else if (!window.isAnimating) {
                     applyVisibility();
                 }
@@ -1011,7 +982,7 @@
                     statusText.style.color = 'rgba(255,255,255,0.5)';
                 }
             }
-        });
+        }
     </script>
 </body>
 </html>
