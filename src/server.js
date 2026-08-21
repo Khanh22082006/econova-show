@@ -35,16 +35,26 @@ const io = new Server(server, {
 const originalEmit = io.emit;
 io.emit = function(event, data, ...args) {
     if (event === 'updateState' && data) {
-        // 1. safeState cho Thí sinh (xóa tất cả đáp án)
+        // 1. safeState cho Thí sinh (xóa tất cả đáp án + xoá questionBank khổng lồ để tránh nghẽn mạng/giật lag)
         let safeState = JSON.parse(JSON.stringify(data));
+        delete safeState.questionBank;
+        delete safeState.questions;
         if (safeState.currentQuestion) safeState.currentQuestion.answer = "";
         if (safeState.lockedPackage && safeState.lockedPackage.questions) {
-            safeState.lockedPackage.questions.forEach(q => q.answer = "");
+            safeState.lockedPackage.questions.forEach(q => {
+                delete q.answer;
+                delete q.vid;
+            });
+        }
+        if (safeState.pendingPackage && safeState.pendingPackage.questions) {
+            safeState.pendingPackage.questions.forEach(q => {
+                delete q.answer;
+                delete q.vid;
+            });
         }
 
         // 2. mcPayload cho MC (giữ đáp án câu ACTIVE, trạng thái lưới/gói, nhưng xóa các câu chưa mở)
         let mcPayload = JSON.parse(JSON.stringify(data));
-        // Đề phòng admin có gửi kèm questionBank thì xóa đi
         delete mcPayload.questionBank;
         delete mcPayload.questions;
 

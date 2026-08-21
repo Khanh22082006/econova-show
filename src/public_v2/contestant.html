@@ -4,17 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title data-i18n="con_title">Econova Show - Thí Sinh</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="/socket.io/socket.io.js"></script>
     <script src="/lang.js"></script>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('auth')) {
-            sessionStorage.setItem('contestantAuth', urlParams.get('auth'));
-            window.history.replaceState({}, document.title, window.location.pathname);
-        } else if (!sessionStorage.getItem('contestantAuth')) {
-            document.write('<h1 style="color:white;text-align:center;margin-top:20%;font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif);">' + t('con_access_denied', currentGlobalLang) + '</h1>');
-            window.stop();
+        let pinParam = urlParams.get('pin');
+        if (pinParam) {
+            sessionStorage.setItem('currentRoomPin', pinParam);
         }
     </script>
     <style>
@@ -318,9 +317,10 @@
     </div>
 
     <script>
-        const socket = io({ transports: ['websocket'] });
-        let myTeamId = null;
-        let isSelected = false;
+        const socket = io({ reconnectionDelay: 1000, reconnectionDelayMax: 5000 });
+        let savedTeam = sessionStorage.getItem('claimedTeamId');
+        let myTeamId = (savedTeam && !isNaN(parseInt(savedTeam))) ? parseInt(savedTeam) : null;
+        let isSelected = (myTeamId !== null);
         let currentTeamCount = null;
         
         let myClientId = sessionStorage.getItem('clientId');
@@ -330,9 +330,19 @@
         }
 
         socket.on('connect', () => {
-            if (isSelected && myTeamId !== null) {
-                socket.emit('claimTeam', { teamId: myTeamId, clientId: myClientId });
-            }
+            const roomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
+            socket.emit('joinRoom', roomPin, (res) => {
+                if (!res || !res.success) {
+                    alert(res && res.message ? res.message : 'Phòng không tồn tại hoặc đã đóng!');
+                    window.location.href = './index.html';
+                } else {
+                    if (isSelected && myTeamId !== null) {
+                        selectScreen.style.display = 'none';
+                        buzzScreen.style.display = 'flex';
+                        socket.emit('claimTeam', { teamId: myTeamId, clientId: myClientId });
+                    }
+                }
+            });
         });
         
         let timerInterval = null;
@@ -620,6 +630,7 @@
                 btn.addEventListener('click', () => {
                     myTeamId = tObj.id;
                     isSelected = true;
+                    sessionStorage.setItem('claimedTeamId', tObj.id.toString());
                     socket.emit('claimTeam', { teamId: tObj.id, clientId: myClientId });
                     selectScreen.style.display = 'none';
                     buzzScreen.style.display = 'flex';
@@ -766,28 +777,39 @@
                 }
             }
 
-            if (!isSelected) {
-                renderSelect(state.teams, state.claimedTeams);
+            let me = (state.teams && isSelected) ? state.teams.find(t => t.id === myTeamId) : null;
+            if (!isSelected || !me) {
+                // Chưa chọn đội hoặc đội không tồn tại trong phòng này -> Hiển thị màn hình chọn đội
+                isSelected = false;
+                myTeamId = null;
+                sessionStorage.removeItem('claimedTeamId');
+                selectScreen.style.display = 'flex';
+                buzzScreen.style.display = 'none';
+                renderSelect(state.teams || [], state.claimedTeams || {});
+                return;
             } else {
+                selectScreen.style.display = 'none';
+                buzzScreen.style.display = 'flex';
+
                 // Check if banned
                 if (state.bannedTeams && state.bannedTeams.includes(myTeamId)) {
                     isBanned = true;
                     const overlay = document.getElementById('antiCheatOverlay');
-                    document.getElementById('acTitle').innerText = '⛔ BẠN ĐÃ BỊ CẤM THI';
-                    document.getElementById('acDesc').innerText = 'Vi phạm quá nhiều lần. Vui lòng liên hệ Admin.';
-                    document.getElementById('acBtn').style.display = 'none';
-                    overlay.style.background = 'rgba(255,0,0,1)';
-                    overlay.style.display = 'flex';
+                    if (overlay) {
+                        document.getElementById('acTitle').innerText = '⛔ BẠN ĐÃ BỊ CẤM THI';
+                        document.getElementById('acDesc').innerText = 'Vi phạm quá nhiều lần. Vui lòng liên hệ Admin.';
+                        document.getElementById('acBtn').style.display = 'none';
+                        overlay.style.background = 'rgba(255,0,0,1)';
+                        overlay.style.display = 'flex';
+                    }
                 } else if (isBanned) {
                     isBanned = false;
-                    document.getElementById('antiCheatOverlay').style.display = 'none';
+                    const overlay = document.getElementById('antiCheatOverlay');
+                    if (overlay) overlay.style.display = 'none';
                 }
 
-                let me = state.teams.find(t => t.id === myTeamId);
-                if (!me) return;
-                
                 let isMain = false;
-                if (state.currentQuestion.active) {
+                if (state.currentQuestion && state.currentQuestion.active) {
                     isMain = (state.currentQuestion.mainTeamId === me.id);
                 } else {
                     isMain = (state.turnOrder && state.turnOrder.length > 0 && state.turnOrder[0] === me.id);
@@ -797,36 +819,19 @@
                 mySchool.textContent = me.school || '';
                 myScore.textContent = me.score;
                 
-                // Cập nhật Lưới 36 câu
-                const ptsList = [10, 20, 40];
-                ptsList.forEach(pts => {
-                    const container = document.getElementById('grid' + pts);
-                    if (container) {
-                        container.innerHTML = '';
-                        for (let i = 0; i < 12; i++) {
-                            let isPlayed = false;
-                            if (state.playedQuestions && state.playedQuestions[pts] && state.playedQuestions[pts].includes(i)) {
-                                isPlayed = true;
-                            }
-                            container.innerHTML += `<div class="q-cell ${isPlayed ? 'played' : ''}">${i + 1}</div>`;
-                        }
-                    }
-                });
-                
                 const qGrid = document.getElementById('qGrid');
-                const buzzerContainer = document.getElementById('buzzerContainer');
+                if (qGrid) qGrid.style.display = 'none'; // Luôn ẩn lưới chọn câu cũ trên giao diện thí sinh
                 
-                let q = state.currentQuestion;
+                const buzzerContainer = document.getElementById('buzzerContainer');
+                let q = state.currentQuestion || { active: false };
 
                 function applyVisibility() {
                     if (!q.active) {
-                        qGrid.style.display = 'flex';
                         qBox.style.display = 'none';
-                        buzzerContainer.style.display = 'none';
-                        statusText.style.display = 'none';
+                        buzzerContainer.style.display = 'flex';
+                        statusText.style.display = 'block';
+                        statusText.textContent = typeof t === 'function' ? t('con_wait_admin', window.currentGlobalLang) : '⏳ ĐANG CHỜ CÂU HỎI TIẾP THEO...';
                     } else {
-                        qGrid.style.display = 'none';
-                        // Update question text and points
                         let textPts = typeof t === 'function' ? t("scr_pts", window.currentGlobalLang) : "ĐIỂM";
                         qPoints.textContent = `${q.points} ${textPts}`;
                         
