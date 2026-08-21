@@ -652,16 +652,25 @@
 
         const adminPin = sessionStorage.getItem('adminAuth');
         const adminRoomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
-        if (adminPin) {
-            const loginPayload = adminRoomPin ? { pin: adminRoomPin, password: adminPin } : adminPin;
-            socket.emit('adminLogin', loginPayload, (res) => {
-                if (!res || !res.success) {
-                    alert(res && res.message ? res.message : t('adm_err_auth', currentGlobalLang));
-                    window.location.href = './index.html';
-                }
-            });
-        } else {
+        if (!adminPin) {
             window.location.href = './index.html';
+        } else {
+            // Wait for socket to be connected before sending adminLogin
+            function doAdminLogin() {
+                const loginPayload = adminRoomPin ? { pin: adminRoomPin, password: adminPin } : adminPin;
+                socket.emit('adminLogin', loginPayload, (res) => {
+                    if (!res || !res.success) {
+                        const msg = (res && res.message) ? res.message : 'Xác thực thất bại. Vui lòng thử lại.';
+                        alert(msg);
+                        window.location.href = './index.html';
+                    }
+                });
+            }
+            if (socket.connected) {
+                doAdminLogin();
+            } else {
+                socket.once('connect', doAdminLogin);
+            }
         }
         function switchTab(tab) {
             const tabIds = ['round1', 'main', 'settings'];
