@@ -10,10 +10,18 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         let authParam = urlParams.get('auth');
+        let pinParam = urlParams.get('pin');
         if (authParam) {
             sessionStorage.setItem('mcAuth', authParam);
-            window.history.replaceState({}, document.title, window.location.pathname);
-        } else if (!sessionStorage.getItem('mcAuth')) {
+        }
+        if (pinParam) {
+            sessionStorage.setItem('currentRoomPin', pinParam);
+        }
+        if (authParam) {
+            const cleanUrl = pinParam ? (window.location.pathname + '?pin=' + encodeURIComponent(pinParam)) : window.location.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+        }
+        if (!sessionStorage.getItem('mcAuth')) {
             window.location.href = './index.html';
         }
     </script>
@@ -502,31 +510,36 @@
         // === AUTH ===
         const mcPin = sessionStorage.getItem('mcAuth');
         const roomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
-        if (mcPin && roomPin) {
-            socket.emit('mcLogin', { pin: roomPin, password: mcPin }, (res) => {
+        
+        let isMcLoggingIn = false;
+        function doMcLogin() {
+            if (isMcLoggingIn) return;
+            isMcLoggingIn = true;
+            const mcPayload = roomPin ? { pin: roomPin, password: mcPin } : mcPin;
+            socket.emit('mcLogin', mcPayload, (res) => {
+                isMcLoggingIn = false;
                 if (!res || !res.success) {
-                    alert('Sai mã PIN quản trị! Đang chuyển về trang đăng nhập...');
+                    const msg = (res && res.message) ? res.message : 'Sai mã PIN MC! Đang chuyển về trang chủ...';
+                    alert(msg);
                     sessionStorage.removeItem('mcAuth');
                     window.location.href = './index.html';
                 }
             });
         }
 
+        if (mcPin) {
+            if (socket.connected) {
+                doMcLogin();
+            }
+            socket.on('connect', doMcLogin);
+        } else {
+            window.location.href = './index.html';
+        }
+
         // === CONNECTION STATUS ===
         socket.on('connect', () => {
             document.getElementById('connDot').classList.add('online');
             document.getElementById('connText').innerText = 'Đã kết nối';
-            // Auto re-authenticate on socket reconnect if PIN is available in sessionStorage
-            const mcPin = sessionStorage.getItem('mcAuth');
-            const roomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
-            if (mcPin && roomPin) {
-                socket.emit('mcLogin', { pin: roomPin, password: mcPin }, (res) => {
-                    if (!res || !res.success) {
-                        sessionStorage.removeItem('mcAuth');
-                        window.location.href = './index.html';
-                    }
-                });
-            }
         });
         socket.on('disconnect', () => {
             document.getElementById('connDot').classList.remove('online');

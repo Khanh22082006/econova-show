@@ -13,10 +13,18 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         let authParam = urlParams.get('auth');
+        let pinParam = urlParams.get('pin');
         if (authParam) {
             sessionStorage.setItem('adminAuth', authParam);
-            window.history.replaceState({}, document.title, window.location.pathname);
-        } else if (!sessionStorage.getItem('adminAuth')) {
+        }
+        if (pinParam) {
+            sessionStorage.setItem('currentRoomPin', pinParam);
+        }
+        if (authParam) {
+            const cleanUrl = pinParam ? (window.location.pathname + '?pin=' + encodeURIComponent(pinParam)) : window.location.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+        }
+        if (!sessionStorage.getItem('adminAuth')) {
             window.location.href = './index.html';
         }
     </script>
@@ -655,22 +663,25 @@
         if (!adminPin) {
             window.location.href = './index.html';
         } else {
-            // Wait for socket to be connected before sending adminLogin
+            let isLoggingIn = false;
             function doAdminLogin() {
+                if (isLoggingIn) return;
+                isLoggingIn = true;
                 const loginPayload = adminRoomPin ? { pin: adminRoomPin, password: adminPin } : adminPin;
                 socket.emit('adminLogin', loginPayload, (res) => {
+                    isLoggingIn = false;
                     if (!res || !res.success) {
-                        const msg = (res && res.message) ? res.message : 'Xác thực thất bại. Vui lòng thử lại.';
+                        const msg = (res && res.message) ? res.message : 'Xác thực thất bại. Vui lòng đăng nhập lại.';
                         alert(msg);
+                        sessionStorage.removeItem('adminAuth');
                         window.location.href = './index.html';
                     }
                 });
             }
             if (socket.connected) {
                 doAdminLogin();
-            } else {
-                socket.once('connect', doAdminLogin);
             }
+            socket.on('connect', doAdminLogin);
         }
         function switchTab(tab) {
             const tabIds = ['round1', 'main', 'settings'];
@@ -2833,16 +2844,6 @@
         socket.on('connect', () => {
             fontRetryCount = 0;
             setTimeout(requestFonts, 500);
-            // Auto re-authenticate on socket reconnect if PIN is available in sessionStorage
-            const adminPin = sessionStorage.getItem('adminAuth');
-            if (adminPin) {
-                socket.emit('adminLogin', adminPin, (res) => {
-                    if (!res.success) {
-                        sessionStorage.removeItem('adminAuth');
-                        window.location.href = './index.html';
-                    }
-                });
-            }
         });
         socket.on('systemFonts', (fonts) => {
             if (fonts && fonts.length > 1) {

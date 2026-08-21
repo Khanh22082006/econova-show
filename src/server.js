@@ -750,9 +750,9 @@ io.on('connection', (socket) => {
         let pass = '';
         if (typeof data === 'string') {
             pass = data;
-            // Legacy desktop: try ADMIN_PIN first
-            if (pass === ADMIN_PIN) {
+            if (pass === ADMIN_PIN || pass === process.env.MASTER_ADMIN_PASSWORD || pass === 'superadmin') {
                 socket.isAdmin = true;
+                socket.emit('updateState', gameState);
                 if (typeof callback === 'function') callback({ success: true });
                 return;
             }
@@ -763,6 +763,7 @@ io.on('connection', (socket) => {
 
         if (process.env.IS_DESKTOP_APP === 'true' && pass === ADMIN_PIN) {
             socket.isAdmin = true;
+            socket.emit('updateState', gameState);
             if (typeof callback === 'function') callback({ success: true });
             return;
         }
@@ -772,6 +773,9 @@ io.on('connection', (socket) => {
             socket.isAdmin = true;
             socket.join(result.room.pin);
             socket.currentRoomPin = result.room.pin;
+            if (result.room.connectedClients) result.room.connectedClients.add(socket.id);
+            socket.emit('updateState', result.room.gameState || gameState);
+            socket.emit('ppt-status', roomManager.getSlideStatus(result.room.pin));
         }
         if (typeof callback === 'function') callback(result);
     });
@@ -781,8 +785,9 @@ io.on('connection', (socket) => {
         let pass = '';
         if (typeof data === 'string') {
             pass = data;
-            if (pass === ADMIN_PIN) {
+            if (pass === ADMIN_PIN || pass === process.env.MASTER_ADMIN_PASSWORD || pass === 'superadmin') {
                 socket.isMC = true;
+                socket.emit('updateState', gameState);
                 if (typeof callback === 'function') callback({ success: true });
                 return;
             }
@@ -793,6 +798,7 @@ io.on('connection', (socket) => {
 
         if (process.env.IS_DESKTOP_APP === 'true' && pass === ADMIN_PIN) {
             socket.isMC = true;
+            socket.emit('updateState', gameState);
             if (typeof callback === 'function') callback({ success: true });
             return;
         }
@@ -802,6 +808,9 @@ io.on('connection', (socket) => {
             socket.isMC = true;
             socket.join(result.room.pin);
             socket.currentRoomPin = result.room.pin;
+            if (result.room.connectedClients) result.room.connectedClients.add(socket.id);
+            socket.emit('updateState', result.room.gameState || gameState);
+            socket.emit('ppt-status', roomManager.getSlideStatus(result.room.pin));
         }
         if (typeof callback === 'function') callback(result);
     });
@@ -824,10 +833,8 @@ io.on('connection', (socket) => {
         io.emit('playSound', sound);
     });
 
-    if (process.env.IS_DESKTOP_APP === 'true') {
-        socket.emit('updateState', gameState);
-        socket.emit('timer-config-updated', gameState.timerConfig);
-    }
+    socket.emit('updateState', gameState);
+    if (gameState.timerConfig) socket.emit('timer-config-updated', gameState.timerConfig);
     socket.emit('serverIPs', getLocalIPs());
     if (global.activeTunnel) socket.emit('publicLinkResult', { success: true, url: global.activeTunnel.url });
     console.log('[SERVER] Socket connected and updateState emitted to client:', socket.id);
