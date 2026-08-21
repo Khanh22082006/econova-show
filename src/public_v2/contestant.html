@@ -361,31 +361,44 @@
 
     <script>
         const socket = io({ reconnectionDelay: 1000, reconnectionDelayMax: 5000 });
-        let savedTeam = sessionStorage.getItem('claimedTeamId');
-        let myTeamId = (savedTeam && !isNaN(parseInt(savedTeam))) ? parseInt(savedTeam) : null;
-        let isSelected = (myTeamId !== null);
-        let currentTeamCount = null;
+        const roomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
         
-        let myClientId = sessionStorage.getItem('clientId');
+        // Mỗi tab/thiết bị có một Client ID riêng biệt
+        let myClientId = sessionStorage.getItem('clientId_' + roomPin);
         if (!myClientId) {
-            myClientId = Math.random().toString(36).substring(2);
-            sessionStorage.setItem('clientId', myClientId);
+            myClientId = 'c_' + Math.random().toString(36).substring(2) + '_' + Date.now();
+            sessionStorage.setItem('clientId_' + roomPin, myClientId);
         }
 
+        let savedTeam = sessionStorage.getItem('claimedTeamId_' + roomPin);
+        let myTeamId = (savedTeam && !isNaN(parseInt(savedTeam))) ? parseInt(savedTeam) : null;
+        let isSelected = false; // Luôn chờ xác thực từ Server trước khi tự động khóa vào đội
+        let currentTeamCount = null;
+
         socket.on('connect', () => {
-            const roomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
             socket.emit('joinRoom', roomPin, (res) => {
                 if (!res || !res.success) {
                     alert(res && res.message ? res.message : 'Phòng không tồn tại hoặc đã đóng!');
                     window.location.href = './index.html';
                 } else {
                     if (res.gameState) {
+                        // Nếu trước đó tab này từng chọn đội, kiểm tra xem đội đó có thuộc về client này không
+                        if (myTeamId !== null && res.gameState.claimedTeams && res.gameState.claimedTeams[myTeamId]) {
+                            if (res.gameState.claimedTeams[myTeamId].clientId === myClientId) {
+                                isSelected = true;
+                                socket.emit('claimTeam', { teamId: myTeamId, clientId: myClientId });
+                            } else {
+                                // Đội đã bị người khác chọn ở thiết bị khác
+                                myTeamId = null;
+                                isSelected = false;
+                                sessionStorage.removeItem('claimedTeamId_' + roomPin);
+                            }
+                        } else if (myTeamId !== null) {
+                            // Chưa ai chọn đội này -> reconnect nhận lại
+                            isSelected = true;
+                            socket.emit('claimTeam', { teamId: myTeamId, clientId: myClientId });
+                        }
                         handleUpdateState(res.gameState);
-                    }
-                    if (isSelected && myTeamId !== null) {
-                        selectScreen.style.display = 'none';
-                        buzzScreen.style.display = 'flex';
-                        socket.emit('claimTeam', { teamId: myTeamId, clientId: myClientId });
                     }
                 }
             });
@@ -659,10 +672,21 @@
         });
 
                 function chooseTeam(id) {
-            myTeamId = parseInt(id);
+            const targetId = parseInt(id);
+            socket.emit('claimTeam', { teamId: targetId, clientId: myClientId }, (res) => {
+                if (res && !res.success) {
+                    alert(res.message || 'Đội này đã có thí sinh khác chọn! Vui lòng chọn đội khác.');
+                    isSelected = false;
+                    myTeamId = null;
+                    sessionStorage.removeItem('claimedTeamId_' + roomPin);
+                    selectScreen.style.display = 'flex';
+                    buzzScreen.style.display = 'none';
+                    return;
+                }
+            });
+            myTeamId = targetId;
             isSelected = true;
-            sessionStorage.setItem('claimedTeamId', myTeamId.toString());
-            socket.emit('claimTeam', { teamId: myTeamId, clientId: myClientId });
+            sessionStorage.setItem('claimedTeamId_' + roomPin, targetId.toString());
             const sScreen = document.getElementById('selectScreen');
             const bScreen = document.getElementById('buzzScreen');
             if (sScreen) sScreen.style.display = 'none';
@@ -671,6 +695,17 @@
             if (btnIcon) btnIcon.innerText = "⏳";
             if (buzzBtn) buzzBtn.classList.add('locked');
         }
+
+        socket.on('claimError', (data) => {
+            const msg = (typeof data === 'object' && data.message) ? data.message : (data || 'Đội này đã có thí sinh khác chọn!');
+            alert(msg);
+            isSelected = false;
+            myTeamId = null;
+            sessionStorage.removeItem('claimedTeamId_' + roomPin);
+            selectScreen.style.display = 'flex';
+            buzzScreen.style.display = 'none';
+            if (window.currentState) renderSelect(window.currentState.teams, window.currentState.claimedTeams);
+        });
 
         // Render / cập nhật nút chọn đội từ dữ liệu phòng thi
         function renderSelect(teams, claimed) {

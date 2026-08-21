@@ -1056,8 +1056,10 @@ io.on('connection', (socket) => {
         io.emit('playSound', sound);
     });
 
-    socket.emit('updateState', gameState);
-    if (gameState.timerConfig) socket.emit('timer-config-updated', gameState.timerConfig);
+    if (process.env.IS_DESKTOP_APP === 'true') {
+        socket.emit('updateState', gameState);
+        if (gameState.timerConfig) socket.emit('timer-config-updated', gameState.timerConfig);
+    }
     socket.emit('serverIPs', getLocalIPs());
     if (global.activeTunnel) socket.emit('publicLinkResult', { success: true, url: global.activeTunnel.url });
     console.log('[SERVER] Socket connected and updateState emitted to client:', socket.id);
@@ -1968,27 +1970,7 @@ io.on('connection', (socket) => {
         io.emit('playSound', seconds === 10 ? 'countdown_10s' : 'countdown_15s');
     });
 
-    // --- THÍ SINH: Chọn đội ---
-    socket.on('claimTeam', (payload) => {
-        let teamId = typeof payload === 'object' ? payload.teamId : payload;
-        let clientId = typeof payload === 'object' ? payload.clientId : socket.id;
-        teamId = parseInt(teamId);
-        
-        socket.clientId = clientId; // Store on socket object to verify reconnection buzzes
-        
-        let existingClaim = gameState.claimedTeams[teamId];
-        if (existingClaim && existingClaim.clientId !== clientId) {
-            return; // Đội đã được người khác chọn
-        }
-
-        for (let tid in gameState.claimedTeams) {
-            if (gameState.claimedTeams[tid].socketId === socket.id) {
-                delete gameState.claimedTeams[tid];
-            }
-        }
-        gameState.claimedTeams[teamId] = { socketId: socket.id, clientId: clientId };
-        io.emit('updateState', gameState);
-    });
+// Duplicate claimTeam removed
 
     // --- THÍ SINH: Bấm chuông ---
     socket.on('buzz', (teamId, token) => {
