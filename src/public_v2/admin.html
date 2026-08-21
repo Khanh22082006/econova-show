@@ -18,6 +18,7 @@
         }
     </script>
     <style>
+        * { box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background-color: #1e1e2f; color: #fff; margin: 0; padding: 20px; }
         .header { background: #ff4757; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(255,71,87,0.3); }
         h1 { margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 2px; }
@@ -167,7 +168,7 @@
                 </div>
                 <div style="flex: 1; display: flex; flex-direction: column; margin-top: 15px;">
                     <h3 style="margin-bottom: 5px; color: #ff9f43;">📝 Speaker Notes (Slide hiện tại) 🔄</h3>
-                    <textarea id="pptNotesArea" readonly style="flex: 1; min-height: 120px; width: 100%; background: #2f3542; color: #fff; padding: 10px; border: 1px solid #576574; border-radius: 5px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 16px; line-height: 1.5; resize: none;" placeholder="Chưa có thông tin ghi chú..."></textarea>
+                    <textarea id="pptNotesArea" readonly style="width: 100%; box-sizing: border-box; background: #1e1e2f; color: #fff; padding: 12px; border: 1px solid #576574; border-radius: 6px; font-family: inherit; font-size: 15px; line-height: 1.5; resize: none; min-height: 110px; max-height: 150px; overflow-y: auto;" placeholder="Chưa có thông tin ghi chú..."></textarea>
                 </div>
             </div>
 

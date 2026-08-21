@@ -68,6 +68,10 @@ class RoomManager {
             return { error: true, message: `Mã PIN ${cleanPin} đã được sử dụng bởi một phòng khác! Vui lòng chọn mã PIN khác.` };
         }
         
+        const initialGameState = JSON.parse(JSON.stringify(this.defaultStateTemplate));
+        initialGameState.isRoomOpen = true;
+        initialGameState.roomPIN = cleanPin;
+
         const roomData = {
             pin: cleanPin,
             name: name || `Phòng Thi ${cleanPin}`,
@@ -76,7 +80,7 @@ class RoomManager {
             theme: theme || "v3",
             createdAt: Date.now(),
             lastActive: Date.now(),
-            gameState: JSON.parse(JSON.stringify(this.defaultStateTemplate)),
+            gameState: initialGameState,
             slides: {
                 currentSlide: 1,
                 totalSlides: 50,
