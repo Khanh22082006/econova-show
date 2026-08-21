@@ -618,17 +618,33 @@
         // Render nút chọn đội
         function renderSelect(teams, claimed) {
             const lang = (window.currentState && window.currentState.settings && window.currentState.settings.language) || currentGlobalLang;
+            if (!teamBtns) return;
             teamBtns.innerHTML = '';
+            
+            if (!teams || !Array.isArray(teams) || teams.length === 0) {
+                teams = [
+                    { id: 1, name: "Đội 1", school: "" },
+                    { id: 2, name: "Đội 2", school: "" },
+                    { id: 3, name: "Đội 3", school: "" },
+                    { id: 4, name: "Đội 4", school: "" }
+                ];
+            }
+            claimed = claimed || (window.currentState ? window.currentState.claimedTeams : {});
+            
             teams.forEach(tObj => {
                 let isClaimed = false;
-                for (let k in claimed) { if (parseInt(k) === tObj.id) isClaimed = true; }
+                if (claimed) {
+                    for (let k in claimed) { 
+                        if (parseInt(k) === tObj.id) isClaimed = true; 
+                    }
+                }
                 
                 let btn = document.createElement('button');
                 btn.className = 'team-btn';
                 btn.dataset.t = tObj.id;
                 btn.disabled = isClaimed;
-                let claimedText = isClaimed ? t('con_claimed', lang) : '';
-                btn.innerHTML = `${tObj.name}${claimedText}<span class="school">${tObj.school || ''}</span>`;
+                let claimedText = isClaimed ? ' ' + (typeof t === 'function' ? t('con_claimed', lang) : '(Đã có người chọn)') : '';
+                btn.innerHTML = `<span>${tObj.name || ('Đội ' + tObj.id)}${claimedText}</span><span class="school">${tObj.school || ''}</span>`;
                 
                 btn.addEventListener('click', () => {
                     myTeamId = tObj.id;
@@ -637,13 +653,18 @@
                     socket.emit('claimTeam', { teamId: tObj.id, clientId: myClientId });
                     selectScreen.style.display = 'none';
                     buzzScreen.style.display = 'flex';
-                    statusText.innerText = t('con_wait_admin', lang);
+                    statusText.innerText = typeof t === 'function' ? t('con_wait_admin', lang) : '⏳ ĐANG CHỜ CÂU HỎI...';
                     btnIcon.innerText = "⏳";
                     buzzBtn.classList.add('locked');
                 });
                 
                 teamBtns.appendChild(btn);
             });
+        }
+
+        // Tự động render 4 nút đội thi ngay lập tức khi mở trang
+        if (!isSelected) {
+            setTimeout(() => { renderSelect(); }, 50);
         }
 
         // Xử lý đếm ngược
@@ -750,17 +771,7 @@
             }
             // ===============================================
 
-            // Check if room is still open and PIN matches (only if contestant already logged in)
-            let currentAuth = sessionStorage.getItem('contestantAuth');
-            if (currentAuth) {
-                // Contestant was logged in — check if session is still valid
-                if (state.isRoomOpen === false || state.roomPIN !== currentAuth) {
-                    sessionStorage.removeItem('contestantAuth');
-                    const lang = (window.currentState && window.currentState.settings && window.currentState.settings.language) || currentGlobalLang;
-                    alert(t('con_session_ended', lang));
-                    return;
-                }
-            }
+// Room session active
 
             if (!state.teams) return;
             
