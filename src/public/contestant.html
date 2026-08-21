@@ -261,7 +261,20 @@
     <!-- CHỌN ĐỘI -->
     <div id="selectScreen">
         <h1 data-i18n="con_choose">CHỌN ĐỘI CỦA BẠN</h1>
-        <div id="teamBtns"></div>
+        <div id="teamBtns">
+            <button class="team-btn" data-t="1" onclick="chooseTeam(1)">
+                <span id="tName1">Đội 1</span><span class="school" id="tSchool1"></span>
+            </button>
+            <button class="team-btn" data-t="2" onclick="chooseTeam(2)">
+                <span id="tName2">Đội 2</span><span class="school" id="tSchool2"></span>
+            </button>
+            <button class="team-btn" data-t="3" onclick="chooseTeam(3)">
+                <span id="tName3">Đội 3</span><span class="school" id="tSchool3"></span>
+            </button>
+            <button class="team-btn" data-t="4" onclick="chooseTeam(4)">
+                <span id="tName4">Đội 4</span><span class="school" id="tSchool4"></span>
+            </button>
+        </div>
     </div>
 
     <!-- MÀN HÌNH CHUÔNG -->
@@ -615,8 +628,55 @@
             }
         });
 
-        // Render nút chọn đội
+        function chooseTeam(id) {
+            myTeamId = parseInt(id);
+            isSelected = true;
+            sessionStorage.setItem('claimedTeamId', myTeamId.toString());
+            socket.emit('claimTeam', { teamId: myTeamId, clientId: myClientId });
+            const sScreen = document.getElementById('selectScreen');
+            const bScreen = document.getElementById('buzzScreen');
+            if (sScreen) sScreen.style.display = 'none';
+            if (bScreen) bScreen.style.display = 'flex';
+            if (statusText) statusText.innerText = typeof t === 'function' ? t('con_wait_admin', currentGlobalLang) : '⏳ ĐANG CHỜ CÂU HỎI...';
+            if (btnIcon) btnIcon.innerText = "⏳";
+            if (buzzBtn) buzzBtn.classList.add('locked');
+        }
+
+        // Render / cập nhật nút chọn đội
         function renderSelect(teams, claimed) {
+            const lang = (window.currentState && window.currentState.settings && window.currentState.settings.language) || currentGlobalLang;
+            const container = document.getElementById('teamBtns');
+            if (!container) return;
+            
+            if (!teams || !Array.isArray(teams) || teams.length === 0) {
+                teams = [
+                    { id: 1, name: "Đội 1", school: "" },
+                    { id: 2, name: "Đội 2", school: "" },
+                    { id: 3, name: "Đội 3", school: "" },
+                    { id: 4, name: "Đội 4", school: "" }
+                ];
+            }
+            claimed = claimed || (window.currentState ? window.currentState.claimedTeams : {});
+            
+            container.innerHTML = '';
+            teams.forEach(tObj => {
+                let isClaimed = false;
+                if (claimed) {
+                    for (let k in claimed) { 
+                        if (parseInt(k) === tObj.id) isClaimed = true; 
+                    }
+                }
+                
+                let btn = document.createElement('button');
+                btn.className = 'team-btn';
+                btn.dataset.t = tObj.id;
+                btn.disabled = isClaimed;
+                let claimedText = isClaimed ? ' ' + (typeof t === 'function' ? t('con_claimed', lang) : '(Đã chọn)') : '';
+                btn.innerHTML = `<span>${tObj.name || ('Đội ' + tObj.id)}${claimedText}</span><span class="school">${tObj.school || ''}</span>`;
+                btn.onclick = () => chooseTeam(tObj.id);
+                container.appendChild(btn);
+            });
+        }
             const lang = (window.currentState && window.currentState.settings && window.currentState.settings.language) || currentGlobalLang;
             if (!teamBtns) return;
             teamBtns.innerHTML = '';
