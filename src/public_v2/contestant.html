@@ -398,35 +398,50 @@
         let isSelected = false; // Luôn chờ xác thực từ Server trước khi tự động khóa vào đội
         let currentTeamCount = null;
 
-        // FAILSAFE: If skeleton still showing after 6s (network/server issue), retry
+        // FAILSAFE: If skeleton still showing after 10s, retry fetch up to 3 times
         let skeletonTimeoutId = null;
+        let skeletonRetryCount = 0;
+        const MAX_SKELETON_RETRIES = 3;
         function armSkeletonTimeout() {
             if (skeletonTimeoutId) clearTimeout(skeletonTimeoutId);
             skeletonTimeoutId = setTimeout(() => {
                 const container = document.getElementById('teamBtns');
                 if (container && container.querySelector('.skeleton-card')) {
-                    // Skeleton still there - render default teams or retry fetch
                     if (window.currentState && window.currentState.teams) {
                         renderSelect(window.currentState.teams, window.currentState.claimedTeams || {});
-                    } else if (roomPin) {
+                        skeletonTimeoutId = null;
+                        return;
+                    }
+                    if (roomPin) {
                         fetch('/api/room/state?pin=' + encodeURIComponent(roomPin))
                             .then(r => r.json())
                             .then(data => {
                                 if (data && data.success && data.gameState && data.gameState.teams) {
                                     handleUpdateState(data.gameState);
+                                    skeletonTimeoutId = null;
                                 } else {
-                                    // Room doesn't exist - redirect
-                                    alert('Phòng không tồn tại hoặc đã đóng!');
-                                    window.location.href = './index.html';
+                                    skeletonRetryCount++;
+                                    if (skeletonRetryCount >= MAX_SKELETON_RETRIES) {
+                                        alert((data && data.message) || 'Phòng không tồn tại hoặc đã đóng! Vui lòng liên hệ Admin.');
+                                        window.location.href = './index.html';
+                                    } else {
+                                        // Retry after 5s
+                                        armSkeletonTimeout();
+                                    }
                                 }
                             })
                             .catch(() => {
-                                alert('Không thể kết nối tới server!');
-                                window.location.href = './index.html';
+                                skeletonRetryCount++;
+                                if (skeletonRetryCount >= MAX_SKELETON_RETRIES) {
+                                    alert('Không thể kết nối tới server sau nhiều lần thử. Vui lòng tải lại trang.');
+                                    window.location.reload();
+                                } else {
+                                    armSkeletonTimeout(); // retry
+                                }
                             });
                     }
                 }
-            }, 6000);
+            }, skeletonRetryCount === 0 ? 10000 : 5000);
         }
         armSkeletonTimeout();
 

@@ -107,8 +107,8 @@ app.use((req, res, next) => {
     next();
 });
 app.use(express.json({ limit: '50mb' }));
-app.use(express.json()); app.post('/log_error', (req, res) => { require('fs').appendFileSync('client_errors.log', JSON.stringify(req.body) + '\n'); res.sendStatus(200); }); app.use(express.static(path.join(__dirname, 'public')));
-app.use('/public_v2', express.static(path.join(__dirname, 'public_v2')));
+app.post('/log_error', (req, res) => { require('fs').appendFileSync('client_errors.log', JSON.stringify(req.body) + '\n'); res.sendStatus(200); });
+// NOTE: express.static is moved AFTER all API routes so /api/* is handled first
 
 // --- MULTI-ROOM REST APIS (HỖ TRỢ TẠO PHÒNG & XÁC THỰC MÃ PIN / PASSWORD) ---
 // ============================================================
@@ -352,7 +352,38 @@ app.post('/api/room/verify_contestant', (req, res) => {
     res.json(result);
 });
 
+// Instant HTTP pre-fetch for contestant page (loads teams before WebSocket connects)
+app.get('/api/room/state', async (req, res) => {
+    const pin = (req.query.pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0');
+    let room = roomManager.getRoom(pin);
+    if (!room) {
+        try {
+            await loadRoomsFromCloud();
+            room = roomManager.getRoom(pin);
+            if (room) console.log('[RoomState] Room', pin, 'restored from cloud on HTTP fetch');
+        } catch(e) {
+            console.error('[RoomState] Cloud reload error:', e.message);
+        }
+    }
+    if (!room) {
+        return res.status(404).json({ success: false, message: 'Phòng không tồn tại hoặc đã bị gỡ. Vui lòng liên hệ Admin tạo lại phòng.' });
+    }
+    let safeState = JSON.parse(JSON.stringify(room.gameState));
+    delete safeState.questionBank;
+    delete safeState.questions;
+    if (safeState.currentQuestion) safeState.currentQuestion.answer = "";
+    if (safeState.lockedPackage && safeState.lockedPackage.questions) {
+        safeState.lockedPackage.questions.forEach(q => { delete q.answer; delete q.vid; });
+    }
+    if (safeState.pendingPackage && safeState.pendingPackage.questions) {
+        safeState.pendingPackage.questions.forEach(q => { delete q.answer; delete q.vid; });
+    }
+    res.json({ success: true, room: { pin: room.pin, name: room.name, theme: room.theme }, gameState: safeState });
+});
 
+// Static file serving AFTER all API routes (so /api/* requests reach handlers first)
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/public_v2', express.static(path.join(__dirname, 'public_v2')));
 
 app.use('/Themes', express.static(path.join(basePath, 'Themes')));
 const thumbsDir = path.join(os.tmpdir(), 'econova_ppt_thumbs');
