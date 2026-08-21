@@ -688,6 +688,10 @@
 
         const adminPin = sessionStorage.getItem('adminAuth');
         const adminRoomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
+        document.addEventListener('DOMContentLoaded', () => {
+            const el = document.getElementById('lblRoomPIN');
+            if (el && adminRoomPin) el.innerText = adminRoomPin;
+        });
         if (!adminPin) {
             window.location.href = './index.html';
         } else {
@@ -721,6 +725,7 @@
 
         function renderDevicesList(info) {
             if (!info) return;
+            window.lastDevStatus = info;
             const container = document.getElementById('teamDevicesGrid');
             if (container && info.teams) {
                 container.innerHTML = '';
@@ -2179,27 +2184,33 @@
             }
             if (typeof renderQuestionSelectionUI === 'function') renderQuestionSelectionUI();
 
-            if (lblRoomPIN && btnOpenRoom && btnCloseRoom) {
+            if (lblRoomPIN) {
                 const currentPin = adminRoomPin || state.roomPIN || '';
-                const isOpen = (state.isRoomOpen === true);
-                let lblPinLabel = document.getElementById('lblPinLabel');
-                if (isOpen) {
-                    if(lblPinLabel) lblPinLabel.innerText = t('adm_room_pin', currentGlobalLang);
-                    lblRoomPIN.innerText = currentPin ? currentPin : 'ĐANG MỞ';
-                    lblRoomPIN.style.color = '#10ac84';
-                    btnOpenRoom.style.opacity = '0.5';
-                    btnOpenRoom.style.pointerEvents = 'none';
-                    btnCloseRoom.style.opacity = '1';
-                    btnCloseRoom.style.pointerEvents = 'auto';
-                } else {
-                    if(lblPinLabel) lblPinLabel.innerText = t('adm_room_status', currentGlobalLang);
-                    lblRoomPIN.innerText = t('adm_room_closed', currentGlobalLang);
-                    lblRoomPIN.style.color = '#ff4757';
-                    btnOpenRoom.style.opacity = '1';
-                    btnOpenRoom.style.pointerEvents = 'auto';
-                    btnCloseRoom.style.opacity = '0.5';
-                    btnCloseRoom.style.pointerEvents = 'none';
-                }
+                lblRoomPIN.innerText = currentPin ? currentPin : 'ĐANG MỞ';
+                lblRoomPIN.style.color = '#10ac84';
+            }
+
+            // Đồng bộ nhanh danh sách 4 đội thí sinh
+            if (state.teams && typeof renderDevicesList === 'function') {
+                const devInfo = window.lastDevStatus || {
+                    teams: {},
+                    mc: false,
+                    screen: false,
+                    overlay: false,
+                    scoreboard: false
+                };
+                if (!devInfo.teams) devInfo.teams = {};
+                state.teams.forEach(t => {
+                    const isClaimed = state.claimedTeams && state.claimedTeams[t.id];
+                    devInfo.teams[t.id] = {
+                        id: t.id,
+                        name: t.name,
+                        school: t.school || '',
+                        claimed: !!isClaimed,
+                        online: !!isClaimed
+                    };
+                });
+                renderDevicesList(devInfo);
             }
 
             if (!window.initialLoaded && state.currentQuestion) {
