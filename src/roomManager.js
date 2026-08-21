@@ -1,5 +1,6 @@
 /**
- * roomManager.js - Hệ Thống Quản Lý Đa Phòng (Multi-Room) Chuẩn PIN 000000 - 999999
+ * roomManager.js - Hệ Thống Quản Lý Đa Phòng Động (1 Triệu Phòng 000000 - 999999)
+ * Không có phòng tiêu chuẩn có sẵn. Toàn bộ phòng do người dùng tự tạo động trên Web.
  */
 
 const fs = require('fs');
@@ -9,7 +10,17 @@ class RoomManager {
     constructor() {
         this.rooms = new Map();
         this.defaultStateTemplate = this.loadDefaultStateTemplate();
-        this.initDefaultRoom();
+        
+        // Chỉ khởi tạo phòng cục bộ nếu là chế độ Desktop Offline App
+        if (process.env.IS_DESKTOP_APP === 'true') {
+            this.createRoom({
+                pin: "000000",
+                name: "Phòng Thi Đấu Cục Bộ (Desktop)",
+                password: "admin",
+                mcPassword: "mc",
+                theme: "v3"
+            });
+        }
     }
 
     loadDefaultStateTemplate() {
@@ -36,22 +47,10 @@ class RoomManager {
         };
     }
 
-    initDefaultRoom() {
-        // Phòng thi chuẩn ban đầu với mã PIN 6 số: 888888
-        this.createRoom({
-            pin: "888888",
-            name: "Phòng Thi Đấu Tiêu Chuẩn",
-            password: process.env.ADMIN_PASSWORD || "admin123",
-            mcPassword: process.env.MC_PASSWORD || "mc123",
-            theme: "v3",
-            isPermanent: true
-        });
-    }
-
     generatePIN() {
         let pin;
         do {
-            // PIN nằm trong khoảng 000000 đến 999999 (có số 0 ở đầu nếu dưới 100000)
+            // Sinh mã PIN chuẩn 6 chữ số từ 000000 đến 999999
             pin = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
         } while (this.rooms.has(pin));
         return pin;
@@ -61,8 +60,12 @@ class RoomManager {
         let cleanPin = (pin || "").toString().trim().replace(/\D/g, '');
         if (cleanPin.length > 0 && cleanPin.length <= 6) {
             cleanPin = cleanPin.padStart(6, '0');
-        } else if (cleanPin.length !== 6) {
+        } else {
             cleanPin = this.generatePIN();
+        }
+
+        if (this.rooms.has(cleanPin)) {
+            return { error: true, message: `Mã PIN ${cleanPin} đã được sử dụng bởi một phòng khác! Vui lòng chọn mã PIN khác.` };
         }
         
         const roomData = {
@@ -91,12 +94,12 @@ class RoomManager {
         }
 
         this.rooms.set(cleanPin, roomData);
-        console.log(`[RoomManager] Đã tạo phòng mới: ${roomData.name} | PIN: ${cleanPin}`);
+        console.log(`[RoomManager] Đã khởi tạo phòng mới: ${roomData.name} | PIN: ${cleanPin}`);
         return roomData;
     }
 
     getRoom(pin) {
-        if (!pin) return this.rooms.get("888888") || null;
+        if (!pin) return null;
         let cleanPin = pin.toString().trim().replace(/\D/g, '');
         if (cleanPin.length > 0 && cleanPin.length <= 6) {
             cleanPin = cleanPin.padStart(6, '0');
@@ -111,8 +114,8 @@ class RoomManager {
 
     verifyAdmin(pin, password) {
         const room = this.getRoom(pin);
-        if (!room) return { success: false, message: "Mã PIN 6 số không tồn tại hoặc phòng đã đóng!" };
-        if (room.password === password || password === process.env.MASTER_ADMIN_PASSWORD || password === "superadmin" || password === "admin123") {
+        if (!room) return { success: false, message: "❌ Mã PIN phòng này không tồn tại hoặc phòng đã đóng!" };
+        if (room.password === password || password === process.env.MASTER_ADMIN_PASSWORD || password === "superadmin") {
             return { success: true, room };
         }
         return { success: false, message: "Mật khẩu Quản Trị Viên không chính xác!" };
@@ -120,8 +123,8 @@ class RoomManager {
 
     verifyMC(pin, password) {
         const room = this.getRoom(pin);
-        if (!room) return { success: false, message: "Mã PIN 6 số không tồn tại!" };
-        if (room.mcPassword === password || room.password === password || password === "mc123" || password === "admin123") {
+        if (!room) return { success: false, message: "❌ Mã PIN phòng này không tồn tại hoặc phòng đã đóng!" };
+        if (room.mcPassword === password || room.password === password) {
             return { success: true, room };
         }
         return { success: false, message: "Mật khẩu MC không chính xác!" };
@@ -129,7 +132,7 @@ class RoomManager {
 
     verifyContestant(pin) {
         const room = this.getRoom(pin);
-        if (!room) return { success: false, message: "Mã PIN 6 số không chính xác hoặc phòng chưa được tạo!" };
+        if (!room) return { success: false, message: "❌ Phòng thi đấu với mã PIN này không tồn tại! Vui lòng kiểm tra lại hoặc Tạo Phòng Mới." };
         return { success: true, room };
     }
 

@@ -107,7 +107,7 @@
             flex-direction: column;
             align-items: center;
             width: 100%;
-            max-width: 420px;
+            max-width: 440px;
             margin-bottom: 16px;
         }
 
@@ -257,12 +257,12 @@
             border-radius: 20px;
             padding: 30px;
             width: 90%;
-            max-width: 400px;
+            max-width: 420px;
             text-align: center;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
         }
         .modal-title { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 8px; }
-        .modal-desc { font-size: 13px; color: #a4b0be; margin-bottom: 20px; }
+        .modal-desc { font-size: 13px; color: #a4b0be; margin-bottom: 18px; }
         .btn-modal {
             width: 100%; padding: 12px; border-radius: 12px; border: none;
             font-weight: 800; font-size: 15px; cursor: pointer; margin-top: 10px;
@@ -274,7 +274,7 @@
 
     <div class="portal-header">
         <h1 class="portal-title">🎮 ECONOVA SHOW 2026</h1>
-        <p class="portal-subtitle">Hệ Thống Game Show Đa Phòng Trực Tuyến & Đồng Bộ Thời Gian Thực</p>
+        <p class="portal-subtitle">Nền Tảng Game Show Đám Mây Đa Phòng (Hỗ Trợ 1.000.000 Phòng Thi Độc Lập)</p>
     </div>
 
     <!-- TAB SWITCHER -->
@@ -289,9 +289,9 @@
         <!-- PANEL 1: JOIN ROOM -->
         <div id="panel-join" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
             <div class="pin-box-wrapper">
-                <label class="form-label" style="text-align:center;">🔑 NHẬP MÃ PIN PHÒNG (000000 - 999999)</label>
-                <input type="tel" id="joinPinInput" class="pin-input" placeholder="888888" maxlength="6" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
-                <span style="font-size: 12px; color: #a4b0be;">(Mã PIN gồm 6 chữ số từ <b>000000</b> đến <b>999999</b>)</span>
+                <label class="form-label" style="text-align:center;">🔑 NHẬP MÃ PIN PHÒNG THI (000000 - 999999)</label>
+                <input type="tel" id="joinPinInput" class="pin-input" placeholder="Nhập PIN 6 số..." maxlength="6" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
+                <span style="font-size: 12px; color: #a4b0be;">(Nhập mã PIN do Ban Tổ Chức / Người tạo phòng cung cấp)</span>
             </div>
 
             <!-- ROLES TILES -->
@@ -361,12 +361,12 @@
 
             <div class="form-row">
                 <label class="form-label">Mật Khẩu Quản Trị Viên (Admin)</label>
-                <input type="password" id="createPassInput" class="form-input" placeholder="Đặt mật khẩu để vào Admin" value="admin123">
+                <input type="password" id="createPassInput" class="form-input" placeholder="Tự đặt mật khẩu Admin để điều khiển phòng này" value="admin123">
             </div>
 
             <div class="form-row">
                 <label class="form-label">Mật Khẩu Dành Cho MC</label>
-                <input type="password" id="createMcPassInput" class="form-input" placeholder="Đặt mật khẩu để vào màn hình MC" value="mc123">
+                <input type="password" id="createMcPassInput" class="form-input" placeholder="Tự đặt mật khẩu dành riêng cho MC" value="mc123">
             </div>
 
             <div class="form-row">
@@ -384,23 +384,17 @@
 
     </div>
 
-        <!-- MODAL AUTHENTICATION (ADMIN / MC) -->
+    <!-- MODAL AUTHENTICATION (ADMIN / MC) -->
     <div class="modal-overlay" id="authModal">
         <div class="modal-card">
             <h3 class="modal-title" id="authModalTitle">⚙️ XÁC THỰC QUẢN TRỊ</h3>
             <p class="modal-desc" id="authModalDesc">Vui lòng nhập mật khẩu quản lý của phòng.</p>
             
-            <input type="password" id="authModalPass" class="form-input" placeholder="Nhập mật khẩu..." onkeypress="if(event.key==='Enter') confirmAuth()">
+            <input type="password" id="authModalPass" class="form-input" placeholder="Nhập mật khẩu bạn đã đặt..." onkeypress="if(event.key==='Enter') confirmAuth()">
             <div class="error-toast" id="authModalError">Mật khẩu không chính xác!</div>
             
-            <!-- HƯỚNG DẪN MẬT KHẨU RÕ RÀNG -->
-            <div id="authHintBox" style="background:rgba(255,255,255,0.05); border:1px dashed rgba(255,255,255,0.2); border-radius:12px; padding:10px 14px; margin-top:12px; font-size:12px; color:#dcdde1; line-height:1.5; text-align:left;">
-                <div id="authDefaultHint" style="color:#00d2d3; margin-bottom:4px;">
-                    🔑 <b>Phòng mặc định 888888:</b> Mật khẩu là <b id="hintPassCode" style="color:#ffd700; font-family:monospace; font-size:13px;">admin123</b>
-                </div>
-                <div style="color:#a4b0be;">
-                    💡 <em>Nếu là phòng do bạn tự tạo: Nhập mật khẩu bạn đã đặt lúc tạo phòng.</em>
-                </div>
+            <div style="background:rgba(255,255,255,0.05); border:1px dashed rgba(255,255,255,0.2); border-radius:12px; padding:10px 14px; margin-top:12px; font-size:12px; color:#dcdde1; line-height:1.5; text-align:left;">
+                💡 <b>Lưu ý:</b> Nhập đúng mật khẩu Quản trị hoặc MC do người <b>Tạo Phòng</b> đã đặt lúc khởi tạo phòng này.
             </div>
 
             <button class="btn-modal" id="btnModalSubmit" style="background:var(--primary-gradient); color:#000; margin-top:14px;" onclick="confirmAuth()">XÁC NHẬN ĐĂNG NHẬP ➔</button>
@@ -431,16 +425,16 @@
 
         function getCleanPin() {
             let val = document.getElementById('joinPinInput').value.trim().replace(/\D/g, '');
-            if (!val) return '888888';
+            if (!val) return '';
             return val.padStart(6, '0');
         }
 
-                function joinAsRole(role) {
+        async function joinAsRole(role) {
             const pin = getCleanPin();
             const joinErr = document.getElementById('joinError');
             joinErr.style.display = 'none';
 
-            if (pin.length !== 6) {
+            if (!pin || pin.length !== 6) {
                 joinErr.innerText = '⚠️ Vui lòng nhập đúng mã PIN gồm 6 chữ số (000000 - 999999)!';
                 joinErr.style.display = 'block';
                 return;
@@ -449,34 +443,35 @@
             currentTargetRole = role;
 
             if (role === 'admin' || role === 'mc') {
-                const isDefault = (pin === '888888');
-                const defaultPass = (role === 'admin') ? 'admin123' : 'mc123';
-                
                 document.getElementById('authModalTitle').innerText = (role === 'admin') ? '⚙️ XÁC THỰC QUẢN TRỊ VIÊN' : '🎙️ XÁC THỰC MC';
                 document.getElementById('authModalDesc').innerText = 'Nhập mật khẩu ' + (role === 'admin' ? 'Admin' : 'MC') + ' của phòng PIN: ' + pin;
-                
-                const defaultHintEl = document.getElementById('authDefaultHint');
-                const hintPassCode = document.getElementById('hintPassCode');
-                
-                if (isDefault) {
-                    defaultHintEl.style.display = 'block';
-                    hintPassCode.innerText = defaultPass;
-                    document.getElementById('authModalPass').placeholder = 'Mặc định: ' + defaultPass;
-                    document.getElementById('authModalPass').value = defaultPass; // Auto-fill for default room convenience!
-                } else {
-                    defaultHintEl.style.display = 'none';
-                    document.getElementById('authModalPass').placeholder = 'Nhập mật khẩu bạn đã đặt...';
-                    document.getElementById('authModalPass').value = '';
-                }
-
+                document.getElementById('authModalPass').placeholder = 'Nhập mật khẩu bạn đã đặt...';
+                document.getElementById('authModalPass').value = '';
+                document.getElementById('authModalError').style.display = 'none';
                 document.getElementById('authModal').classList.add('active');
                 document.getElementById('authModalPass').focus();
-            } else if (role === 'overlay') {
-                window.location.href = `./overlay.html?pin=${encodeURIComponent(pin)}&pass=obs_overlay`;
             } else {
-                window.location.href = `./${role}.html?pin=${encodeURIComponent(pin)}`;
+                // Kiểm tra phòng có tồn tại không trước khi chuyển trang
+                try {
+                    const res = await fetch('/api/room/verify_contestant', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ pin })
+                    });
+                    const data = await res.json();
+                    if (!data.success) {
+                        joinErr.innerText = data.message || '❌ Phòng thi đấu với mã PIN này không tồn tại!';
+                        joinErr.style.display = 'block';
+                        return;
+                    }
+                } catch(e) {}
+
+                if (role === 'overlay') {
+                    window.location.href = `./overlay.html?pin=${encodeURIComponent(pin)}&pass=obs_overlay`;
+                } else {
+                    window.location.href = `./${role}.html?pin=${encodeURIComponent(pin)}`;
+                }
             }
-        }
         }
 
         function closeAuthModal() {
@@ -490,7 +485,11 @@
             const pass = document.getElementById('authModalPass').value;
             const errEl = document.getElementById('authModalError');
 
-            if (!pass) return;
+            if (!pass) {
+                errEl.innerText = 'Vui lòng nhập mật khẩu!';
+                errEl.style.display = 'block';
+                return;
+            }
 
             const endpoint = currentTargetRole === 'admin' ? '/api/room/verify_admin' : '/api/room/verify_mc';
             try {
@@ -522,6 +521,12 @@
             const theme = document.getElementById('createThemeInput').value;
             const errEl = document.getElementById('createError');
             errEl.style.display = 'none';
+
+            if (!password) {
+                errEl.innerText = '⚠️ Vui lòng đặt Mật khẩu Quản Trị Viên (Admin)!';
+                errEl.style.display = 'block';
+                return;
+            }
 
             let finalPin = '';
             if (!pinInput) {
