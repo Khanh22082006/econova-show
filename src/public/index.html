@@ -108,7 +108,7 @@
             align-items: center;
             width: 100%;
             max-width: 420px;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
 
         .pin-input {
@@ -118,13 +118,13 @@
             border: 2px solid #576574;
             border-radius: 16px;
             color: #ffd700;
-            font-size: 24px;
+            font-size: 28px;
             font-weight: 800;
-            letter-spacing: 4px;
+            letter-spacing: 8px;
             text-align: center;
             outline: none;
             transition: all 0.2s;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
 
         .pin-input:focus {
@@ -269,9 +269,9 @@
         <!-- PANEL 1: JOIN ROOM -->
         <div id="panel-join" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
             <div class="pin-box-wrapper">
-                <label class="form-label" style="text-align:center;">🔑 NHẬP MÃ PIN PHÒNG THI ĐẤU</label>
-                <input type="text" id="joinPinInput" class="pin-input" placeholder="VD: 889922" maxlength="8" value="DEFAULT">
-                <span style="font-size: 12px; color: #a4b0be;">(Mặc định: <b>DEFAULT</b> dành cho thi đấu phòng chính)</span>
+                <label class="form-label" style="text-align:center;">🔑 NHẬP MÃ PIN PHÒNG (6 CHỮ SỐ)</label>
+                <input type="tel" id="joinPinInput" class="pin-input" placeholder="888888" maxlength="6" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
+                <span style="font-size: 12px; color: #a4b0be;">(Mã PIN mặc định ban đầu: <b style="color:#00d2d3;">888888</b>)</span>
             </div>
 
             <!-- ROLES TILES -->
@@ -312,6 +312,7 @@
                     <div class="role-desc">Bảng điều khiển toàn diện: điểm số, âm thanh, gói câu và đồng hồ.</div>
                 </div>
             </div>
+            <div class="error-toast" id="joinError" style="margin-top: 15px;"></div>
         </div>
 
         <!-- PANEL 2: CREATE ROOM -->
@@ -322,10 +323,10 @@
             </div>
 
             <div class="form-row">
-                <label class="form-label">Mã PIN Phòng (6 Chữ Số)</label>
+                <label class="form-label">Mã PIN Phòng (Đúng 6 Chữ Số)</label>
                 <div style="display: flex; gap: 8px;">
-                    <input type="text" id="createPinInput" class="form-input" placeholder="Tự động sinh hoặc tự đặt" maxlength="8">
-                    <button type="button" onclick="generateRandomPin()" style="padding:0 16px; border-radius:12px; background:rgba(0,210,211,0.2); border:1px solid #00d2d3; color:#00d2d3; cursor:pointer; font-weight:bold;">🎲 Ngẫu Nhiên</button>
+                    <input type="tel" id="createPinInput" class="form-input" placeholder="VD: 654321" maxlength="6" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
+                    <button type="button" onclick="generateRandomPin()" style="padding:0 16px; border-radius:12px; background:rgba(0,210,211,0.2); border:1px solid #00d2d3; color:#00d2d3; cursor:pointer; font-weight:bold; white-space:nowrap;">🎲 Ngẫu Nhiên</button>
                 </div>
             </div>
 
@@ -348,7 +349,7 @@
                 </select>
             </div>
 
-            <button class="btn-create-room" onclick="handleCreateRoom()">🚀 KHỞI TẠO PHÒNG ĐẤU NGAY</button>
+            <button class="btn-create-room" onclick="handleCreateRoom()">🚀 KHỞI TẠO PHÒNG ĐẤU (PIN 6 SỐ)</button>
             <div class="error-toast" id="createError"></div>
         </div>
 
@@ -381,22 +382,35 @@
             document.getElementById('createPinInput').value = pin;
         }
 
+        function getCleanPin() {
+            const val = document.getElementById('joinPinInput').value.trim().replace(/\D/g, '');
+            return val || '888888';
+        }
+
         function joinAsRole(role) {
-            const pin = document.getElementById('joinPinInput').value.trim() || 'DEFAULT';
+            const pin = getCleanPin();
+            const joinErr = document.getElementById('joinError');
+            joinErr.style.display = 'none';
+
+            if (pin.length !== 6) {
+                joinErr.innerText = '⚠️ Vui lòng nhập đúng mã PIN gồm 6 chữ số!';
+                joinErr.style.display = 'block';
+                return;
+            }
+
             currentTargetRole = role;
 
             if (role === 'admin') {
                 document.getElementById('authModalTitle').innerText = '⚙️ XÁC THỰC QUẢN TRỊ VIÊN';
-                document.getElementById('authModalDesc').innerText = 'Nhập mật khẩu Admin của phòng ' + pin;
+                document.getElementById('authModalDesc').innerText = 'Nhập mật khẩu Admin của phòng PIN: ' + pin;
                 document.getElementById('authModal').classList.add('active');
                 document.getElementById('authModalPass').focus();
             } else if (role === 'mc') {
                 document.getElementById('authModalTitle').innerText = '🎙️ XÁC THỰC MC';
-                document.getElementById('authModalDesc').innerText = 'Nhập mật khẩu MC của phòng ' + pin;
+                document.getElementById('authModalDesc').innerText = 'Nhập mật khẩu MC của phòng PIN: ' + pin;
                 document.getElementById('authModal').classList.add('active');
                 document.getElementById('authModalPass').focus();
             } else {
-                // Public screen, overlay, contestant, scoreboard
                 window.location.href = `./${role}.html?pin=${encodeURIComponent(pin)}`;
             }
         }
@@ -408,7 +422,7 @@
         }
 
         async function confirmAuth() {
-            const pin = document.getElementById('joinPinInput').value.trim() || 'DEFAULT';
+            const pin = getCleanPin();
             const pass = document.getElementById('authModalPass').value;
             const errEl = document.getElementById('authModalError');
 
@@ -438,11 +452,20 @@
 
         async function handleCreateRoom() {
             const name = document.getElementById('createNameInput').value.trim() || 'Phòng Thi Đấu Econova';
-            const pin = document.getElementById('createPinInput').value.trim();
+            let pin = document.getElementById('createPinInput').value.trim().replace(/\D/g, '');
             const password = document.getElementById('createPassInput').value.trim();
             const mcPassword = document.getElementById('createMcPassInput').value.trim();
             const theme = document.getElementById('createThemeInput').value;
             const errEl = document.getElementById('createError');
+            errEl.style.display = 'none';
+
+            if (!pin) {
+                pin = Math.floor(100000 + Math.random() * 900000).toString();
+            } else if (pin.length !== 6) {
+                errEl.innerText = '⚠️ Mã PIN tự đặt phải có đúng 6 chữ số!';
+                errEl.style.display = 'block';
+                return;
+            }
 
             try {
                 const res = await fetch('/api/room/create', {
@@ -452,7 +475,7 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    alert(`🎉 Tạo phòng thành công!\n\nTên phòng: ${data.room.name}\nMã PIN: ${data.room.pin}\n\nBạn sẽ được chuyển ngay đến giao diện tham gia phòng!`);
+                    alert(`🎉 Tạo phòng thành công!\n\nTên phòng: ${data.room.name}\nMã PIN 6 số: ${data.room.pin}\n\nBạn sẽ được chuyển ngay đến giao diện tham gia phòng!`);
                     document.getElementById('joinPinInput').value = data.room.pin;
                     switchTab('join');
                 } else {

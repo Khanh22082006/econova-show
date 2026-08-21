@@ -1,6 +1,5 @@
 /**
- * roomManager.js - Hệ Thống Quản Lý Đa Phòng (Multi-Room) & Web Slide Sync cho Econova Show
- * Hỗ trợ tạo phòng với mã PIN 6 số, Password Admin & MC, và cách ly trạng thái GameState giữa các phòng.
+ * roomManager.js - Hệ Thống Quản Lý Đa Phòng (Multi-Room) Chuẩn 6 Chữ Số PIN
  */
 
 const fs = require('fs');
@@ -38,10 +37,10 @@ class RoomManager {
     }
 
     initDefaultRoom() {
-        // Phòng mặc định (Dành cho chạy Offline cục bộ hoặc truy cập trực tiếp không qua PIN)
+        // Khởi tạo phòng tiêu chuẩn ban đầu với mã PIN 6 số: 888888
         this.createRoom({
-            pin: "DEFAULT",
-            name: "Phòng Thi Đấu Chính",
+            pin: "888888",
+            name: "Phòng Thi Đấu Tiêu Chuẩn",
             password: process.env.ADMIN_PASSWORD || "admin123",
             mcPassword: process.env.MC_PASSWORD || "mc123",
             theme: "v3",
@@ -58,23 +57,25 @@ class RoomManager {
     }
 
     createRoom({ pin, name, password, mcPassword, theme, questions }) {
-        const roomPin = (pin || this.generatePIN()).toString().toUpperCase().trim();
+        let cleanPin = (pin || "").toString().trim().replace(/\D/g, '');
+        if (cleanPin.length !== 6) {
+            cleanPin = this.generatePIN();
+        }
         
         const roomData = {
-            pin: roomPin,
-            name: name || `Phòng Thi ${roomPin}`,
+            pin: cleanPin,
+            name: name || `Phòng Thi ${cleanPin}`,
             password: password || "123456",
             mcPassword: mcPassword || "mc123",
             theme: theme || "v3",
             createdAt: Date.now(),
             lastActive: Date.now(),
             gameState: JSON.parse(JSON.stringify(this.defaultStateTemplate)),
-            // Web Virtual Slide Presentation Engine (Thay thế PowerPoint trên Web)
             slides: {
                 currentSlide: 1,
                 totalSlides: 50,
-                slideList: [], // Danh sách ảnh slide hoặc nội dung câu hỏi
-                notes: {}      // Ghi chú MC theo từng slide: { 1: "Lời chào mở màn...", 2: "Câu 1: ..." }
+                slideList: [],
+                notes: {}
             },
             connectedClients: new Set()
         };
@@ -86,15 +87,15 @@ class RoomManager {
             roomData.gameState.questionBank = questions;
         }
 
-        this.rooms.set(roomPin, roomData);
-        console.log(`[RoomManager] Đã tạo phòng mới: ${roomData.name} | PIN: ${roomPin}`);
+        this.rooms.set(cleanPin, roomData);
+        console.log(`[RoomManager] Đã tạo phòng mới: ${roomData.name} | PIN: ${cleanPin}`);
         return roomData;
     }
 
     getRoom(pin) {
-        if (!pin) return this.rooms.get("DEFAULT");
-        const normalizedPin = pin.toString().toUpperCase().trim();
-        const room = this.rooms.get(normalizedPin);
+        if (!pin) return this.rooms.get("888888") || null;
+        const cleanPin = pin.toString().trim().replace(/\D/g, '');
+        const room = this.rooms.get(cleanPin);
         if (room) {
             room.lastActive = Date.now();
             return room;
@@ -104,7 +105,7 @@ class RoomManager {
 
     verifyAdmin(pin, password) {
         const room = this.getRoom(pin);
-        if (!room) return { success: false, message: "Phòng thi đấu không tồn tại hoặc đã đóng!" };
+        if (!room) return { success: false, message: "Mã PIN 6 số không tồn tại hoặc phòng đã đóng!" };
         if (room.password === password || password === process.env.MASTER_ADMIN_PASSWORD || password === "superadmin" || password === "admin123") {
             return { success: true, room };
         }
@@ -113,7 +114,7 @@ class RoomManager {
 
     verifyMC(pin, password) {
         const room = this.getRoom(pin);
-        if (!room) return { success: false, message: "Phòng thi đấu không tồn tại!" };
+        if (!room) return { success: false, message: "Mã PIN 6 số không tồn tại!" };
         if (room.mcPassword === password || room.password === password || password === "mc123" || password === "admin123") {
             return { success: true, room };
         }
@@ -122,22 +123,20 @@ class RoomManager {
 
     verifyContestant(pin) {
         const room = this.getRoom(pin);
-        if (!room) return { success: false, message: "Mã PIN phòng không chính xác hoặc phòng chưa mở!" };
+        if (!room) return { success: false, message: "Mã PIN 6 số không chính xác hoặc phòng chưa được tạo!" };
         return { success: true, room };
     }
 
     listPublicRooms() {
         const list = [];
         this.rooms.forEach((r, pin) => {
-            if (pin !== "DEFAULT") {
-                list.push({
-                    pin: r.pin,
-                    name: r.name,
-                    theme: r.theme,
-                    createdAt: r.createdAt,
-                    clientCount: r.connectedClients.size
-                });
-            }
+            list.push({
+                pin: r.pin,
+                name: r.name,
+                theme: r.theme,
+                createdAt: r.createdAt,
+                clientCount: r.connectedClients.size
+            });
         });
         return list;
     }
