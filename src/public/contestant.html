@@ -321,8 +321,9 @@
 
     <script>
         const socket = io({ transports: ['websocket'] });
-        let myTeamId = null;
-        let isSelected = false;
+        let savedTeam = sessionStorage.getItem('claimedTeamId');
+        let myTeamId = savedTeam ? parseInt(savedTeam) : null;
+        let isSelected = (myTeamId !== null && !isNaN(myTeamId));
         let currentTeamCount = null;
         
         let myClientId = sessionStorage.getItem('clientId');
@@ -339,6 +340,8 @@
                     window.location.href = './index.html';
                 } else {
                     if (isSelected && myTeamId !== null) {
+                        selectScreen.style.display = 'none';
+                        buzzScreen.style.display = 'flex';
                         socket.emit('claimTeam', { teamId: myTeamId, clientId: myClientId });
                     }
                 }
@@ -630,6 +633,7 @@
                 btn.addEventListener('click', () => {
                     myTeamId = tObj.id;
                     isSelected = true;
+                    sessionStorage.setItem('claimedTeamId', tObj.id.toString());
                     socket.emit('claimTeam', { teamId: tObj.id, clientId: myClientId });
                     selectScreen.style.display = 'none';
                     buzzScreen.style.display = 'flex';
