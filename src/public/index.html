@@ -4,9 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Econova Show - Cổng Thi Đấu Trực Tuyến 2026</title>
+    
+    <!-- GOOGLE FONTS: BE VIETNAM PRO & MONTSERRAT CHUẨN 100% TIẾNG VIỆT -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=Montserrat:wght@600;700;800;900&display=swap" rel="stylesheet">
+    
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root {
@@ -19,7 +22,12 @@
             --card-border: rgba(255, 255, 255, 0.12);
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Be Vietnam Pro', 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
 
         body {
             min-height: 100vh;
@@ -28,7 +36,6 @@
             align-items: center;
             justify-content: center;
             background: radial-gradient(circle at top, #1a1a3a, #0a0a1a 80%);
-            font-family: 'Be Vietnam Pro', 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             color: #ffffff;
             padding: 20px 15px;
             user-select: none;
@@ -41,21 +48,22 @@
         }
 
         .portal-title {
-            font-family: 'Montserrat', 'Be Vietnam Pro', sans-serif;
-            font-size: clamp(32px, 5vw, 48px);
+            font-family: 'Montserrat', 'Be Vietnam Pro', sans-serif !important;
+            font-size: clamp(28px, 4.5vw, 44px);
             font-weight: 900;
             background: linear-gradient(135deg, #ffffff, #00d2d3, #ffd700);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             text-shadow: 0 0 30px rgba(0, 210, 211, 0.3);
             margin-bottom: 8px;
+            letter-spacing: 1px;
         }
 
         .portal-subtitle {
-            font-size: 15px;
+            font-size: 14.5px;
             color: #a4b0be;
             font-weight: 500;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
         }
 
         /* TAB NAVIGATION */
@@ -73,7 +81,6 @@
             background: transparent;
             border: none;
             color: #a4b0be;
-            font-family: inherit;
             font-size: 14px;
             font-weight: 700;
             padding: 10px 24px;
@@ -113,7 +120,7 @@
             margin-bottom: 16px;
         }
 
-                .pin-input {
+        .pin-input {
             width: 100%;
             padding: 16px 20px;
             background: rgba(0, 0, 0, 0.4);
@@ -207,8 +214,8 @@
             display: flex;
             flex-direction: column;
             width: 100%;
-            max-width: 500px;
-            margin-bottom: 15px;
+            max-width: 520px;
+            margin-bottom: 16px;
             text-align: left;
         }
 
@@ -217,8 +224,7 @@
             font-weight: 700;
             color: #00d2d3;
             margin-bottom: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
         }
 
         .form-input {
@@ -229,15 +235,21 @@
             border-radius: 12px;
             color: white;
             font-size: 15px;
-            font-family: inherit;
             outline: none;
             transition: border-color 0.2s;
         }
         .form-input:focus { border-color: var(--primary); }
 
+        .input-hint {
+            font-size: 11.5px;
+            color: #a4b0be;
+            margin-top: 4px;
+            line-height: 1.3;
+        }
+
         .btn-create-room {
             width: 100%;
-            max-width: 500px;
+            max-width: 520px;
             padding: 14px 20px;
             background: var(--gold-gradient);
             color: #05020c;
@@ -266,9 +278,9 @@
             background: #141024;
             border: 1.5px solid var(--card-border);
             border-radius: 20px;
-            padding: 30px;
+            padding: 28px 24px;
             width: 90%;
-            max-width: 420px;
+            max-width: 440px;
             text-align: center;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
         }
@@ -358,30 +370,34 @@
         <!-- PANEL 2: CREATE ROOM -->
         <div id="panel-create" style="width: 100%; display: none; flex-direction: column; align-items: center;">
             <div class="form-row">
-                <label class="form-label">Tên Cuộc Thi / Phòng Đấu</label>
-                <input type="text" id="createNameInput" class="form-input" placeholder="VD: Chung Kết Econova Show 2026">
+                <label class="form-label">TÊN CUỘC THI / PHÒNG ĐẤU</label>
+                <input type="text" id="createNameInput" class="form-input" placeholder="VD: Chung Kết Econova Show 2026" value="Chung Kết Econova Show 2026">
+                <div class="input-hint">Tên hiển thị trên đầu bảng điều khiển và màn hình trận đấu.</div>
             </div>
 
             <div class="form-row">
-                <label class="form-label">Mã PIN Phòng (000000 - 999999)</label>
+                <label class="form-label">MÃ PIN PHÒNG (000000 - 999999)</label>
                 <div style="display: flex; gap: 8px;">
-                    <input type="tel" id="createPinInput" class="form-input" placeholder="VD: 005432" maxlength="6" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
+                    <input type="tel" id="createPinInput" class="form-input" placeholder="Tự gõ hoặc bấm Ngẫu Nhiên" maxlength="6" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
                     <button type="button" onclick="generateRandomPin()" style="padding:0 16px; border-radius:12px; background:rgba(0,210,211,0.2); border:1px solid #00d2d3; color:#00d2d3; cursor:pointer; font-weight:bold; white-space:nowrap;">🎲 Ngẫu Nhiên</button>
                 </div>
+                <div class="input-hint">Mã PIN này sẽ gửi cho Thí Sinh & Màn Hình LED để vào phòng.</div>
             </div>
 
             <div class="form-row">
-                <label class="form-label">Mật Khẩu Quản Trị Viên (Admin)</label>
-                <input type="password" id="createPassInput" class="form-input" placeholder="Tự đặt mật khẩu Admin để điều khiển phòng này" value="admin123">
+                <label class="form-label">MẬT KHẨU QUẢN TRỊ VIÊN (ADMIN)</label>
+                <input type="text" id="createPassInput" class="form-input" placeholder="VD: 123456 hoặc admin123" value="admin123">
+                <div class="input-hint">💡 Bạn tự đặt mật khẩu này để sau đó đăng nhập vào bảng điều khiển Admin.</div>
             </div>
 
             <div class="form-row">
-                <label class="form-label">Mật Khẩu Dành Cho MC</label>
-                <input type="password" id="createMcPassInput" class="form-input" placeholder="Tự đặt mật khẩu dành riêng cho MC" value="mc123">
+                <label class="form-label">MẬT KHẨU DÀNH CHO MC</label>
+                <input type="text" id="createMcPassInput" class="form-input" placeholder="VD: mc123" value="mc123">
+                <div class="input-hint">💡 Bạn tự đặt mật khẩu này để gửi cho MC đăng nhập vào màn hình MC.</div>
             </div>
 
             <div class="form-row">
-                <label class="form-label">Giao Diện Theme Khởi Tạo</label>
+                <label class="form-label">GIAO DIỆN THEME KHỞI TẠO</label>
                 <select id="createThemeInput" class="form-input" style="background:#0a0a1a;">
                     <option value="v3">✨ Theme Diagonal V3 (Mũi tên xanh & Đồ họa hiện đại nhất)</option>
                     <option value="v2">🚀 Theme Ascend (Khung điểm ngang nổi bật)</option>
@@ -389,13 +405,13 @@
                 </select>
             </div>
 
-            <button class="btn-create-room" onclick="handleCreateRoom()">🚀 KHỞI TẠO PHÒNG ĐẤU (PIN 6 SỐ)</button>
+            <button class="btn-create-room" onclick="handleCreateRoom()">🚀 KHỞI TẠO PHÒNG ĐẤU</button>
             <div class="error-toast" id="createError"></div>
         </div>
 
     </div>
 
-    <!-- MODAL AUTHENTICATION (ADMIN / MC) -->
+    <!-- MODAL AUTHENTICATION (ADMIN / MC LOGIN) -->
     <div class="modal-overlay" id="authModal">
         <div class="modal-card">
             <h3 class="modal-title" id="authModalTitle">⚙️ XÁC THỰC QUẢN TRỊ</h3>
@@ -405,7 +421,7 @@
             <div class="error-toast" id="authModalError">Mật khẩu không chính xác!</div>
             
             <div style="background:rgba(255,255,255,0.05); border:1px dashed rgba(255,255,255,0.2); border-radius:12px; padding:10px 14px; margin-top:12px; font-size:12px; color:#dcdde1; line-height:1.5; text-align:left;">
-                💡 <b>Lưu ý:</b> Nhập đúng mật khẩu Quản trị hoặc MC do người <b>Tạo Phòng</b> đã đặt lúc khởi tạo phòng này.
+                💡 <b>Mật khẩu là gì?</b> Nhập đúng mật khẩu Quản trị hoặc MC do người <b>Tạo Phòng</b> đã đặt lúc khởi tạo phòng này.
             </div>
 
             <button class="btn-modal" id="btnModalSubmit" style="background:var(--primary-gradient); color:#000; margin-top:14px;" onclick="confirmAuth()">XÁC NHẬN ĐĂNG NHẬP ➔</button>
@@ -418,8 +434,36 @@
         </div>
     </div>
 
+    <!-- MODAL SUCCESSFUL ROOM CREATION WITH DETAILS & COPY BUTTON -->
+    <div class="modal-overlay" id="createdSuccessModal">
+        <div class="modal-card" style="max-width: 480px; text-align: left;">
+            <h3 class="modal-title" style="color: #00d2d3; text-align: center;">🎉 TẠO PHÒNG THÀNH CÔNG!</h3>
+            <p class="modal-desc" style="text-align: center; margin-bottom: 15px;">Dưới đây là thông tin đăng nhập của phòng thi vừa tạo:</p>
+            
+            <div style="background: rgba(0,0,0,0.5); border: 1.5px solid var(--card-border); border-radius: 14px; padding: 15px; font-size: 14px; line-height: 1.8;">
+                <div>🏷️ <b>Tên phòng:</b> <span id="succRoomName" style="color:#fff;"></span></div>
+                <div>🔑 <b>Mã PIN 6 số:</b> <span id="succRoomPin" style="color:#ffd700; font-size:18px; font-weight:900; letter-spacing:2px;"></span></div>
+                <div>⚙️ <b>Mật khẩu Admin:</b> <span id="succAdminPass" style="color:#ff6b81; font-weight:bold;"></span></div>
+                <div>🎙️ <b>Mật khẩu MC:</b> <span id="succMcPass" style="color:#00d2d3; font-weight:bold;"></span></div>
+            </div>
+
+            <button class="btn-modal" onclick="copyRoomDetails()" style="background: rgba(255,255,255,0.1); border: 1px solid #fff; color: #fff; margin-top: 14px;">
+                📋 Sao Chép Thông Tin Phòng (Để gửi Zalo / Ekip)
+            </button>
+            <button class="btn-modal" onclick="goToCreatedRoomAdmin()" style="background: var(--gold-gradient); color: #000; margin-top: 8px;">
+                🚀 Vào Ngay Bảng Điều Khiển Admin ➔
+            </button>
+        </div>
+    </div>
+
     <script>
         let currentTargetRole = '';
+        let lastCreatedRoom = null;
+
+        // Auto generate random PIN on first load for convenience
+        window.addEventListener('DOMContentLoaded', () => {
+            generateRandomPin();
+        });
 
         function switchTab(tab) {
             document.getElementById('tab-btn-join').classList.toggle('active', tab === 'join');
@@ -525,19 +569,13 @@
         }
 
         async function handleCreateRoom() {
-            const name = document.getElementById('createNameInput').value.trim() || 'Phòng Thi Đấu Econova';
+            const name = document.getElementById('createNameInput').value.trim() || 'Chung Kết Econova Show 2026';
             let pinInput = document.getElementById('createPinInput').value.trim().replace(/\D/g, '');
-            const password = document.getElementById('createPassInput').value.trim();
-            const mcPassword = document.getElementById('createMcPassInput').value.trim();
+            const password = document.getElementById('createPassInput').value.trim() || 'admin123';
+            const mcPassword = document.getElementById('createMcPassInput').value.trim() || 'mc123';
             const theme = document.getElementById('createThemeInput').value;
             const errEl = document.getElementById('createError');
             errEl.style.display = 'none';
-
-            if (!password) {
-                errEl.innerText = '⚠️ Vui lòng đặt Mật khẩu Quản Trị Viên (Admin)!';
-                errEl.style.display = 'block';
-                return;
-            }
 
             let finalPin = '';
             if (!pinInput) {
@@ -554,9 +592,20 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    alert(`🎉 Tạo phòng thành công!\n\nTên phòng: ${data.room.name}\nMã PIN 6 số: ${data.room.pin}\n\nBạn sẽ được chuyển ngay đến giao diện tham gia phòng!`);
-                    document.getElementById('joinPinInput').value = data.room.pin;
-                    switchTab('join');
+                    lastCreatedRoom = {
+                        name: data.room.name,
+                        pin: data.room.pin,
+                        password: password,
+                        mcPassword: mcPassword
+                    };
+
+                    document.getElementById('succRoomName').innerText = lastCreatedRoom.name;
+                    document.getElementById('succRoomPin').innerText = lastCreatedRoom.pin;
+                    document.getElementById('succAdminPass').innerText = lastCreatedRoom.password;
+                    document.getElementById('succMcPass').innerText = lastCreatedRoom.mcPassword;
+                    
+                    document.getElementById('joinPinInput').value = lastCreatedRoom.pin;
+                    document.getElementById('createdSuccessModal').classList.add('active');
                 } else {
                     errEl.innerText = data.message || 'Không thể tạo phòng!';
                     errEl.style.display = 'block';
@@ -565,6 +614,23 @@
                 errEl.innerText = 'Lỗi kết nối máy chủ khi tạo phòng!';
                 errEl.style.display = 'block';
             }
+        }
+
+        function copyRoomDetails() {
+            if (!lastCreatedRoom) return;
+            const text = `🏆 ECONOVA SHOW 2026 - THÔNG TIN PHÒNG THI\n\n🏷️ Tên phòng: ${lastCreatedRoom.name}\n🔑 Mã PIN 6 số: ${lastCreatedRoom.pin}\n⚙️ Mật khẩu Admin: ${lastCreatedRoom.password}\n🎙️ Mật khẩu MC: ${lastCreatedRoom.mcPassword}\n\n👉 Link tham gia: ${window.location.origin}`;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('📋 Đã sao chép toàn bộ thông tin phòng vào bộ nhớ tạm!');
+            }).catch(() => {
+                alert(text);
+            });
+        }
+
+        function goToCreatedRoomAdmin() {
+            if (!lastCreatedRoom) return;
+            sessionStorage.setItem('adminAuth', lastCreatedRoom.password);
+            sessionStorage.setItem('currentRoomPin', lastCreatedRoom.pin);
+            window.location.href = `./admin.html?pin=${encodeURIComponent(lastCreatedRoom.pin)}`;
         }
     </script>
 </body>
