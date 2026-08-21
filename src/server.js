@@ -101,50 +101,147 @@ app.use(express.json()); app.post('/log_error', (req, res) => { require('fs').ap
 app.use('/public_v2', express.static(path.join(__dirname, 'public_v2')));
 
 // --- MULTI-ROOM REST APIS (HỖ TRỢ TẠO PHÒNG & XÁC THỰC MÃ PIN / PASSWORD) ---
+// ============================================================
+// ROOM PERSISTENCE: 3-layer approach
+//   Layer 1 (local disk)  — works for Railway/VPS with persistent volumes
+//   Layer 2 (Upstash Redis) — cloud KV, survives ANY restart on ANY platform
+//   Layer 3 (in-memory)   — fast access during runtime (always active)
+// Set env vars: UPSTASH_REDIS_URL + UPSTASH_REDIS_TOKEN to enable Layer 2
+// ============================================================
 const ROOMS_PERSIST_FILE = process.env.ECONOVA_ROOMS_FILE || path.join(basePath, 'rooms_persist.json');
+const UPSTASH_URL = process.env.UPSTASH_REDIS_URL || '';
+const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_TOKEN || '';
+const UPSTASH_KEY = 'econova_rooms_v1';
 
-function saveRoomsToDisk() {
+// --- Upstash REST helpers (uses built-in fetch, Node 18+) ---
+async function upstashSet(key, value) {
+    if (!UPSTASH_URL || !UPSTASH_TOKEN) return false;
     try {
-        const toSave = [];
-        roomManager.rooms.forEach((room, pin) => {
-            toSave.push({
-                pin: room.pin,
-                name: room.name,
-                password: room.password,
-                mcPassword: room.mcPassword,
-                theme: room.theme,
-                createdAt: room.createdAt,
-                gameState: room.gameState
-            });
+        const res = await fetch(`${UPSTASH_URL}/set/${key}`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${UPSTASH_TOKEN}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(value)
         });
-        fs.writeFileSync(ROOMS_PERSIST_FILE, JSON.stringify(toSave, null, 2), 'utf8');
+        const json = await res.json();
+        return json.result === 'OK';
     } catch(e) {
-        console.error('[RoomPersist] Lỗi lưu phòng:', e);
+        console.error('[Upstash] set error:', e.message);
+        return false;
     }
 }
 
+async function upstashGet(key) {
+    if (!UPSTASH_URL || !UPSTASH_TOKEN) return null;
+    try {
+        const res = await fetch(`${UPSTASH_URL}/get/${key}`, {
+            headers: { Authorization: `Bearer ${UPSTASH_TOKEN}` }
+        });
+        const json = await res.json();
+        if (json.result === null || json.result === undefined) return null;
+        return typeof json.result === 'string' ? JSON.parse(json.result) : json.result;
+    } catch(e) {
+        console.error('[Upstash] get error:', e.message);
+        return null;
+    }
+}
+
+// --- Build serializable snapshot of all rooms ---
+function buildRoomsSnapshot() {
+    const toSave = [];
+    roomManager.rooms.forEach((room, pin) => {
+        toSave.push({
+            pin: room.pin,
+            name: room.name,
+            password: room.password,
+            mcPassword: room.mcPassword,
+            theme: room.theme,
+            createdAt: room.createdAt,
+            gameState: room.gameState
+        });
+    });
+    return toSave;
+}
+
+// --- Restore rooms from a snapshot array ---
+function restoreRoomsFromSnapshot(data) {
+    if (!Array.isArray(data) || data.length === 0) return 0;
+    let count = 0;
+    data.forEach(r => {
+        if (!r.pin) return;
+        if (!roomManager.rooms.has(r.pin)) {
+            roomManager.createRoom({ pin: r.pin, name: r.name, password: r.password, mcPassword: r.mcPassword, theme: r.theme });
+        }
+        const room = roomManager.getRoom(r.pin);
+        if (room && r.gameState) { room.gameState = r.gameState; count++; }
+    });
+    return count;
+}
+
+// Layer 1: Save to local disk
+function saveRoomsToDisk() {
+    try {
+        fs.writeFileSync(ROOMS_PERSIST_FILE, JSON.stringify(buildRoomsSnapshot(), null, 2), 'utf8');
+    } catch(e) {
+        console.error('[RoomPersist/Disk] Lỗi lưu phòng:', e.message);
+    }
+}
+
+// Layer 1: Load from local disk
 function loadRoomsFromDisk() {
     try {
         if (fs.existsSync(ROOMS_PERSIST_FILE)) {
             const data = JSON.parse(fs.readFileSync(ROOMS_PERSIST_FILE, 'utf8'));
-            if (Array.isArray(data)) {
-                data.forEach(r => {
-                    if (!roomManager.rooms.has(r.pin)) {
-                        roomManager.createRoom({ pin: r.pin, name: r.name, password: r.password, mcPassword: r.mcPassword, theme: r.theme });
-                        const room = roomManager.getRoom(r.pin);
-                        if (room && r.gameState) room.gameState = r.gameState;
-                    }
-                });
-                console.log(`[RoomPersist] Đã khôi phục ${data.length} phòng từ disk`);
-            }
+            const n = restoreRoomsFromSnapshot(data);
+            if (n > 0) console.log(`[RoomPersist/Disk] Khôi phục ${n} phòng từ disk`);
         }
     } catch(e) {
-        console.error('[RoomPersist] Lỗi đọc phòng từ disk:', e);
+        console.error('[RoomPersist/Disk] Lỗi đọc phòng:', e.message);
     }
 }
 
-// Load persisted rooms on startup
-loadRoomsFromDisk();
+// Layer 2: Save to Upstash Redis cloud
+async function saveRoomsToCloud() {
+    if (!UPSTASH_URL) return;
+    const snapshot = buildRoomsSnapshot();
+    const ok = await upstashSet(UPSTASH_KEY, JSON.stringify(snapshot));
+    if (ok) console.log(`[RoomPersist/Cloud] Đã lưu ${snapshot.length} phòng lên Upstash Redis`);
+}
+
+// Layer 2: Load from Upstash Redis cloud
+async function loadRoomsFromCloud() {
+    if (!UPSTASH_URL) return false;
+    try {
+        const data = await upstashGet(UPSTASH_KEY);
+        if (!data) return false;
+        const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+        const n = restoreRoomsFromSnapshot(parsed);
+        if (n > 0) console.log(`[RoomPersist/Cloud] Khôi phục ${n} phòng từ Upstash Redis`);
+        return n > 0;
+    } catch(e) {
+        console.error('[RoomPersist/Cloud] Lỗi khôi phục:', e.message);
+        return false;
+    }
+}
+
+// Full save: disk + cloud
+async function saveRooms() {
+    saveRoomsToDisk();
+    await saveRoomsToCloud();
+}
+
+// Full load on startup: try cloud first, then disk as fallback
+async function loadRoomsOnStartup() {
+    const cloudOk = await loadRoomsFromCloud();
+    if (!cloudOk) {
+        loadRoomsFromDisk();
+    }
+    // Auto-save gameState to cloud every 2 minutes
+    setInterval(saveRooms, 2 * 60 * 1000);
+    console.log('[RoomPersist] Auto-save mỗi 2 phút đã bật');
+}
+
+// Fire and forget — don't block server startup
+loadRoomsOnStartup().catch(e => console.error('[RoomPersist] Startup error:', e));
 
 app.post('/api/room/create', (req, res) => {
     try {
@@ -153,8 +250,8 @@ app.post('/api/room/create', (req, res) => {
         if (newRoom.error) {
             return res.status(400).json({ success: false, message: newRoom.message });
         }
-        // Persist to disk so rooms survive server restarts
-        saveRoomsToDisk();
+        // Persist immediately: disk + cloud (async, non-blocking)
+        saveRooms().catch(e => console.error('[RoomPersist] save error:', e));
         res.json({
             success: true,
             message: "Tạo phòng thi đấu thành công!",
