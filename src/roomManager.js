@@ -119,6 +119,11 @@ class RoomManager {
     verifyAdmin(pin, password) {
         const room = this.getRoom(pin);
         if (!room) return { success: false, message: "❌ Mã PIN phòng này không tồn tại hoặc phòng đã đóng!" };
+        if (!room.password || !room.gameState) {
+            console.log(`[RoomManager] Phát hiện phòng lỗi PIN ${pin} -> Tự động gỡ phòng!`);
+            this.deleteRoom(pin);
+            return { success: false, message: "❌ Phòng này bị lỗi dữ liệu và đã được tự động gỡ bỏ!" };
+        }
         if (room.password === password || password === process.env.MASTER_ADMIN_PASSWORD || password === "superadmin") {
             return { success: true, room };
         }
@@ -199,6 +204,24 @@ class RoomManager {
         if (!room) return false;
         room.slides.notes[slideIndex] = notes;
         return true;
+    }
+
+    deleteRoom(pin) {
+        if (!pin) return false;
+        let cleanPin = pin.toString().trim().replace(/\D/g, '');
+        if (cleanPin.length > 0 && cleanPin.length <= 6) {
+            cleanPin = cleanPin.padStart(6, '0');
+        }
+        if (this.rooms.has(cleanPin)) {
+            const room = this.rooms.get(cleanPin);
+            if (room && room.connectedClients) {
+                room.connectedClients.clear();
+            }
+            this.rooms.delete(cleanPin);
+            console.log(`[RoomManager] Đã tự động gỡ phòng: PIN ${cleanPin}`);
+            return true;
+        }
+        return false;
     }
 }
 

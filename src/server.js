@@ -167,12 +167,23 @@ function restoreRoomsFromSnapshot(data) {
     if (!Array.isArray(data) || data.length === 0) return 0;
     let count = 0;
     data.forEach(r => {
-        if (!r.pin) return;
+        if (!r.pin || !r.password) {
+            console.log(`[RoomPersist] Bỏ qua và tự động gỡ phòng lỗi: PIN ${r ? r.pin : 'N/A'}`);
+            return;
+        }
         if (!roomManager.rooms.has(r.pin)) {
             roomManager.createRoom({ pin: r.pin, name: r.name, password: r.password, mcPassword: r.mcPassword, theme: r.theme });
         }
         const room = roomManager.getRoom(r.pin);
-        if (room && r.gameState) { room.gameState = r.gameState; count++; }
+        if (room) {
+            if (r.gameState) {
+                room.gameState = r.gameState;
+            }
+            // Đảm bảo trạng thái phòng luôn mở và gán đúng PIN
+            room.gameState.isRoomOpen = true;
+            room.gameState.roomPIN = r.pin;
+            count++;
+        }
     });
     return count;
 }
@@ -242,6 +253,22 @@ async function loadRoomsOnStartup() {
 
 // Fire and forget — don't block server startup
 loadRoomsOnStartup().catch(e => console.error('[RoomPersist] Startup error:', e));
+
+app.post('/api/room/delete', (req, res) => {
+    try {
+        const { pin, password } = req.body || {};
+        const auth = roomManager.verifyAdmin(pin, password);
+        if (!auth.success && password !== process.env.MASTER_ADMIN_PASSWORD && password !== 'superadmin') {
+            return res.status(403).json({ success: false, message: "Không có quyền gỡ phòng này!" });
+        }
+        const ok = roomManager.deleteRoom(pin);
+        saveRooms().catch(e => console.error('[RoomPersist] save error on delete:', e));
+        io.to(pin).emit('roomClosed', { message: 'Phòng thi này đã được gỡ bỏ.' });
+        res.json({ success: true, message: `Đã gỡ phòng ${pin} thành công!` });
+    } catch(e) {
+        res.status(500).json({ success: false, message: "Lỗi máy chủ khi gỡ phòng!" });
+    }
+});
 
 app.post('/api/room/create', (req, res) => {
     try {
@@ -743,6 +770,18 @@ io.on('connection', (socket) => {
             result.room.connectedClients.add(socket.id);
         }
         if (typeof callback === 'function') callback(result);
+    });
+
+    socket.on('deleteRoom', (pin, callback) => {
+        if (!socket.isAdmin) {
+            if (typeof callback === 'function') callback({ success: false, message: 'Unauthorized' });
+            return;
+        }
+        const targetPin = (pin || socket.currentRoomPin || '').toString().trim().replace(/\D/g, '').padStart(6, '0');
+        roomManager.deleteRoom(targetPin);
+        saveRooms().catch(e => console.error('[RoomPersist] save error on delete:', e));
+        io.to(targetPin).emit('roomClosed', { message: 'Phòng thi này đã được gỡ bỏ.' });
+        if (typeof callback === 'function') callback({ success: true, message: `Đã gỡ phòng ${targetPin}` });
     });
 
     socket.on('adminLogin', (data, callback) => {
