@@ -3,17 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <title data-i18n="adm_title">Command Center - Kỹ thuật viên</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=Inter:wght@400;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+    <script src="import_excel.js" defer></script>
     <script src="/socket.io/socket.io.js"></script>
     <script src="/lang.js"></script>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         let authParam = urlParams.get('auth');
+        let pinParam = urlParams.get('pin');
         if (authParam) {
             sessionStorage.setItem('adminAuth', authParam);
-            window.history.replaceState({}, document.title, window.location.pathname);
-        } else if (!sessionStorage.getItem('adminAuth')) {
+        }
+        if (pinParam) {
+            sessionStorage.setItem('currentRoomPin', pinParam);
+        }
+        if (authParam) {
+            const cleanUrl = pinParam ? (window.location.pathname + '?pin=' + encodeURIComponent(pinParam)) : window.location.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+        }
+        if (!sessionStorage.getItem('adminAuth')) {
             window.location.href = './index.html';
         }
     </script>
@@ -79,6 +90,28 @@
     <div id="tab-round1">
         <div class="panel" style="border-left-color: #0abde3;">
             <h2>⏱ CÀI ĐẶT ĐỒNG HỒ ĐẾM NGƯỢC (VÒNG 1)</h2>
+
+            <!-- TOGGLE ẨN ĐỒ HỌA VÒNG 2 -->
+            <div id="round2GraphicsToggleBar" style="background: linear-gradient(135deg, #2d3436, #1e272e); border: 2px solid #ff7675; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; box-shadow: 0 3px 12px rgba(0,0,0,0.4);">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 24px;">🎬</span>
+                    <div>
+                        <div style="font-size: 15px; font-weight: bold; color: #ff7675; margin-bottom: 2px;">Ẩn đồ hoạ Vòng 2</div>
+                        <div id="round2GraphicsStatusText" style="font-size: 12px; color: #b2bec3;">Đang ẩn đồ hoạ (Chỉ hiện lên khi tắt dấu tích)</div>
+                    </div>
+                </div>
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
+                    <span id="round2GraphicsLabel" style="font-size: 13px; font-weight: bold; color: #ff7675;">ẨN ĐỒ HỌA</span>
+                    <div style="position: relative; width: 52px; height: 28px; flex-shrink: 0;">
+                        <input type="checkbox" id="settingHideRound2Graphics" onchange="toggleRound2Graphics()" style="opacity: 0; width: 0; height: 0; position: absolute;">
+                        <div id="round2Toggle" onclick="document.getElementById('settingHideRound2Graphics').click()" style="position: absolute; inset: 0; background: #d63031; border-radius: 14px; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; padding: 3px;">
+                            <div id="round2ToggleThumb" style="width: 22px; height: 22px; background: white; border-radius: 50%; transition: transform 0.2s; transform: translateX(24px); box-shadow: 0 2px 5px rgba(0,0,0,0.4);"></div>
+                        </div>
+                    </div>
+                </label>
+            </div>
+            <!-- END TOGGLE ẨN ĐỒ HỌA VÒNG 2 -->
+
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
                     <h3>Điều khiển thời gian</h3>
@@ -254,7 +287,7 @@
             <div id="qSelectionContainer"></div>
 
             <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;" id="qSelectionActions">
-                <button class="btn-orange" style="flex: 1;" onclick="toggleHopeStar()" data-i18n="adm_hopestar">⭐ BẬT NS HY VỌNG</button>
+                <button class="btn-orange" id="btnToggleHopeStar1" style="flex: 1;" onclick="toggleHopeStar()" data-i18n="adm_hopestar">⭐ BẬT NS HY VỌNG</button>
                 <button class="btn-purple" style="flex: 1;" onclick="socket.emit('playSound', 'on_stage')">🎤 LÊN SÂN KHẤU</button>
                 <button class="btn-blue" style="flex: 1;" id="btnOpenQ" onclick="setQuestion()" data-i18n="adm_open_q">🚀 MỞ CÂU HỎI</button>
                 <button class="btn-green" id="btnShowOverlayGrid" style="flex: 1;" onclick="socket.emit('showOverlayGrid')" data-i18n="adm_grid_show">🟢 MỞ GÓI ĐIỂM</button>
@@ -605,15 +638,6 @@
                 </div>
             </div>
             <div class="control-row" id="mode2SettingsRow" style="display: none; margin-top: 10px;">
-                <div style="flex: 1;">
-                    <label style="color:#f1f2f6;">Số dòng lưới Mode 2:</label>
-                    <input type="number" id="settingMode2Rows" value="3" min="1" max="6" style="background:#2d3436; border:1px solid #747d8c; color:#fff; width: 80px;" onchange="applyModeSettings()">
-                </div>
-            </div>
-            <div style="font-size: 12px; color: #a4b0be; margin-top: 5px; margin-bottom: 15px;" data-i18n="adm_change_warn">Lưu ý: Thay đổi sẽ Reset toàn bộ điểm số và câu hỏi.</div>
-            <div class="control-row">
-                <div style="flex: 1;">
-                    <label style="color:#fdcb6e;" data-i18n="adm_turn_rule">Quy tắc thứ tự lượt chơi:</label>
                     <select id="settingTurnOrderRule" onchange="applySettings()" style="background:#2d3436; border:1px solid #fdcb6e; color:#fdcb6e;">
                         <option value="mode_order" data-i18n="adm_tr_seq">Theo thứ tự đội (1 -> 4)</option>
                         <option value="mode_desc" data-i18n="adm_tr_desc">Điểm từ Cao xuống Thấp</option>
@@ -637,15 +661,29 @@
     
 
         const adminPin = sessionStorage.getItem('adminAuth');
-        if (adminPin) {
-            socket.emit('adminLogin', adminPin, (res) => {
-                if (!res.success) {
-                    alert(t('adm_err_auth', currentGlobalLang));
-                    window.location.href = './index.html';
-                }
-            });
-        } else {
+        const adminRoomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
+        if (!adminPin) {
             window.location.href = './index.html';
+        } else {
+            let isLoggingIn = false;
+            function doAdminLogin() {
+                if (isLoggingIn) return;
+                isLoggingIn = true;
+                const loginPayload = adminRoomPin ? { pin: adminRoomPin, password: adminPin } : adminPin;
+                socket.emit('adminLogin', loginPayload, (res) => {
+                    isLoggingIn = false;
+                    if (!res || !res.success) {
+                        const msg = (res && res.message) ? res.message : 'Xác thực thất bại. Vui lòng đăng nhập lại.';
+                        alert(msg);
+                        sessionStorage.removeItem('adminAuth');
+                        window.location.href = './index.html';
+                    }
+                });
+            }
+            if (socket.connected) {
+                doAdminLogin();
+            }
+            socket.on('connect', doAdminLogin);
         }
         function switchTab(tab) {
             const tabIds = ['round1', 'main', 'settings'];
@@ -681,7 +719,57 @@
         let questionBank = { 10: [], 20: [], 40: [] };
         let currentVideoUrl = "";
 
-        window.onload = () => { loadSlots(); switchTab('main'); }
+        function saveQuestionBankToLocalStorage(displayName, slotId) {
+            try {
+                localStorage.setItem('econova_questionBank', JSON.stringify(questionBank));
+                localStorage.setItem('econova_questionBankName', displayName || '');
+                localStorage.setItem('econova_activeBankSlot', slotId || '');
+            } catch (e) {
+                console.error("Lỗi lưu questionBank vào localStorage:", e);
+            }
+        }
+
+        function restoreQuestionBankFromLocalStorage() {
+            try {
+                const savedBank = localStorage.getItem('econova_questionBank');
+                if (savedBank) {
+                    questionBank = JSON.parse(savedBank);
+                    const displayName = localStorage.getItem('econova_questionBankName') || 'Đã khôi phục';
+                    const slotId = localStorage.getItem('econova_activeBankSlot') || '';
+                    
+                    document.getElementById('excelStatus').innerHTML =
+                        `<span style="color:#48dbfb">${t("adm_load_ok", currentGlobalLang).replace("{name}", displayName).replace("{10}", questionBank[10]?.length||0).replace("{20}", questionBank[20]?.length||0).replace("{40}", questionBank[40]?.length||0)}</span>`;
+                    
+                    updateQuestionDropdown();
+                    updateMaxQuestions();
+                    validateQuestionsPerTeam();
+                    
+                    socket.emit('setQuestionCount', { 
+                        "10": questionBank[10] ? questionBank[10].length : 0, 
+                        "20": questionBank[20] ? questionBank[20].length : 0, 
+                        "40": questionBank[40] ? questionBank[40].length : 0 
+                    });
+                    
+                    if (slotId && slotId !== 'excel') {
+                        socket.emit('setActiveBankSlot', slotId);
+                    }
+                    
+                    const savedSelected = localStorage.getItem('econova_adminSelectedQuestions');
+                    if (savedSelected) {
+                        adminSelectedQuestions = JSON.parse(savedSelected);
+                    }
+                }
+            } catch (e) {
+                console.error("Lỗi khôi phục questionBank từ localStorage:", e);
+            }
+        }
+
+        window.onload = () => { 
+            loadSlots(); 
+            restoreQuestionBankFromLocalStorage();
+            const savedTab = localStorage.getItem('adminActiveTab') || 'round1'; 
+            switchTab(savedTab); 
+        }
 
         // TÊN ĐỘI
         function saveTeamNames() {
@@ -730,6 +818,7 @@
                     updateMaxQuestions();
                     validateQuestionsPerTeam();
                     socket.emit('setQuestionCount', { "10": questionBank[10].length, "20": questionBank[20].length, "40": questionBank[40].length });
+                    saveQuestionBankToLocalStorage(file.name, 'excel');
                 } catch (err) {
                     alert(t("adm_excel_err", currentGlobalLang) + err.message);
                 }
@@ -753,7 +842,11 @@
                 body: JSON.stringify({ name, questions: questionBank })
             })
             .then(r => r.json())
-            .then(d => { alert(t("adm_save_ok", currentGlobalLang).replace("{slotId}", slotId)); loadSlots(); })
+            .then(d => { 
+                alert(t("adm_save_ok", currentGlobalLang).replace("{slotId}", slotId)); 
+                saveQuestionBankToLocalStorage(name, slotId);
+                loadSlots(); 
+            })
             .catch(e => alert(t("adm_save_err", currentGlobalLang) + e.message));
         }
 
@@ -774,6 +867,7 @@
                 validateQuestionsPerTeam();
                 socket.emit('setQuestionCount', { "10": questionBank[10] ? questionBank[10].length : 0, "20": questionBank[20] ? questionBank[20].length : 0, "40": questionBank[40] ? questionBank[40].length : 0 });
                 socket.emit('setActiveBankSlot', slotId);
+                saveQuestionBankToLocalStorage(displayName, slotId);
             })
             .catch(e => alert(t("adm_load_err", currentGlobalLang) + e.message));
         }
@@ -872,14 +966,22 @@
                 html += '<div style="color: #a4b0be; font-style: italic; margin-bottom: 5px;">Quản trị viên chọn ' + qPerTeam + ' câu hỏi từ lưới dưới đây để tạo thành gói:</div>';
                 if (currentState && currentState.pendingPackage && currentState.pendingPackage.mode === 2 && adminSelectedQuestions.length === 0) {
                     let pQ = currentState.pendingPackage.questions || currentState.pendingPackage.package;
-                    if (pQ) adminSelectedQuestions = pQ.map(q => ({ points: q.points, idx: q.idx })).filter(q => q.idx !== -1);
+                    if (pQ) {
+                        adminSelectedQuestions = pQ.map((q, i) => ({ points: q.points, idx: q.idx, slotIndex: i }));
+                    }
+                }
+                while (adminSelectedQuestions.length < qPerTeam) {
+                    adminSelectedQuestions.push({ points: null, idx: -1, slotIndex: adminSelectedQuestions.length });
                 }
                 
                 let selectedTextArr = [];
-                const ptsTypes = [10, 20, 40];
                 for (let i = 0; i < adminSelectedQuestions.length; i++) {
                     let q = adminSelectedQuestions[i];
-                    selectedTextArr.push(`Câu ${i+1}: ${q.points}đ (Câu ${q.idx+1})`);
+                    if (q.points !== null && q.idx !== -1) {
+                        selectedTextArr.push(`Câu ${i+1}: ${q.points}đ (Câu ${q.idx+1})`);
+                    } else {
+                        selectedTextArr.push(`Câu ${i+1}: Chưa chọn`);
+                    }
                 }
                 if (selectedTextArr.length > 0) {
                     html += '<div style="color: #feca57; font-weight: bold; margin-bottom: 10px;">Đã chọn: ' + selectedTextArr.join(' | ') + '</div>';
@@ -929,7 +1031,7 @@
             if (actions) {
                 actions.innerHTML = `
                     <div style="display: flex; gap: 10px; width: 100%; margin-bottom: 5px;">
-                        <button class="btn-orange" style="flex: 1;" onclick="toggleHopeStar()" data-i18n="adm_hopestar">⭐ BẬT NS HY VỌNG</button>
+                        <button class="btn-orange" id="btnToggleHopeStar2" style="flex: 1;" onclick="toggleHopeStar()" data-i18n="adm_hopestar">⭐ BẬT NS HY VỌNG</button>
                         <button class="btn-purple" style="flex: 1;" onclick="socket.emit('playSound', 'on_stage')">🎤 LÊN SÂN KHẤU</button>
                         <button class="btn-green" id="btnShowOverlayGrid" style="flex: 1;" onclick="socket.emit('showOverlayGrid')" data-i18n="adm_grid_show">🟢 MỞ GÓI ĐIỂM</button>
                         <button class="btn-secondary" id="btnHideOverlayGrid" style="flex: 1; display: none; background: #576574;" onclick="socket.emit('hideOverlayGrid')" data-i18n="adm_grid_hide">🔴 ĐÓNG GÓI ĐIỂM</button>
@@ -947,7 +1049,12 @@
             }
         }
 
+        let mode1ClickTimeout = null;
+        let isMode1Locked = false;
+
         function toggleAdminGridSelection(pts, idx, mode) {
+            if (isMode1Locked) return;
+            
             if (currentState && !currentState.isGridVisibleOnOverlay) {
                 showAlert('Bạn chưa "MỞ GÓI ĐIỂM" trên màn hình Overlay! Vui lòng bấm "MỞ GÓI ĐIỂM" trước khi chọn câu hỏi.');
                 return;
@@ -956,21 +1063,28 @@
             
             if (mode === 1) {
                 adminSelectedQuestions = [{ points: pts, idx: idx }];
-                // Need to emit syncPendingPackage to notify others (e.g. preview)
+                // Emit syncPendingPackage so screen highlights selected question in grid
                 socket.emit('syncPendingPackage', {
                     mode: 1,
                     points: pts,
-                    idx: idx
+                    idx: idx,
+                    playSound: true
                 });
-            } else if (mode === 2 || mode === 3) {
+                
+                isMode1Locked = false;
+                renderQuestionSelectionUI();
+                
+                return; // Admin must manually press "MỞ CÂU HỎI" button to open the question
+            } else if (mode === 2) {
                 let existingIdx = adminSelectedQuestions.findIndex(q => q.points == pts && q.idx == idx);
                 if (existingIdx >= 0) {
-                    adminSelectedQuestions.splice(existingIdx, 1);
+                    adminSelectedQuestions[existingIdx] = { points: null, idx: -1, slotIndex: existingIdx };
                 } else {
-                    if (adminSelectedQuestions.length < qPerTeam) {
-                        adminSelectedQuestions.push({ points: pts, idx: idx });
+                    let emptyIdx = adminSelectedQuestions.findIndex(q => q.points === null || q.idx === -1);
+                    if (emptyIdx >= 0) {
+                        adminSelectedQuestions[emptyIdx] = { points: pts, idx: idx, slotIndex: emptyIdx };
                     } else {
-                        showAlert('Đã chọn đủ số lượng câu hỏi/điểm trong gói (' + qPerTeam + ' câu). Hãy bỏ chọn ô khác để đổi.');
+                        showAlert('Đã chọn đủ số lượng câu hỏi trong gói (' + qPerTeam + ' câu). Hãy bỏ chọn ô khác để đổi.');
                         return;
                     }
                 }
@@ -1046,8 +1160,7 @@
             
             let packageData = [];
             if (mode == 2) {
-                let sortedQuestions = [...adminSelectedQuestions].sort((a, b) => (a.points || 0) - (b.points || 0));
-                packageData = sortedQuestions.map(q => ({ points: q.points, idx: q.idx }));
+                packageData = adminSelectedQuestions.map(q => ({ points: q.points, idx: q.idx }));
             } else if (mode == 3) {
                 packageData = adminSelectedQuestions.map(q => ({ points: q.points, idx: -1 }));
             }
@@ -1063,14 +1176,20 @@
             let packageData = [];
             
             if (mode == 2 || mode == 3) {
-                if (adminSelectedQuestions.length !== qPerTeam) {
+                let filledCount = 0;
+                if (mode == 2) {
+                    filledCount = adminSelectedQuestions.filter(q => q.points !== null && q.idx !== -1).length;
+                } else {
+                    filledCount = adminSelectedQuestions.filter(q => q.points !== null).length;
+                }
+                
+                if (filledCount !== qPerTeam) {
                     showAlert('Vui lòng chọn đủ ' + qPerTeam + ' câu hỏi/điểm!');
                     return;
                 }
                 
                 if (mode == 2) {
-                    let sortedQuestions = [...adminSelectedQuestions].sort((a, b) => (a.points || 0) - (b.points || 0));
-                    packageData = sortedQuestions.map(q => ({ points: q.points, idx: q.idx }));
+                    packageData = adminSelectedQuestions.map(q => ({ points: q.points, idx: q.idx }));
                 } else if (mode == 3) {
                     packageData = adminSelectedQuestions.map(q => ({ points: q.points, idx: -1 }));
                 }
@@ -1190,6 +1309,12 @@
             questionBank[category][idx].a = aText;
             questionBank[category][idx].vid = vText;
             
+            try {
+                localStorage.setItem('econova_questionBank', JSON.stringify(questionBank));
+            } catch (e) {
+                console.error("Lỗi cập nhật questionBank vào localStorage:", e);
+            }
+            
             alert(`Đã lưu Câu ${idx + 1} (${category} Điểm) vào bộ nhớ tạm.\nVui lòng bấm 'Lưu Ngân Hàng Hiện Tại' ở phần Cài đặt để lưu vĩnh viễn!`);
             
             if (typeof updateQuestionDropdown === 'function') updateQuestionDropdown();
@@ -1258,6 +1383,8 @@
             document.getElementById('btnTabMain').className = tabId === 'main' ? 'btn-primary' : 'btn-secondary';
             document.getElementById('btnTabSettings').className = tabId === 'settings' ? 'btn-primary' : 'btn-secondary';
             document.getElementById('btnTabRound1').className = tabId === 'round1' ? 'btn-primary' : 'btn-secondary';
+
+            localStorage.setItem('adminActiveTab', tabId);
 
             if (tabId === 'round1') {
                 socket.emit('change-round', 1);
@@ -1351,7 +1478,32 @@
         // (called from updateState handler below)
         // -----------------------------------------------------------------
         
-        function toggleRoom(isOpen) { socket.emit('toggleRoom', isOpen); }
+        function toggleRoom(isOpen) { 
+            socket.emit('toggleRoom', isOpen); 
+        }
+
+        function deleteCurrentRoom() {
+            const pin = adminRoomPin || (window.currentState && window.currentState.roomPIN) || '';
+            if (!pin) {
+                alert('Không tìm thấy mã PIN phòng!');
+                return;
+            }
+            if (confirm('Bạn có chắc chắn muốn GỠ BỎ HOÀN TOÀN phòng thi PIN ' + pin + '? Tất cả thí sinh và thiết bị sẽ bị ngắt kết nối.')) {
+                socket.emit('deleteRoom', pin, (res) => {
+                    sessionStorage.removeItem('adminAuth');
+                    sessionStorage.removeItem('currentRoomPin');
+                    alert('Đã gỡ phòng ' + pin + ' thành công.');
+                    window.location.href = './index.html';
+                });
+            }
+        }
+
+        socket.on('roomClosed', (data) => {
+            alert(data && data.message ? data.message : 'Phòng thi đã được gỡ bỏ.');
+            sessionStorage.removeItem('adminAuth');
+            sessionStorage.removeItem('currentRoomPin');
+            window.location.href = './index.html';
+        });
         function startPublicServer() { socket.emit('startPublicServer'); }
         function toggleQRCode() { socket.emit('toggleQRCode'); }
         function correctMainTeam() { socket.emit('correctMainTeam'); }
@@ -1531,7 +1683,8 @@
 
         // --- ADMIN VÒNG 1 ---
         document.addEventListener('DOMContentLoaded', () => {
-            switchTab('round1'); // Default to Round 1
+            const savedTab = localStorage.getItem('adminActiveTab') || 'round1';
+            switchTab(savedTab);
 
             const configInputs = document.querySelectorAll('.config-input');
             configInputs.forEach(input => {
@@ -1647,6 +1800,41 @@
                 }
             }, 1000);
         });
+        // ---- TOGGLE ẨN ĐỒ HỌA VÒNG 2 ----
+        function toggleRound2Graphics() {
+            var checkbox = document.getElementById('settingHideRound2Graphics');
+            var isHidden = checkbox.checked; // true = đang ẩn (checked), false = đang hiện (unchecked)
+            socket.emit('updateSettings', { hideRound2Graphics: isHidden });
+            updateRound2GraphicsUI(isHidden);
+        }
+
+        function updateRound2GraphicsUI(isHidden) {
+            var label = document.getElementById('round2GraphicsLabel');
+            var statusText = document.getElementById('round2GraphicsStatusText');
+            var toggleBg = document.getElementById('round2Toggle');
+            var toggleThumb = document.getElementById('round2ToggleThumb');
+            var checkbox = document.getElementById('settingHideRound2Graphics');
+            if (!label) return;
+
+            checkbox.checked = isHidden;
+
+            if (isHidden) {
+                // ĐANG ẨN (tích bật)
+                label.textContent = 'ẨN ĐỒ HỌA';
+                label.style.color = '#ff7675';
+                statusText.textContent = 'Đang ẩn đồ hoạ (Chỉ hiện lên khi tắt dấu tích)';
+                toggleBg.style.background = '#d63031';
+                toggleThumb.style.transform = 'translateX(24px)';
+            } else {
+                // ĐANG HIỆN (tích tắt)
+                label.textContent = 'HIỂN THỊ';
+                label.style.color = '#2ed573';
+                statusText.textContent = 'Đang hiện đồ hoạ Vòng 2';
+                toggleBg.style.background = '#2ed573';
+                toggleThumb.style.transform = 'translateX(0)';
+            }
+        }
+        // ---- END TOGGLE ẨN ĐỒ HỌA VÒNG 2 ----
 
         function applySettings() {
             let theme = document.getElementById('settingTheme').value;
@@ -1730,6 +1918,23 @@
             showConfirm(t('adm_confirm_reset', currentGlobalLang), () => {
                 cancelLockedPackage();
                 adminSelectedQuestions = [];
+                
+                try {
+                    localStorage.removeItem('econova_questionBank');
+                    localStorage.removeItem('econova_questionBankName');
+                    localStorage.removeItem('econova_activeBankSlot');
+                    localStorage.removeItem('econova_adminSelectedQuestions');
+                } catch (e) {
+                    console.error("Lỗi xóa localStorage trong resetGame:", e);
+                }
+                
+                hasAutoLoadedSlot = true; // Prevent auto-loading when game is reset
+                questionBank = { 10: [], 20: [], 40: [] };
+                document.getElementById('excelStatus').innerHTML = `<span>${t("adm_bank_empty", currentGlobalLang)}</span>`;
+                updateQuestionDropdown();
+                updateMaxQuestions();
+                validateQuestionsPerTeam();
+                
                 socket.emit('resetGame');
             }); 
         }
@@ -1803,14 +2008,26 @@
             currentState = state;
             if (!state.teams) return;
             state.turnOrder = state.turnOrder || [];
+
+            // Sync "Ẩn Đồ Hoạ Vòng 2" toggle UI
+            if (state.settings && typeof state.settings.hideRound2Graphics !== 'undefined') {
+                var isHidden = state.settings.hideRound2Graphics;
+                if (typeof updateRound2GraphicsUI === 'function') updateRound2GraphicsUI(isHidden);
+            }
             
             if (!state.pendingPackage && !state.lockedPackage) {
                 adminSelectedQuestions = [];
                 adminMode3Points = [];
             }
             
+            // If the active bank slot changes, reset the auto-loaded flag so we can sync the new slot
+            if (currentState && state.activeBankSlot !== currentState.activeBankSlot) {
+                hasAutoLoadedSlot = false;
+            }
+            
             let totalQs = (questionBank[10] ? questionBank[10].length : 0) + (questionBank[20] ? questionBank[20].length : 0) + (questionBank[40] ? questionBank[40].length : 0);
-            if (state.activeBankSlot && totalQs === 0 && !hasAutoLoadedSlot) {
+            const savedSlot = localStorage.getItem('econova_activeBankSlot');
+            if (state.activeBankSlot && (totalQs === 0 || String(state.activeBankSlot) !== String(savedSlot)) && !hasAutoLoadedSlot) {
                 hasAutoLoadedSlot = true;
                 loadFromSlot(state.activeBankSlot);
             }
@@ -1873,17 +2090,18 @@
             if (typeof renderQuestionSelectionUI === 'function') renderQuestionSelectionUI();
 
             if (lblRoomPIN && btnOpenRoom && btnCloseRoom) {
-                if (state.isRoomOpen) {
-                    let lblPinLabel = document.getElementById('lblPinLabel');
+                const currentPin = adminRoomPin || state.roomPIN || '';
+                const isOpen = (state.isRoomOpen === true);
+                let lblPinLabel = document.getElementById('lblPinLabel');
+                if (isOpen) {
                     if(lblPinLabel) lblPinLabel.innerText = t('adm_room_pin', currentGlobalLang);
-                    lblRoomPIN.innerText = state.roomPIN;
+                    lblRoomPIN.innerText = currentPin ? currentPin : 'ĐANG MỞ';
                     lblRoomPIN.style.color = '#10ac84';
                     btnOpenRoom.style.opacity = '0.5';
                     btnOpenRoom.style.pointerEvents = 'none';
                     btnCloseRoom.style.opacity = '1';
                     btnCloseRoom.style.pointerEvents = 'auto';
                 } else {
-                    let lblPinLabel = document.getElementById('lblPinLabel');
                     if(lblPinLabel) lblPinLabel.innerText = t('adm_room_status', currentGlobalLang);
                     lblRoomPIN.innerText = t('adm_room_closed', currentGlobalLang);
                     lblRoomPIN.style.color = '#ff4757';
@@ -2161,6 +2379,18 @@
                     btnHideOverlay.style.display = 'none';
                 }
             }
+
+            // Hope Star Button Update
+            var hopeStarOn = q.isHopeStar === true;
+            var hopeStarBtnLabel = hopeStarOn ? '⭐ TắT NS HY VỌNG' : '⭐ BẬT NS HY VỌNG';
+            var hopeStarBtnBg = hopeStarOn ? '#e74c3c' : '#e67e22';
+            ['btnToggleHopeStar1', 'btnToggleHopeStar2'].forEach(function(bid) {
+                var btn = document.getElementById(bid);
+                if (btn) {
+                    btn.innerText = hopeStarBtnLabel;
+                    btn.style.background = hopeStarBtnBg;
+                }
+            });
 
             // 5. Scoreboard
             const container = document.getElementById('team-container');
@@ -2523,10 +2753,18 @@
         // Nhận danh sách IP LAN/VPN
         socket.on('serverIPs', (ips) => {
             const list = document.getElementById('localIpsList');
-            if (list && ips && ips.length > 0) {
-                list.innerHTML = ips.map(ip => `<div style="margin-bottom:5px; color:#10ac84;">👉 <b>http://${ip}:39281</b></div>`).join('');
-            } else if (list) {
-                list.innerHTML = `<span style="color:#ff4757;">${t('adm_ip_none', currentGlobalLang)}</span>`;
+            if (list) {
+                let html = '';
+                if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                    html += `<div style="margin-bottom:8px; color:#0abde3;">🌐 <b>Web Host:</b> <a href="${window.location.origin}" target="_blank" style="color:#0abde3; text-decoration:underline;"><b>${window.location.origin}</b></a></div>`;
+                }
+                if (ips && ips.length > 0) {
+                    html += ips.map(ip => `<div style="margin-bottom:5px; color:#10ac84;">👉 <b>http://${ip}:39281</b></div>`).join('');
+                }
+                if (!html) {
+                    html = `<span style="color:#ff4757;">${t('adm_ip_none', currentGlobalLang)}</span>`;
+                }
+                list.innerHTML = html;
             }
         });
 
@@ -2634,16 +2872,6 @@
         socket.on('connect', () => {
             fontRetryCount = 0;
             setTimeout(requestFonts, 500);
-            // Auto re-authenticate on socket reconnect if PIN is available in sessionStorage
-            const adminPin = sessionStorage.getItem('adminAuth');
-            if (adminPin) {
-                socket.emit('adminLogin', adminPin, (res) => {
-                    if (!res.success) {
-                        sessionStorage.removeItem('adminAuth');
-                        window.location.href = './index.html';
-                    }
-                });
-            }
         });
         socket.on('systemFonts', (fonts) => {
             if (fonts && fonts.length > 1) {

@@ -336,6 +336,9 @@
                     alert(res && res.message ? res.message : 'Phòng không tồn tại hoặc đã đóng!');
                     window.location.href = './index.html';
                 } else {
+                    if (res.gameState) {
+                        handleUpdateState(res.gameState);
+                    }
                     if (isSelected && myTeamId !== null) {
                         selectScreen.style.display = 'none';
                         buzzScreen.style.display = 'flex';
@@ -686,7 +689,10 @@
             }
         }
 
-        socket.on('updateState', (state) => {
+        socket.on('updateState', handleUpdateState);
+        function handleUpdateState(state) {
+            if (!state) return;
+            window.currentState = state;
             // ================= FONT LOGIC =================
             if (state.settings) {
                 let s = state.settings;

@@ -1478,7 +1478,32 @@
         // (called from updateState handler below)
         // -----------------------------------------------------------------
         
-        function toggleRoom(isOpen) { socket.emit('toggleRoom', isOpen); }
+        function toggleRoom(isOpen) { 
+            socket.emit('toggleRoom', isOpen); 
+        }
+
+        function deleteCurrentRoom() {
+            const pin = adminRoomPin || (window.currentState && window.currentState.roomPIN) || '';
+            if (!pin) {
+                alert('Không tìm thấy mã PIN phòng!');
+                return;
+            }
+            if (confirm('Bạn có chắc chắn muốn GỠ BỎ HOÀN TOÀN phòng thi PIN ' + pin + '? Tất cả thí sinh và thiết bị sẽ bị ngắt kết nối.')) {
+                socket.emit('deleteRoom', pin, (res) => {
+                    sessionStorage.removeItem('adminAuth');
+                    sessionStorage.removeItem('currentRoomPin');
+                    alert('Đã gỡ phòng ' + pin + ' thành công.');
+                    window.location.href = './index.html';
+                });
+            }
+        }
+
+        socket.on('roomClosed', (data) => {
+            alert(data && data.message ? data.message : 'Phòng thi đã được gỡ bỏ.');
+            sessionStorage.removeItem('adminAuth');
+            sessionStorage.removeItem('currentRoomPin');
+            window.location.href = './index.html';
+        });
         function startPublicServer() { socket.emit('startPublicServer'); }
         function toggleQRCode() { socket.emit('toggleQRCode'); }
         function correctMainTeam() { socket.emit('correctMainTeam'); }
@@ -2066,7 +2091,7 @@
 
             if (lblRoomPIN && btnOpenRoom && btnCloseRoom) {
                 const currentPin = adminRoomPin || state.roomPIN || '';
-                const isOpen = state.isRoomOpen !== false; // Default to open in web multi-room
+                const isOpen = (state.isRoomOpen === true);
                 let lblPinLabel = document.getElementById('lblPinLabel');
                 if (isOpen) {
                     if(lblPinLabel) lblPinLabel.innerText = t('adm_room_pin', currentGlobalLang);

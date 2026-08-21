@@ -762,7 +762,15 @@ io.on('connection', (socket) => {
             if (typeof callback === 'function') {
                 callback({ success: true, room: { pin: room.pin, name: room.name, theme: room.theme }, gameState: room.gameState });
             }
-            socket.emit('updateState', room.gameState);
+            let stateToSend = room.gameState;
+            if (!socket.isAdmin && !socket.isMC) {
+                let safeState = JSON.parse(JSON.stringify(room.gameState));
+                delete safeState.questionBank;
+                delete safeState.questions;
+                if (safeState.currentQuestion) safeState.currentQuestion.answer = "";
+                stateToSend = safeState;
+            }
+            socket.emit('updateState', stateToSend);
             socket.emit('ppt-status', roomManager.getSlideStatus(roomPin));
         } else {
             if (typeof callback === 'function') {
@@ -912,14 +920,21 @@ io.on('connection', (socket) => {
 
     // Mở phòng / Đóng phòng
     socket.on('toggleRoom', (isOpen, pin) => {
-        gameState.isRoomOpen = isOpen;
-        if (isOpen) {
+        gameState.isRoomOpen = !!isOpen;
+        if (socket.currentRoomPin) {
+            const room = roomManager.getRoom(socket.currentRoomPin);
+            if (room) {
+                room.gameState.isRoomOpen = !!isOpen;
+                room.gameState.roomPIN = socket.currentRoomPin;
+            }
+            gameState.roomPIN = socket.currentRoomPin;
+        } else if (isOpen) {
             gameState.roomPIN = pin || Math.floor(1000 + Math.random() * 9000).toString();
-        } else {
-            gameState.roomPIN = "";
-            // Kick all claimed teams when room closes
+        }
+        if (!isOpen) {
             gameState.claimedTeams = {};
         }
+        saveRooms().catch(e => console.error('[RoomPersist] save error on toggleRoom:', e));
         io.emit('updateState', gameState);
     });
 
