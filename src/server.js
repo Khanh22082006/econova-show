@@ -246,8 +246,20 @@ async function loadRoomsFromCloud() {
 
 // Full save: disk + cloud
 async function saveRooms() {
-    saveRoomsToDisk();
-    await saveRoomsToCloud();
+    try {
+        saveRoomsToDisk();
+        await saveRoomsToCloud();
+    } catch(e) {
+        console.error('[RoomPersist] saveRooms error:', e.message);
+    }
+}
+
+let saveRoomsTimer = null;
+function scheduleSaveRooms(delayMs = 2000) {
+    if (saveRoomsTimer) clearTimeout(saveRoomsTimer);
+    saveRoomsTimer = setTimeout(() => {
+        scheduleSaveRooms(2000);
+    }, delayMs);
 }
 
 // Full load on startup: try cloud first, then disk as fallback
@@ -272,7 +284,7 @@ app.post('/api/room/delete', (req, res) => {
             return res.status(403).json({ success: false, message: "Không có quyền gỡ phòng này!" });
         }
         const ok = roomManager.deleteRoom(pin);
-        saveRooms().catch(e => console.error('[RoomPersist] save error on delete:', e));
+        scheduleSaveRooms(2000);
         io.to(pin).emit('roomClosed', { message: 'Phòng thi này đã được gỡ bỏ.' });
         res.json({ success: true, message: `Đã gỡ phòng ${pin} thành công!` });
     } catch(e) {
@@ -288,7 +300,7 @@ app.post('/api/room/create', (req, res) => {
             return res.status(400).json({ success: false, message: newRoom.message });
         }
         // Persist immediately: disk + cloud (async, non-blocking)
-        saveRooms().catch(e => console.error('[RoomPersist] save error:', e));
+        scheduleSaveRooms(2000);
         res.json({
             success: true,
             message: "Tạo phòng thi đấu thành công!",
@@ -878,7 +890,7 @@ function broadcastState(socket, customEvent = 'updateState', customData = null) 
     const targetState = customData || getActiveState(socket);
     
     if (pin) {
-        saveRooms().catch(e => console.error('[RoomPersist] save error:', e));
+        scheduleSaveRooms(2000);
         const socketsInRoom = io.sockets.adapter.rooms.get(pin);
         if (socketsInRoom) {
             socketsInRoom.forEach(sid => {
@@ -963,7 +975,7 @@ io.on('connection', (socket) => {
         }
         const targetPin = (pin || socket.currentRoomPin || '').toString().trim().replace(/\D/g, '').padStart(6, '0');
         roomManager.deleteRoom(targetPin);
-        saveRooms().catch(e => console.error('[RoomPersist] save error on delete:', e));
+        scheduleSaveRooms(2000);
         io.to(targetPin).emit('roomClosed', { message: 'Phòng thi này đã được gỡ bỏ.' });
         if (typeof callback === 'function') callback({ success: true, message: `Đã gỡ phòng ${targetPin}` });
     });
@@ -1102,7 +1114,7 @@ io.on('connection', (socket) => {
         if (!isOpen) {
             gameState.claimedTeams = {};
         }
-        saveRooms().catch(e => console.error('[RoomPersist] save error on toggleRoom:', e));
+        scheduleSaveRooms(2000);
         io.emit('updateState', gameState);
     });
 
