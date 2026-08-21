@@ -34,11 +34,12 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         let authParam = urlParams.get('auth');
+        let pinParam = urlParams.get('pin');
         if (authParam) {
             sessionStorage.setItem('adminAuth', authParam);
             window.history.replaceState({}, document.title, window.location.pathname);
-        } else if (!sessionStorage.getItem('adminAuth') && urlParams.get('pass') !== 'obs_overlay') {
-            document.write('<h1 style="color:white;text-align:center;margin-top:20%;font-family: var(--font-general, \'SF Pro Display Bold\', \'Segoe UI\', sans-serif);">' + t('con_access_denied', currentGlobalLang) + '</h1>');
+        } else if (!sessionStorage.getItem('adminAuth') && urlParams.get('pass') !== 'obs_overlay' && !pinParam) {
+            document.write('<div style="background:#0a0a1a;color:white;text-align:center;padding:40px;font-family:sans-serif;"><h1>💡 THÔNG BÁO VỀ OVERLAY LIVESTREAM</h1><p style="color:#a4b0be;max-width:600px;margin:15px auto;line-height:1.6;">Màn hình Overlay này có nền trong suốt 100% (Alpha Channel) chuyên dụng để nhúng làm <b>Browser Source</b> trong phần mềm phát sóng <b>OBS Studio, vMix, Prism Live</b>.<br>Trình duyệt web thông thường luôn hiển thị nền mặc định thay vì trong suốt.</p><a href="./index.html" style="display:inline-block;padding:10px 20px;background:#00d2d3;color:#000;text-decoration:none;border-radius:10px;font-weight:bold;">← Quay Về Cổng Thi Đấu</a></div>');
             window.stop();
         }
     </script>

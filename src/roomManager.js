@@ -1,5 +1,5 @@
 /**
- * roomManager.js - Hệ Thống Quản Lý Đa Phòng (Multi-Room) Chuẩn 6 Chữ Số PIN
+ * roomManager.js - Hệ Thống Quản Lý Đa Phòng (Multi-Room) Chuẩn PIN 000000 - 999999
  */
 
 const fs = require('fs');
@@ -37,7 +37,7 @@ class RoomManager {
     }
 
     initDefaultRoom() {
-        // Khởi tạo phòng tiêu chuẩn ban đầu với mã PIN 6 số: 888888
+        // Phòng thi chuẩn ban đầu với mã PIN 6 số: 888888
         this.createRoom({
             pin: "888888",
             name: "Phòng Thi Đấu Tiêu Chuẩn",
@@ -51,14 +51,17 @@ class RoomManager {
     generatePIN() {
         let pin;
         do {
-            pin = Math.floor(100000 + Math.random() * 900000).toString();
+            // PIN nằm trong khoảng 000000 đến 999999 (có số 0 ở đầu nếu dưới 100000)
+            pin = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
         } while (this.rooms.has(pin));
         return pin;
     }
 
     createRoom({ pin, name, password, mcPassword, theme, questions }) {
         let cleanPin = (pin || "").toString().trim().replace(/\D/g, '');
-        if (cleanPin.length !== 6) {
+        if (cleanPin.length > 0 && cleanPin.length <= 6) {
+            cleanPin = cleanPin.padStart(6, '0');
+        } else if (cleanPin.length !== 6) {
             cleanPin = this.generatePIN();
         }
         
@@ -94,7 +97,10 @@ class RoomManager {
 
     getRoom(pin) {
         if (!pin) return this.rooms.get("888888") || null;
-        const cleanPin = pin.toString().trim().replace(/\D/g, '');
+        let cleanPin = pin.toString().trim().replace(/\D/g, '');
+        if (cleanPin.length > 0 && cleanPin.length <= 6) {
+            cleanPin = cleanPin.padStart(6, '0');
+        }
         const room = this.rooms.get(cleanPin);
         if (room) {
             room.lastActive = Date.now();

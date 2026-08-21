@@ -108,7 +108,7 @@
             align-items: center;
             width: 100%;
             max-width: 420px;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
         .pin-input {
@@ -118,7 +118,7 @@
             border: 2px solid #576574;
             border-radius: 16px;
             color: #ffd700;
-            font-size: 28px;
+            font-size: 30px;
             font-weight: 800;
             letter-spacing: 8px;
             text-align: center;
@@ -153,6 +153,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            position: relative;
         }
 
         .role-card:hover {
@@ -170,6 +171,25 @@
         .role-icon { font-size: 34px; margin-bottom: 10px; }
         .role-title { font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 4px; }
         .role-desc { font-size: 12px; color: #a4b0be; line-height: 1.4; }
+
+        /* OBS TRANSPARENCY NOTICE BANNER */
+        .obs-notice-banner {
+            width: 100%;
+            background: rgba(0, 210, 211, 0.08);
+            border: 1px solid rgba(0, 210, 211, 0.3);
+            border-radius: 14px;
+            padding: 12px 16px;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #dcdde1;
+            line-height: 1.5;
+            text-align: left;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .obs-notice-banner .n-icon { font-size: 18px; flex-shrink: 0; }
 
         /* TAB CONTENT 2: CREATE ROOM */
         .form-row {
@@ -269,9 +289,9 @@
         <!-- PANEL 1: JOIN ROOM -->
         <div id="panel-join" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
             <div class="pin-box-wrapper">
-                <label class="form-label" style="text-align:center;">🔑 NHẬP MÃ PIN PHÒNG (6 CHỮ SỐ)</label>
+                <label class="form-label" style="text-align:center;">🔑 NHẬP MÃ PIN PHÒNG (000000 - 999999)</label>
                 <input type="tel" id="joinPinInput" class="pin-input" placeholder="888888" maxlength="6" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
-                <span style="font-size: 12px; color: #a4b0be;">(Mã PIN mặc định ban đầu: <b style="color:#00d2d3;">888888</b>)</span>
+                <span style="font-size: 12px; color: #a4b0be;">(Mã PIN gồm 6 chữ số từ <b>000000</b> đến <b>999999</b>)</span>
             </div>
 
             <!-- ROLES TILES -->
@@ -312,6 +332,15 @@
                     <div class="role-desc">Bảng điều khiển toàn diện: điểm số, âm thanh, gói câu và đồng hồ.</div>
                 </div>
             </div>
+
+            <!-- OBS TRANSPARENCY NOTICE -->
+            <div class="obs-notice-banner">
+                <span class="n-icon">💡</span>
+                <div>
+                    <b>LƯU Ý KHI SỬ DỤNG MÀN HÌNH OVERLAY:</b> Trình duyệt web thông thường luôn hiển thị nền mặc định (trắng/đen) thay vì trong suốt. Màn hình <b>OBS Livestream (Overlay)</b> được thiết kế chuyên dụng với nền trong suốt (Alpha Channel) để nhúng làm <b>Browser Source</b> trong phần mềm phát sóng <b>OBS Studio, vMix, Prism Live</b> hoặc phần mềm livestream tương đương.
+                </div>
+            </div>
+
             <div class="error-toast" id="joinError" style="margin-top: 15px;"></div>
         </div>
 
@@ -323,9 +352,9 @@
             </div>
 
             <div class="form-row">
-                <label class="form-label">Mã PIN Phòng (Đúng 6 Chữ Số)</label>
+                <label class="form-label">Mã PIN Phòng (000000 - 999999)</label>
                 <div style="display: flex; gap: 8px;">
-                    <input type="tel" id="createPinInput" class="form-input" placeholder="VD: 654321" maxlength="6" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
+                    <input type="tel" id="createPinInput" class="form-input" placeholder="VD: 005432" maxlength="6" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
                     <button type="button" onclick="generateRandomPin()" style="padding:0 16px; border-radius:12px; background:rgba(0,210,211,0.2); border:1px solid #00d2d3; color:#00d2d3; cursor:pointer; font-weight:bold; white-space:nowrap;">🎲 Ngẫu Nhiên</button>
                 </div>
             </div>
@@ -378,13 +407,15 @@
         }
 
         function generateRandomPin() {
-            const pin = Math.floor(100000 + Math.random() * 900000).toString();
+            // PIN nằm trong 000000 - 999999 có padStart
+            const pin = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
             document.getElementById('createPinInput').value = pin;
         }
 
         function getCleanPin() {
-            const val = document.getElementById('joinPinInput').value.trim().replace(/\D/g, '');
-            return val || '888888';
+            let val = document.getElementById('joinPinInput').value.trim().replace(/\D/g, '');
+            if (!val) return '888888';
+            return val.padStart(6, '0');
         }
 
         function joinAsRole(role) {
@@ -393,7 +424,7 @@
             joinErr.style.display = 'none';
 
             if (pin.length !== 6) {
-                joinErr.innerText = '⚠️ Vui lòng nhập đúng mã PIN gồm 6 chữ số!';
+                joinErr.innerText = '⚠️ Vui lòng nhập đúng mã PIN gồm 6 chữ số (000000 - 999999)!';
                 joinErr.style.display = 'block';
                 return;
             }
@@ -410,6 +441,8 @@
                 document.getElementById('authModalDesc').innerText = 'Nhập mật khẩu MC của phòng PIN: ' + pin;
                 document.getElementById('authModal').classList.add('active');
                 document.getElementById('authModalPass').focus();
+            } else if (role === 'overlay') {
+                window.location.href = `./overlay.html?pin=${encodeURIComponent(pin)}&pass=obs_overlay`;
             } else {
                 window.location.href = `./${role}.html?pin=${encodeURIComponent(pin)}`;
             }
@@ -452,26 +485,25 @@
 
         async function handleCreateRoom() {
             const name = document.getElementById('createNameInput').value.trim() || 'Phòng Thi Đấu Econova';
-            let pin = document.getElementById('createPinInput').value.trim().replace(/\D/g, '');
+            let pinInput = document.getElementById('createPinInput').value.trim().replace(/\D/g, '');
             const password = document.getElementById('createPassInput').value.trim();
             const mcPassword = document.getElementById('createMcPassInput').value.trim();
             const theme = document.getElementById('createThemeInput').value;
             const errEl = document.getElementById('createError');
             errEl.style.display = 'none';
 
-            if (!pin) {
-                pin = Math.floor(100000 + Math.random() * 900000).toString();
-            } else if (pin.length !== 6) {
-                errEl.innerText = '⚠️ Mã PIN tự đặt phải có đúng 6 chữ số!';
-                errEl.style.display = 'block';
-                return;
+            let finalPin = '';
+            if (!pinInput) {
+                finalPin = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+            } else {
+                finalPin = pinInput.padStart(6, '0');
             }
 
             try {
                 const res = await fetch('/api/room/create', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, pin, password, mcPassword, theme })
+                    body: JSON.stringify({ name, pin: finalPin, password, mcPassword, theme })
                 });
                 const data = await res.json();
                 if (data.success) {
