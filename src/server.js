@@ -664,23 +664,25 @@ if (fs.existsSync(STATE_FILE) && process.env.ECONOVA_WATCH_STATE === '1') {
 // =============================================
 // HELPER: Auto-sort turn order
 // =============================================
-function resetBuzzerState() {
-    gameState.buzzedTeam = null;
-    gameState.pendingBuzzerTeam = null;
-    gameState.isBuzzerLocked = true;
-    gameState.buzzerUnlockTime = null;
-    gameState.buzzTimes = {};
-    gameState.wrongBuzzes = [];
-    if (gameState.buzzerDelayTimer) {
-        clearTimeout(gameState.buzzerDelayTimer);
-        gameState.buzzerDelayTimer = null;
+function resetBuzzerState(state) {
+    if (!state) state = gameState;
+    state.buzzedTeam = null;
+    state.pendingBuzzerTeam = null;
+    state.isBuzzerLocked = true;
+    state.buzzerUnlockTime = null;
+    state.buzzTimes = {};
+    state.wrongBuzzes = [];
+    if (state.buzzerDelayTimer) {
+        clearTimeout(state.buzzerDelayTimer);
+        state.buzzerDelayTimer = null;
     }
 }
 
-function clearBuzzerTimeout() {
-    if (gameState.buzzerTimeout) {
-        clearTimeout(gameState.buzzerTimeout);
-        gameState.buzzerTimeout = null;
+function clearBuzzerTimeout(state) {
+    if (!state) state = gameState;
+    if (state.buzzerTimeout) {
+        clearTimeout(state.buzzerTimeout);
+        state.buzzerTimeout = null;
     }
 }
 
@@ -689,8 +691,8 @@ function closeCurrentQuestion() {
     gameState.currentQuestion.mainTeamId = null;
     gameState.currentQuestion.isHopeStar = false;
     gameState.currentQuestion.resolved = false;
-    resetBuzzerState();
-    clearBuzzerTimeout();
+    resetBuzzerState(typeof state !== 'undefined' ? state : gameState);
+    clearBuzzerTimeout(typeof state !== 'undefined' ? state : gameState);
 }
         gameState.currentQuestion = null;
 
@@ -704,7 +706,7 @@ function updateTeamScore(teamId, points, reason = "Chỉnh sửa thủ công") {
         gameState.scoreLog.unshift({ id: require('crypto').randomUUID(), time: Date.now(), teamId: teamId, delta: points, reason: reason });
         if (gameState.scoreLog.length > 50) gameState.scoreLog.pop();
 
-        updateTurnOrder();
+        updateTurnOrder(state);
         io.emit('updateState', gameState);
     }
 }
@@ -760,7 +762,7 @@ function updateTurnOrder(targetState = gameState, lockActive = true) {
 
 // Khởi tạo lượt chơi nếu mảng trống (ví dụ: lần đầu chạy server)
 if (gameState.turnOrder.length === 0) {
-    updateTurnOrder();
+    updateTurnOrder(state);
 }
 
 // =============================================
@@ -906,6 +908,15 @@ function broadcastState(socket, customEvent = 'updateState', customData = null) 
     }
 }
 
+
+function playSoundInRoom(socket, sound) {
+    if (socket && socket.currentRoomPin) {
+        io.to(socket.currentRoomPin).emit('playSound', sound);
+    } else {
+        io.emit('playSound', sound);
+    }
+}
+
 io.on('connection', (socket) => {
 
     // --- MULTI-ROOM SOCKET JOIN & AUTH HANDLERS ---
@@ -916,16 +927,23 @@ io.on('connection', (socket) => {
             socket.join(roomPin);
             socket.currentRoomPin = roomPin;
             room.connectedClients.add(socket.id);
-            if (typeof callback === 'function') {
-                callback({ success: true, room: { pin: room.pin, name: room.name, theme: room.theme }, gameState: room.gameState });
+            
+            // Always build safe state (strip questionBank for web clients)
+            let safeState = JSON.parse(JSON.stringify(room.gameState));
+            delete safeState.questionBank;
+            delete safeState.questions;
+            if (safeState.currentQuestion) safeState.currentQuestion.answer = "";
+            if (safeState.lockedPackage && safeState.lockedPackage.questions) {
+                safeState.lockedPackage.questions.forEach(q => { delete q.answer; delete q.vid; });
             }
-            let stateToSend = room.gameState;
-            if (!socket.isAdmin && !socket.isMC) {
-                let safeState = JSON.parse(JSON.stringify(room.gameState));
-                delete safeState.questionBank;
-                delete safeState.questions;
-                if (safeState.currentQuestion) safeState.currentQuestion.answer = "";
-                stateToSend = safeState;
+            if (safeState.pendingPackage && safeState.pendingPackage.questions) {
+                safeState.pendingPackage.questions.forEach(q => { delete q.answer; delete q.vid; });
+            }
+            
+            let stateToSend = (socket.isAdmin || socket.isMC) ? room.gameState : safeState;
+            
+            if (typeof callback === 'function') {
+                callback({ success: true, room: { pin: room.pin, name: room.name, theme: room.theme }, gameState: safeState });
             }
             socket.emit('updateState', stateToSend);
             socket.emit('ppt-status', roomManager.getSlideStatus(roomPin));
@@ -937,7 +955,8 @@ io.on('connection', (socket) => {
     });
 
     socket.on('verifyRoomPIN', (pin, callback) => {
-        const roomPin = (pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0');
+        const state = getActiveState(socket);
+const roomPin = (pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0');
         const result = roomManager.verifyContestant(roomPin);
         if (result.success) {
             socket.join(roomPin);
@@ -1065,7 +1084,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('playSound', (sound) => {
-        io.emit('playSound', sound);
+        playSoundInRoom(socket, sound);
     });
 
     if (process.env.IS_DESKTOP_APP === 'true') {
@@ -1120,11 +1139,12 @@ io.on('connection', (socket) => {
 
     // Verify Room PIN for contestants
     socket.on('verifyRoomPIN', (pin, callback) => {
-        if (!gameState.isRoomOpen) {
+        const state = getActiveState(socket);
+if (!state.isRoomOpen) {
             callback({ success: false, message: 'Phòng thi chưa mở!' });
             return;
         }
-        if (pin === gameState.roomPIN) {
+        if (pin === state.roomPIN) {
             callback({ success: true });
         } else {
             callback({ success: false, message: 'Sai mã phòng!' });
@@ -1143,7 +1163,7 @@ io.on('connection', (socket) => {
     // --- ADMIN: Đặt tên đội & trường ---
     socket.on('setTeamNames', (data) => {
         const state = getActiveState(socket);
-        data.forEach((item, idx) => {
+data.forEach((item, idx) => {
             if (state.teams[idx]) {
                 if (item.name && item.name.trim()) state.teams[idx].name = item.name.trim();
                 if (item.school !== undefined) state.teams[idx].school = item.school.trim();
@@ -1156,65 +1176,68 @@ io.on('connection', (socket) => {
 
     // --- ADMIN: Bật/Tắt Ngôi sao hy vọng ---
     socket.on('toggleHopeStar', (teamId) => {
-        // Toggle: nếu đang bật thì tắt, nếu đang tắt thì bật
-        var wasOn = gameState.currentQuestion.isHopeStar;
-        gameState.currentQuestion.isHopeStar = !wasOn;
-        
-        if (gameState.currentQuestion.isHopeStar) {
+        const state = getActiveState(socket);
+// Toggle: nếu đang bật thì tắt, nếu đang tắt thì bật
+        var wasOn = state.currentQuestion.isHopeStar;
+        state.currentQuestion.isHopeStar = !wasOn;
+
+        if (state.currentQuestion.isHopeStar) {
             // Đang bật: gán đội
             let targetTeam = parseInt(teamId);
-            if (targetTeam === -1 && gameState.turnOrder && gameState.turnOrder.length > 0) {
-                targetTeam = gameState.turnOrder[0];
+            if (targetTeam === -1 && state.turnOrder && state.turnOrder.length > 0) {
+                targetTeam = state.turnOrder[0];
             } else if (targetTeam === -1) {
                 targetTeam = 1;
             }
-            gameState.currentQuestion.mainTeamId = targetTeam;
-            io.emit('updateState', gameState);
-            io.emit('playSound', 'hope_star');
+            state.currentQuestion.mainTeamId = targetTeam;
+            broadcastState(socket);
+            playSoundInRoom(socket, 'hope_star');
         } else {
             // Đang tắt
-            io.emit('updateState', gameState);
+            broadcastState(socket);
         }
     });
 
     // --- ADMIN: Ép chọn lượt chơi (cho đội) ---
     socket.on('forceTurn', (teamId) => {
-        gameState.forcedTeamId = teamId;
+        const state = getActiveState(socket);
+state.forcedTeamId = teamId;
         // Find team in turnOrder and move to front
-        let idx = gameState.turnOrder.indexOf(teamId);
+        let idx = state.turnOrder.indexOf(teamId);
         if (idx > -1) {
-            gameState.turnOrder.splice(idx, 1);
-            gameState.turnOrder.unshift(teamId);
+            state.turnOrder.splice(idx, 1);
+            state.turnOrder.unshift(teamId);
         }
-        
+
         // Tắt câu hỏi hiện tại và dọn dẹp viền sáng
-        gameState.currentQuestion.active = false;
-        gameState.currentQuestion.mainTeamId = null;
-        gameState.currentQuestion.isHopeStar = false;
-        gameState.isGridVisibleOnOverlay = false;
-        
-        io.emit('updateState', gameState);
+        state.currentQuestion.active = false;
+        state.currentQuestion.mainTeamId = null;
+        state.currentQuestion.isHopeStar = false;
+        state.isGridVisibleOnOverlay = false;
+
+        broadcastState(socket);
     });
 
     // --- ADMIN: Đặt câu hỏi ---
     socket.on('setQuestion', (data) => {
-        try {
+        const state = getActiveState(socket);
+try {
             // If mainTeamId is not provided (auto), pick the first one from turnOrder
             let mainTeamId = data.mainTeamId;
             if (!mainTeamId || mainTeamId === -1) {
-                if (gameState.turnOrder && gameState.turnOrder.length > 0) {
-                    mainTeamId = gameState.turnOrder[0];
+                if (state.turnOrder && state.turnOrder.length > 0) {
+                    mainTeamId = state.turnOrder[0];
                 } else {
                     mainTeamId = 1; // Fallback
                 }
             }
 
-            gameState.currentQuestion = {
+            state.currentQuestion = {
                 active: true,
                 resolved: false,
                 points: data.points || 0,
                 mainTeamId: mainTeamId,
-                isHopeStar: (gameState.currentQuestion && gameState.currentQuestion.isHopeStar) ? true : false,
+                isHopeStar: (state.currentQuestion && state.currentQuestion.isHopeStar) ? true : false,
                 deductedFromMain: false,
                 text: data.text || "",
                 answer: data.answer || "",
@@ -1224,25 +1247,25 @@ io.on('connection', (socket) => {
             
             // Mark question as played
             if (data.points && data.idx !== undefined && data.idx !== -1) {
-                if (!gameState.playedQuestions[data.points]) gameState.playedQuestions[data.points] = [];
-                if (!gameState.playedQuestions[data.points].includes(data.idx)) {
-                    gameState.playedQuestions[data.points].push(data.idx);
+                if (!state.playedQuestions[data.points]) state.playedQuestions[data.points] = [];
+                if (!state.playedQuestions[data.points].includes(data.idx)) {
+                    state.playedQuestions[data.points].push(data.idx);
                 }
                 
                 // Cập nhật lịch sử của đội
-                if (!gameState.teamQuestionHistory) gameState.teamQuestionHistory = { 1: [], 2: [], 3: [], 4: [] };
-                if (!gameState.teamQuestionHistory[mainTeamId]) gameState.teamQuestionHistory[mainTeamId] = [];
-                let exists = gameState.teamQuestionHistory[mainTeamId].find(q => q.points == data.points && q.idx == data.idx);
+                if (!state.teamQuestionHistory) state.teamQuestionHistory = { 1: [], 2: [], 3: [], 4: [] };
+                if (!state.teamQuestionHistory[mainTeamId]) state.teamQuestionHistory[mainTeamId] = [];
+                let exists = state.teamQuestionHistory[mainTeamId].find(q => q.points == data.points && q.idx == data.idx);
                 if (!exists) {
-                    gameState.teamQuestionHistory[mainTeamId].push({ points: data.points, idx: data.idx, mode: 1 });
+                    state.teamQuestionHistory[mainTeamId].push({ points: data.points, idx: data.idx, mode: 1 });
                 }
             }
             
-            resetBuzzerState();
-            gameState.isGridVisibleOnOverlay = false;
+            resetBuzzerState(typeof state !== 'undefined' ? state : gameState);
+            state.isGridVisibleOnOverlay = false;
             
-            io.emit('updateState', gameState);
-            io.emit('playSound', 'question_open_mode1');
+            broadcastState(socket);
+            playSoundInRoom(socket, 'question_open_mode1');
         } catch (err) {
             console.error("Loi server khi setQuestion:", err);
         }
@@ -1250,11 +1273,12 @@ io.on('connection', (socket) => {
 
     // --- ADMIN: Chốt gói câu hỏi (Mode 2 & 3) ---
     socket.on('lockPackage', (data) => {
-        try {
+        const state = getActiveState(socket);
+try {
             let mainTeamId = data.mainTeamId;
             if (!mainTeamId || mainTeamId === -1) {
-                if (gameState.turnOrder && gameState.turnOrder.length > 0) {
-                    mainTeamId = gameState.turnOrder[0];
+                if (state.turnOrder && state.turnOrder.length > 0) {
+                    mainTeamId = state.turnOrder[0];
                 } else {
                     mainTeamId = 1;
                 }
@@ -1268,9 +1292,9 @@ io.on('connection', (socket) => {
                 // Mode 2: Mark all chosen questions as played immediately
                 finalPackage.forEach(q => {
                     if (q.points && q.idx !== undefined && q.idx !== -1) {
-                        if (!gameState.playedQuestions[q.points]) gameState.playedQuestions[q.points] = [];
-                        if (!gameState.playedQuestions[q.points].includes(q.idx)) {
-                            gameState.playedQuestions[q.points].push(q.idx);
+                        if (!state.playedQuestions[q.points]) state.playedQuestions[q.points] = [];
+                        if (!state.playedQuestions[q.points].includes(q.idx)) {
+                            state.playedQuestions[q.points].push(q.idx);
                         }
                     }
                 });
@@ -1279,8 +1303,8 @@ io.on('connection', (socket) => {
                 data.package.forEach(item => {
                     let points = (item && typeof item === 'object') ? parseInt(item.points) : parseInt(item);
                     if (isNaN(points)) return;
-                    let totalQs = gameState.questionCount[points] || 0;
-                    let played = gameState.playedQuestions[points] || [];
+                    let totalQs = state.questionCount[points] || 0;
+                    let played = state.playedQuestions[points] || [];
                     let available = [];
                     for (let i = 0; i < totalQs; i++) {
                         if (!played.includes(i)) available.push(i);
@@ -1290,14 +1314,14 @@ io.on('connection', (socket) => {
                     if (available.length > 0) {
                         let randIndex = Math.floor(Math.random() * available.length);
                         chosenIdx = available[randIndex];
-                        if (!gameState.playedQuestions[points]) gameState.playedQuestions[points] = [];
-                        gameState.playedQuestions[points].push(chosenIdx); // mark as played immediately
+                        if (!state.playedQuestions[points]) state.playedQuestions[points] = [];
+                        state.playedQuestions[points].push(chosenIdx); // mark as played immediately
                     }
                     finalPackage.push({ points: points, idx: chosenIdx });
                 });
             }
 
-            gameState.lockedPackage = {
+            state.lockedPackage = {
                 mode: data.mode,
                 mainTeamId: mainTeamId,
                 questions: finalPackage,
@@ -1306,18 +1330,18 @@ io.on('connection', (socket) => {
             };
             
             // Lịch sử câu hỏi
-            if (!gameState.teamQuestionHistory) gameState.teamQuestionHistory = { 1: [], 2: [], 3: [], 4: [] };
-            if (!gameState.teamQuestionHistory[mainTeamId]) gameState.teamQuestionHistory[mainTeamId] = [];
+            if (!state.teamQuestionHistory) state.teamQuestionHistory = { 1: [], 2: [], 3: [], 4: [] };
+            if (!state.teamQuestionHistory[mainTeamId]) state.teamQuestionHistory[mainTeamId] = [];
             finalPackage.forEach(q => {
                 if (q.points && q.idx !== undefined) {
-                    let exists = gameState.teamQuestionHistory[mainTeamId].find(x => x.points == q.points && x.idx == q.idx);
+                    let exists = state.teamQuestionHistory[mainTeamId].find(x => x.points == q.points && x.idx == q.idx);
                     if (!exists) {
-                        gameState.teamQuestionHistory[mainTeamId].push({ points: q.points, idx: q.idx, mode: data.mode });
+                        state.teamQuestionHistory[mainTeamId].push({ points: q.points, idx: q.idx, mode: data.mode });
                     }
                 }
             });
 
-            gameState.currentQuestion = {
+            state.currentQuestion = {
                 active: false,
                 resolved: false,
                 points: 0,
@@ -1331,12 +1355,12 @@ io.on('connection', (socket) => {
                 isHidden: true
             };
             
-            gameState.isGridVisibleOnOverlay = false;
-            io.emit('updateState', gameState);
-            io.emit('playSound', 'question_open');
+            state.isGridVisibleOnOverlay = false;
+            broadcastState(socket);
+            playSoundInRoom(socket, 'question_open');
             
-            io.emit('updateState', gameState);
-            io.emit('packageLocked', gameState.lockedPackage);
+            broadcastState(socket);
+            io.emit('packageLocked', state.lockedPackage);
         } catch(err) {
             console.error("Lỗi khi lockPackage:", err);
         }
@@ -1344,42 +1368,43 @@ io.on('connection', (socket) => {
 
     // --- ADMIN: Chuyển câu trong gói (Mode 2 & 3) ---
     socket.on('nextQuestionInPackage', (data) => {
-        if (data.cancel) {
-            gameState.lockedPackage = null;
-            gameState.pendingPackage = null;
+        const state = getActiveState(socket);
+if (data.cancel) {
+            state.lockedPackage = null;
+            state.pendingPackage = null;
             
-            if (gameState.currentQuestion && gameState.currentQuestion.active) {
-                gameState.currentQuestion.active = false;
-                gameState.currentQuestion.mainTeamId = null;
-                gameState.currentQuestion.isHopeStar = false;
-                gameState.buzzedTeam = null;
-                gameState.isBuzzerLocked = true;
-                clearBuzzerTimeout();
+            if (state.currentQuestion && state.currentQuestion.active) {
+                state.currentQuestion.active = false;
+                state.currentQuestion.mainTeamId = null;
+                state.currentQuestion.isHopeStar = false;
+                state.buzzedTeam = null;
+                state.isBuzzerLocked = true;
+                clearBuzzerTimeout(typeof state !== 'undefined' ? state : gameState);
             }
-        gameState.currentQuestion = null;
-            io.emit('updateState', gameState);
+        state.currentQuestion = null;
+            broadcastState(socket);
             return;
         }
 
-        let pkg = gameState.lockedPackage;
+        let pkg = state.lockedPackage;
         if (!pkg) return;
 
         if (data.revealOnly) {
-            gameState.currentQuestion.isHidden = false;
-            gameState.currentQuestion.text = data.text || "";
-            gameState.currentQuestion.answer = data.answer || "";
-            gameState.currentQuestion.vid = data.vid || "";
-            gameState.currentQuestion.points = pkg.questions[pkg.currentIndex].points;
-            io.emit('updateState', gameState);
+            state.currentQuestion.isHidden = false;
+            state.currentQuestion.text = data.text || "";
+            state.currentQuestion.answer = data.answer || "";
+            state.currentQuestion.vid = data.vid || "";
+            state.currentQuestion.points = pkg.questions[pkg.currentIndex].points;
+            broadcastState(socket);
             return;
         }
 
         pkg.currentIndex++;
-        
+
         if (pkg.currentIndex < pkg.questions.length) {
             let qData = pkg.questions[pkg.currentIndex];
             
-            gameState.currentQuestion = {
+            state.currentQuestion = {
                 active: true,
                 resolved: false,
                 points: qData.points || 0,
@@ -1395,360 +1420,380 @@ io.on('connection', (socket) => {
             };
             
 
-            gameState.isGridVisibleOnOverlay = false;
-            io.emit('updateState', gameState);
+            state.isGridVisibleOnOverlay = false;
+            broadcastState(socket);
             
-            resetBuzzerState();
-            gameState.isGridVisibleOnOverlay = false;
+            resetBuzzerState(typeof state !== 'undefined' ? state : gameState);
+            state.isGridVisibleOnOverlay = false;
             
-            io.emit('updateState', gameState);
+            broadcastState(socket);
             
-            // io.emit('playSound', 'question_open'); // Removed as per request
+            // playSoundInRoom(socket, 'question_open'); // Removed as per request
         } else {
             // End of package
-            gameState.lockedPackage = null;
-            gameState.isGridVisibleOnOverlay = false;
-            io.emit('updateState', gameState);
+            state.lockedPackage = null;
+            state.isGridVisibleOnOverlay = false;
+            broadcastState(socket);
         }
     });
 
     socket.on('syncPendingPackage', (data) => {
-        gameState.pendingPackage = data;
-        io.emit('updateState', gameState);
+        const state = getActiveState(socket);
+state.pendingPackage = data;
+        broadcastState(socket);
         if (data.playSound !== false) {
-            io.emit('playSound', 'choose_each_question');
+            playSoundInRoom(socket, 'choose_each_question');
         }
     });
 
     socket.on('setActiveBankSlot', (slotId) => {
-        gameState.activeBankSlot = slotId;
+        const state = getActiveState(socket);
+state.activeBankSlot = slotId;
         saveStateToDiskSync();
-        io.emit('updateState', gameState);
+        broadcastState(socket);
     });
 
     // --- ADMIN: Đội chính ĐÚNG ---
     socket.on('correctMainTeam', () => {
-        let q = gameState.currentQuestion;
+        const state = getActiveState(socket);
+let q = state.currentQuestion;
         if (!q.active || !q.mainTeamId || q.resolved) return;
 
-        let team = gameState.teams.find(t => t.id === q.mainTeamId);
+        let team = state.teams.find(t => t.id === q.mainTeamId);
         if (team) {
             let pts = q.isHopeStar ? q.points * 2 : q.points;
             team.score += pts;
             
-            if (!gameState.scoreLog) gameState.scoreLog = [];
-            gameState.scoreLog.unshift({ id: require('crypto').randomUUID(), time: Date.now(), teamId: team.id, delta: pts, reason: "Đội chính trả lời ĐÚNG" });
-            if (gameState.scoreLog.length > 50) gameState.scoreLog.pop();
+            if (!state.scoreLog) state.scoreLog = [];
+            state.scoreLog.unshift({ id: require('crypto').randomUUID(), time: Date.now(), teamId: team.id, delta: pts, reason: "Đội chính trả lời ĐÚNG" });
+            if (state.scoreLog.length > 50) state.scoreLog.pop();
         }
         q.resolved = true;
         // Không reset isHopeStar ở đây - để MC tắt thủ công
-        if (gameState.turnStats && gameState.turnStats[q.mainTeamId] >= (gameState.settings.questionsPerTeam || 3)) {
-            gameState.turnOrder = gameState.turnOrder.filter(id => id !== q.mainTeamId);
+        if (state.turnStats && state.turnStats[q.mainTeamId] >= (state.settings.questionsPerTeam || 3)) {
+            state.turnOrder = state.turnOrder.filter(id => id !== q.mainTeamId);
         }
-        updateTurnOrder(); // Sort after score change
-        io.emit('updateState', gameState);
-        io.emit('playSound', 'correct');
+        updateTurnOrder(state); // Sort after score change
+        broadcastState(socket);
+        playSoundInRoom(socket, 'correct');
     });
 
     // --- ADMIN: Đội chính SAI -> Mở chuông 5s ---
     socket.on('startBuzzer', () => {
-        let q = gameState.currentQuestion;
+        const state = getActiveState(socket);
+let q = state.currentQuestion;
 
         if (q.active && q.isHopeStar && !q.deductedFromMain) {
-            let team = gameState.teams.find(t => t.id === q.mainTeamId);
+            let team = state.teams.find(t => t.id === q.mainTeamId);
             if (team) { 
                 team.score -= q.points; 
                 if (team.score < 0) team.score = 0; 
 
-                if (!gameState.scoreLog) gameState.scoreLog = [];
-                gameState.scoreLog.unshift({ id: require('crypto').randomUUID(), time: Date.now(), teamId: team.id, delta: -q.points, reason: "Đội chính SAI (Ngôi sao hy vọng)" });
-                if (gameState.scoreLog.length > 50) gameState.scoreLog.pop();
+                if (!state.scoreLog) state.scoreLog = [];
+                state.scoreLog.unshift({ id: require('crypto').randomUUID(), time: Date.now(), teamId: team.id, delta: -q.points, reason: "Đội chính SAI (Ngôi sao hy vọng)" });
+                if (state.scoreLog.length > 50) state.scoreLog.pop();
             }
             q.deductedFromMain = true;
         }
 
-        gameState.buzzedTeam = null;
-        gameState.isBuzzerLocked = false;
-        gameState.buzzerUnlockTime = Date.now();
-        gameState.buzzToken = require('crypto').randomUUID();
-        gameState.buzzTimes = {};
-        io.emit('updateState', gameState);
-        io.emit('playSound', 'buzzer_5s');
-        
-        let hideBar = gameState.settings.disableBuzzerTimerBar || false;
+        state.buzzedTeam = null;
+        state.isBuzzerLocked = false;
+        state.buzzerUnlockTime = Date.now();
+        state.buzzToken = require('crypto').randomUUID();
+        state.buzzTimes = {};
+        broadcastState(socket);
+        playSoundInRoom(socket, 'buzzer_5s');
+
+        let hideBar = state.settings.disableBuzzerTimerBar || false;
         if (!hideBar) {
             io.emit('startCountdown', 5);
         }
-        
-        if (gameState.buzzerTimeout) clearTimeout(gameState.buzzerTimeout);
-        gameState.buzzerTimeout = setTimeout(() => {
-            if (!gameState.isBuzzerLocked && gameState.buzzedTeam === null) {
-                gameState.isBuzzerLocked = true;
-                io.emit('updateState', gameState);
+
+        if (state.buzzerTimeout) clearTimeout(state.buzzerTimeout);
+        state.buzzerTimeout = setTimeout(() => {
+            if (!state.isBuzzerLocked && state.buzzedTeam === null) {
+                state.isBuzzerLocked = true;
+                broadcastState(socket);
             }
         }, 5000);
     });
 
     // --- ADMIN: Đội giành quyền ĐÚNG ---
     socket.on('correctBuzzedTeam', () => {
-        let q = gameState.currentQuestion;
-        let buzzedId = gameState.buzzedTeam;
+        const state = getActiveState(socket);
+let q = state.currentQuestion;
+        let buzzedId = state.buzzedTeam;
 
         if (buzzedId && !q.resolved) {
-            let bTeam = gameState.teams.find(t => t.id === buzzedId);
+            let bTeam = state.teams.find(t => t.id === buzzedId);
             if (bTeam) {
                 bTeam.score += q.points;
-                if (!gameState.scoreLog) gameState.scoreLog = [];
-                gameState.scoreLog.unshift({ id: require('crypto').randomUUID(), time: Date.now(), teamId: bTeam.id, delta: q.points, reason: "Giành quyền trả lời ĐÚNG" });
+                if (!state.scoreLog) state.scoreLog = [];
+                state.scoreLog.unshift({ id: require('crypto').randomUUID(), time: Date.now(), teamId: bTeam.id, delta: q.points, reason: "Giành quyền trả lời ĐÚNG" });
             }
 
             if (q.active && q.mainTeamId && !q.deductedFromMain) {
-                let mTeam = gameState.teams.find(t => t.id === q.mainTeamId);
+                let mTeam = state.teams.find(t => t.id === q.mainTeamId);
                 if (mTeam && mTeam.id !== buzzedId) { 
                     mTeam.score -= q.points; 
                     if (mTeam.score < 0) mTeam.score = 0; 
                     
-                    if (!gameState.scoreLog) gameState.scoreLog = [];
-                    gameState.scoreLog.unshift({ id: require('crypto').randomUUID(), time: Date.now(), teamId: mTeam.id, delta: -q.points, reason: "Bị trừ vì đội khác giành quyền" });
+                    if (!state.scoreLog) state.scoreLog = [];
+                    state.scoreLog.unshift({ id: require('crypto').randomUUID(), time: Date.now(), teamId: mTeam.id, delta: -q.points, reason: "Bị trừ vì đội khác giành quyền" });
                 }
                 q.deductedFromMain = true;
             }
-            if (gameState.scoreLog && gameState.scoreLog.length > 50) gameState.scoreLog.length = 50;
+            if (state.scoreLog && state.scoreLog.length > 50) state.scoreLog.length = 50;
         }
         q.resolved = true;
         // Không reset isHopeStar ở đây - để MC tắt thủ công
-        gameState.isBuzzerLocked = true;
-        if (gameState.turnStats && gameState.turnStats[q.mainTeamId] >= (gameState.settings.questionsPerTeam || 3)) {
-            gameState.turnOrder = gameState.turnOrder.filter(id => id !== q.mainTeamId);
+        state.isBuzzerLocked = true;
+        if (state.turnStats && state.turnStats[q.mainTeamId] >= (state.settings.questionsPerTeam || 3)) {
+            state.turnOrder = state.turnOrder.filter(id => id !== q.mainTeamId);
         }
-        updateTurnOrder(); // Sort after score change
-        io.emit('updateState', gameState);
-        io.emit('playSound', 'correct');
+        updateTurnOrder(state); // Sort after score change
+        broadcastState(socket);
+        playSoundInRoom(socket, 'correct');
     });
 
     // --- ADMIN: Đội giành quyền SAI ---
     socket.on('wrongBuzzedTeam', () => {
-        let q = gameState.currentQuestion;
-        let buzzedId = gameState.buzzedTeam;
+        const state = getActiveState(socket);
+let q = state.currentQuestion;
+        let buzzedId = state.buzzedTeam;
 
         if (buzzedId && !q.resolved) {
             updateTeamScore(buzzedId, -(q.points / 2));
         }
-        
+
         q.resolved = true;
         // Không reset isHopeStar ở đây - để MC tắt thủ công
-        gameState.buzzedTeam = null;
-        gameState.isBuzzerLocked = true;
-        gameState.buzzerUnlockTime = null;
-        gameState.buzzTimes = {};
-        
-        clearBuzzerTimeout();
-        
-        io.emit('updateState', gameState);
-        io.emit('playSound', 'wrong');
+        state.buzzedTeam = null;
+        state.isBuzzerLocked = true;
+        state.buzzerUnlockTime = null;
+        state.buzzTimes = {};
+
+        clearBuzzerTimeout(typeof state !== 'undefined' ? state : gameState);
+
+        broadcastState(socket);
+        playSoundInRoom(socket, 'wrong');
     });
 
     // --- ADMIN: Đóng câu hỏi, quay về Grid ---
     socket.on('closeQuestion', () => {
-        let mainTeamId = gameState.currentQuestion.mainTeamId;
+        const state = getActiveState(socket);
+let mainTeamId = state.currentQuestion.mainTeamId;
 
-        gameState.currentQuestion.active = false;
-        gameState.currentQuestion.mainTeamId = null;
-        gameState.currentQuestion.isHopeStar = false;
-        gameState.currentQuestion.resolved = false; // Reset trạng thái
-        
-        gameState.buzzedTeam = null;
-        gameState.isBuzzerLocked = true;
-        
-        clearBuzzerTimeout();
+        state.currentQuestion.active = false;
+        state.currentQuestion.mainTeamId = null;
+        state.currentQuestion.isHopeStar = false;
+        state.currentQuestion.resolved = false; // Reset trạng thái
+
+        state.buzzedTeam = null;
+        state.isBuzzerLocked = true;
+
+        clearBuzzerTimeout(typeof state !== 'undefined' ? state : gameState);
 
         // Tăng đếm số câu đã chơi SAU KHI đóng câu hỏi
         if (mainTeamId !== null) {
-            if (!gameState.turnStats[mainTeamId]) {
-                gameState.turnStats[mainTeamId] = 0;
+            if (!state.turnStats[mainTeamId]) {
+                state.turnStats[mainTeamId] = 0;
             }
-            gameState.turnStats[mainTeamId]++;
+            state.turnStats[mainTeamId]++;
             
-            if (gameState.turnStats[mainTeamId] >= (gameState.settings.questionsPerTeam || 3)) {
-                gameState.turnOrder = gameState.turnOrder.filter(id => id !== mainTeamId);
-                if (gameState.turnOrder.length === 0) updateTurnOrder();
-                gameState.isGridVisibleOnOverlay = false;
-                io.emit('playSound', 'finish_turn');
+            if (state.turnStats[mainTeamId] >= (state.settings.questionsPerTeam || 3)) {
+                state.turnOrder = state.turnOrder.filter(id => id !== mainTeamId);
+                if (state.turnOrder.length === 0) updateTurnOrder(state);
+                state.isGridVisibleOnOverlay = false;
+                playSoundInRoom(socket, 'finish_turn');
             } else {
-                gameState.isGridVisibleOnOverlay = true;
+                state.isGridVisibleOnOverlay = true;
             }
         }
 
-        io.emit('updateState', gameState);
+        broadcastState(socket);
     });
 
     // --- ADMIN: Sửa câu hỏi hiện tại ---
     socket.on('editCurrentQuestion', (data) => {
-        if (!socket.isAdmin) return;
-        if (gameState.currentQuestion.active) {
-            gameState.currentQuestion.text = data.text;
-            gameState.currentQuestion.answer = data.answer;
-            io.emit('updateState', gameState);
+        const state = getActiveState(socket);
+if (!socket.isAdmin) return;
+        if (state.currentQuestion.active) {
+            state.currentQuestion.text = data.text;
+            state.currentQuestion.answer = data.answer;
+            broadcastState(socket);
         }
     });
 
     socket.on('undoScore', (logId) => {
-        if (!socket.isAdmin || !gameState.scoreLog) return;
-        let logIndex = gameState.scoreLog.findIndex(l => l.id === logId);
+        const state = getActiveState(socket);
+if (!socket.isAdmin || !state.scoreLog) return;
+        let logIndex = state.scoreLog.findIndex(l => l.id === logId);
         if (logIndex !== -1) {
-            let log = gameState.scoreLog[logIndex];
-            let team = gameState.teams.find(t => t.id === log.teamId);
+            let log = state.scoreLog[logIndex];
+            let team = state.teams.find(t => t.id === log.teamId);
             if (team) {
                 team.score -= log.delta;
                 if (team.score < 0) team.score = 0;
             }
-            gameState.scoreLog.splice(logIndex, 1);
-            updateTurnOrder();
-            io.emit('updateState', gameState);
+            state.scoreLog.splice(logIndex, 1);
+            updateTurnOrder(state);
+            broadcastState(socket);
         }
     });
 
     // --- ADMIN: Chỉnh điểm thủ công ---
     socket.on('updateTeamAvatarSettings', (data) => {
-        let team = gameState.teams.find(t => t.id === data.id);
+        const state = getActiveState(socket);
+let team = state.teams.find(t => t.id === data.id);
         if (team) {
             if (data.avatarSize !== undefined) team.avatarSize = data.avatarSize;
             if (data.avatarOverlap !== undefined) team.avatarOverlap = data.avatarOverlap;
             if (data.avatarOffsetX !== undefined) team.avatarOffsetX = data.avatarOffsetX;
-            io.emit('updateState', gameState);
+            broadcastState(socket);
         }
     });
 
     // Cập nhật cài đặt chung avatar cho tất cả các đội
     socket.on('updateAllAvatarSettings', (data) => {
-        gameState.teams.forEach(t => {
+        const state = getActiveState(socket);
+state.teams.forEach(t => {
             if (data.avatarSize !== undefined) t.avatarSize = data.avatarSize;
             if (data.avatarOverlap !== undefined) t.avatarOverlap = data.avatarOverlap;
             if (data.avatarOffsetX !== undefined) t.avatarOffsetX = data.avatarOffsetX;
         });
-        io.emit('updateState', gameState);
+        broadcastState(socket);
     });
 
     socket.on('updateScore', (data) => {
-        updateTeamScore(data.teamId, data.points);
+        const state = getActiveState(socket);
+updateTeamScore(data.teamId, data.points);
     });
 
     // --- ADMIN: Kết thúc phần chơi của đội hiện tại ---
     socket.on('finishTurn', () => {
-        let teamId = null;
-        if (gameState.turnOrder && gameState.turnOrder.length > 0) {
-            teamId = gameState.turnOrder.shift(); // Gỡ đội hiện tại ra khỏi lượt
-        } else if (gameState.currentQuestion.mainTeamId) {
-            teamId = gameState.currentQuestion.mainTeamId;
+        const state = getActiveState(socket);
+let teamId = null;
+        if (state.turnOrder && state.turnOrder.length > 0) {
+            teamId = state.turnOrder.shift(); // Gỡ đội hiện tại ra khỏi lượt
+        } else if (state.currentQuestion.mainTeamId) {
+            teamId = state.currentQuestion.mainTeamId;
         }
 
-        if (teamId && gameState.forcedTeamId === teamId) gameState.forcedTeamId = null;
-        
-        if (gameState.currentQuestion.active) {
-            gameState.currentQuestion.active = false;
-            gameState.currentQuestion.mainTeamId = null;
-            gameState.currentQuestion.isHopeStar = false;
-            gameState.buzzedTeam = null;
-            gameState.isBuzzerLocked = true;
-            clearBuzzerTimeout();
+        if (teamId && state.forcedTeamId === teamId) state.forcedTeamId = null;
+
+        if (state.currentQuestion.active) {
+            state.currentQuestion.active = false;
+            state.currentQuestion.mainTeamId = null;
+            state.currentQuestion.isHopeStar = false;
+            state.buzzedTeam = null;
+            state.isBuzzerLocked = true;
+            clearBuzzerTimeout(typeof state !== 'undefined' ? state : gameState);
         }
-        gameState.currentQuestion = null;
-        
-        gameState.lockedPackage = null;
-        gameState.pendingPackage = null;
-        gameState.isGridVisibleOnOverlay = false;
-        if (gameState.turnOrder && gameState.turnOrder.length === 0) updateTurnOrder();
-        
-        io.emit('updateState', gameState);
-        io.emit('playSound', 'finish_turn');
+        state.currentQuestion = null;
+
+        state.lockedPackage = null;
+        state.pendingPackage = null;
+        state.isGridVisibleOnOverlay = false;
+        if (state.turnOrder && state.turnOrder.length === 0) updateTurnOrder(state);
+
+        broadcastState(socket);
+        playSoundInRoom(socket, 'finish_turn');
     });
 
     // --- ADMIN: Kết thúc phần chơi cho một đội cụ thể ---
     socket.on('finishTurnForTeam', (teamId) => {
-        if (gameState.turnOrder && gameState.turnOrder.includes(teamId)) {
-            if (gameState.forcedTeamId === teamId) gameState.forcedTeamId = null;
-            gameState.turnOrder = gameState.turnOrder.filter(id => id !== teamId);
+        const state = getActiveState(socket);
+if (state.turnOrder && state.turnOrder.includes(teamId)) {
+            if (state.forcedTeamId === teamId) state.forcedTeamId = null;
+            state.turnOrder = state.turnOrder.filter(id => id !== teamId);
             
-            if (gameState.currentQuestion.active && gameState.currentQuestion.mainTeamId === teamId) {
-                gameState.currentQuestion.active = false;
-                gameState.currentQuestion.mainTeamId = null;
-                gameState.currentQuestion.isHopeStar = false;
-                gameState.buzzedTeam = null;
-                gameState.isBuzzerLocked = true;
-                clearBuzzerTimeout();
+            if (state.currentQuestion.active && state.currentQuestion.mainTeamId === teamId) {
+                state.currentQuestion.active = false;
+                state.currentQuestion.mainTeamId = null;
+                state.currentQuestion.isHopeStar = false;
+                state.buzzedTeam = null;
+                state.isBuzzerLocked = true;
+                clearBuzzerTimeout(typeof state !== 'undefined' ? state : gameState);
             }
-        gameState.currentQuestion = null;
+        state.currentQuestion = null;
             
-            gameState.lockedPackage = null;
-            gameState.pendingPackage = null;
-            gameState.isGridVisibleOnOverlay = false;
-            if (gameState.turnOrder.length === 0) updateTurnOrder();
+            state.lockedPackage = null;
+            state.pendingPackage = null;
+            state.isGridVisibleOnOverlay = false;
+            if (state.turnOrder.length === 0) updateTurnOrder(state);
             
-            io.emit('updateState', gameState);
-            io.emit('playSound', 'finish_turn');
+            broadcastState(socket);
+            playSoundInRoom(socket, 'finish_turn');
         }
     });
     // --- ADMIN: Cài đặt Hệ thống đồ hoạ ---
     socket.on('updateSettings', (newSettings) => {
-        let oldQuestionsPerTeam = gameState.settings.questionsPerTeam || 3;
-        let oldRule = gameState.settings.turnOrderRule || 'mode_asc';
-        gameState.settings = { ...gameState.settings, ...newSettings };
-        let newQuestionsPerTeam = gameState.settings.questionsPerTeam || 3;
-        let newRule = gameState.settings.turnOrderRule || 'mode_asc';
+        const state = getActiveState(socket);
+let oldQuestionsPerTeam = state.settings.questionsPerTeam || 3;
+        let oldRule = state.settings.turnOrderRule || 'mode_asc';
+        state.settings = { ...state.settings, ...newSettings };
+        let newQuestionsPerTeam = state.settings.questionsPerTeam || 3;
+        let newRule = state.settings.turnOrderRule || 'mode_asc';
 
         // Xử lý khi thay đổi số câu hỏi mỗi đội
         if (newSettings.questionsPerTeam !== undefined && oldQuestionsPerTeam !== newQuestionsPerTeam) {
             let changed = false;
-            gameState.turnOrder = gameState.turnOrder.filter(id => {
-                if (gameState.turnStats[id] && gameState.turnStats[id] >= newQuestionsPerTeam) {
+            state.turnOrder = state.turnOrder.filter(id => {
+                if (state.turnStats[id] && state.turnStats[id] >= newQuestionsPerTeam) {
                     changed = true;
                     return false;
                 }
                 return true;
             });
-            if (changed && gameState.turnOrder.length === 0) {
-                updateTurnOrder();
+            if (changed && state.turnOrder.length === 0) {
+                updateTurnOrder(state);
             }
         }
-        
+
         if (newSettings.turnOrderRule !== undefined && oldRule !== newRule) {
             updateTurnOrder(false);
         }
-        
-        io.emit('updateState', gameState);
+
+        broadcastState(socket);
     });
 
     // --- ADMIN: VÒNG 1 (TIMER CONFIG) ---
     socket.on('update-timer-config', (config) => {
-        gameState.timerConfig = { ...gameState.timerConfig, ...config };
-        io.emit('timer-config-updated', gameState.timerConfig);
+        const state = getActiveState(socket);
+state.timerConfig = { ...state.timerConfig, ...config };
+        io.emit('timer-config-updated', state.timerConfig);
     });
 
     socket.on('forceUpdateTurnOrder', () => {
-        // Manually sort the turn order based on current score
+        const state = getActiveState(socket);
+// Manually sort the turn order based on current score
         updateTurnOrder(false);
-        io.emit('updateState', gameState);
+        broadcastState(socket);
     });
 
     socket.on('timer-action', (action) => {
-        io.emit('timer-action', action);
+        const state = getActiveState(socket);
+io.emit('timer-action', action);
     });
 
     socket.on('change-round', (roundNum) => {
-        gameState.activeRound = roundNum;
-        
+        const state = getActiveState(socket);
+state.activeRound = roundNum;
+
         // Reset turn state when switching rounds so the turn order is properly rebuilt 
         // based on the teams' current scores at the beginning of the new round.
-        gameState.forcedTeamId = null;
-        gameState.turnStats = {};
-        gameState.turnOrder = [];
+        state.forcedTeamId = null;
+        state.turnStats = {};
+        state.turnOrder = [];
         updateTurnOrder(false);
-        
-        io.emit('updateState', gameState);
+
+        broadcastState(socket);
     });
 
     socket.on('stop-timer', () => {
-        io.emit('timer-action', { type: 'PAUSE' });
+        const state = getActiveState(socket);
+io.emit('timer-action', { type: 'PAUSE' });
     });
     // --- PPT FILE WATCHER ---
     let pptWatcher = null;
@@ -1878,79 +1923,81 @@ io.on('connection', (socket) => {
     });
 
     socket.on('resetGame', () => {
-        gameState.teams.forEach(t => t.score = 0);
-        gameState.forcedTeamId = null;
-        resetBuzzerState();
-        gameState.antiCheatViolations = {};
-        gameState.bannedTeams = [];
-        gameState.currentQuestion = {
+        const state = getActiveState(socket);
+state.teams.forEach(t => t.score = 0);
+        state.forcedTeamId = null;
+        resetBuzzerState(typeof state !== 'undefined' ? state : gameState);
+        state.antiCheatViolations = {};
+        state.bannedTeams = [];
+        state.currentQuestion = {
             active: false, points: 0, mainTeamId: null,
             isHopeStar: false, deductedFromMain: false, text: "", answer: "", idx: null
         };
-        gameState.isGridVisibleOnOverlay = false;
-        gameState.showOverallScoreboard = false;
-        gameState.activeBankSlot = null;
-        gameState.lockedPackage = null;
-        gameState.pendingPackage = null;
-        gameState.currentMedia = null;
-        gameState.isVideoPlaying = false;
-        gameState.playedQuestions = { "10": [], "20": [], "40": [] };
-        gameState.turnStats = {};
-        gameState.turnOrder = []; // Bắt buộc nạp lại toàn bộ 4 đội
+        state.isGridVisibleOnOverlay = false;
+        state.showOverallScoreboard = false;
+        state.activeBankSlot = null;
+        state.lockedPackage = null;
+        state.pendingPackage = null;
+        state.currentMedia = null;
+        state.isVideoPlaying = false;
+        state.playedQuestions = { "10": [], "20": [], "40": [] };
+        state.turnStats = {};
+        state.turnOrder = []; // Bắt buộc nạp lại toàn bộ 4 đội
         updateTurnOrder(false);
         saveStateToDiskSync();
-        io.emit('updateState', gameState);
+        broadcastState(socket);
         io.emit('timer-action', { type: 'STOP' });
     });
 
     socket.on('changeTeamCount', (newCount) => {
-        if (newCount < 2 || newCount > 6) return;
-        gameState.forcedTeamId = null;
-        gameState.settings.teamCount = newCount;
-        
+        const state = getActiveState(socket);
+if (newCount < 2 || newCount > 6) return;
+        state.forcedTeamId = null;
+        state.settings.teamCount = newCount;
+
         let newTeams = [];
         for (let i = 1; i <= newCount; i++) {
-            let existing = gameState.teams.find(t => t.id === i);
+            let existing = state.teams.find(t => t.id === i);
             if (existing) {
                 newTeams.push(existing);
             } else {
                 newTeams.push({ id: i, name: "Đội " + i, school: "", score: 0, avatarSize: 100, avatarOverlap: 10 });
             }
         }
-        gameState.teams = newTeams;
-        
+        state.teams = newTeams;
+
         // Cập nhật lại avatar timestamps
         let newTimestamps = {};
         for (let i = 1; i <= newCount; i++) {
-            newTimestamps[i] = gameState.avatarTimestamps[i] || 1;
+            newTimestamps[i] = state.avatarTimestamps[i] || 1;
         }
-        gameState.avatarTimestamps = newTimestamps;
+        state.avatarTimestamps = newTimestamps;
 
         // Reset toàn bộ game để tương thích với số lượng đội mới
-        gameState.teams.forEach(t => t.score = 0);
-        resetBuzzerState();
-        gameState.currentQuestion = {
+        state.teams.forEach(t => t.score = 0);
+        resetBuzzerState(typeof state !== 'undefined' ? state : gameState);
+        state.currentQuestion = {
             active: false, points: 0, mainTeamId: null,
             isHopeStar: false, deductedFromMain: false, text: "", answer: "", idx: null
         };
-        gameState.isGridVisibleOnOverlay = false;
-        gameState.playedQuestions = { "10": [], "20": [], "40": [] };
-        gameState.turnStats = {};
-        gameState.turnOrder = [];
+        state.isGridVisibleOnOverlay = false;
+        state.playedQuestions = { "10": [], "20": [], "40": [] };
+        state.turnStats = {};
+        state.turnOrder = [];
         updateTurnOrder(false);
-        io.emit('updateState', gameState);
+        broadcastState(socket);
     });
 
     // --- ADMIN: Phát Video ---
     socket.on('playVideo', (url) => {
         authorizedVideoPath = url;
-        io.emit('playVideo', url);
+        if(socket.currentRoomPin) io.to(socket.currentRoomPin).emit('playVideo'); else io.emit('playVideo', url);
     });
 
     // --- ADMIN: Đóng Video ---
     socket.on('closeVideo', () => {
         authorizedVideoPath = null;
-        io.emit('closeVideo');
+        if(socket.currentRoomPin) io.to(socket.currentRoomPin).emit('closeVideo'); else io.emit('closeVideo');
     });
 
     socket.on('videoSync', (time) => {
@@ -1978,8 +2025,9 @@ io.on('connection', (socket) => {
 
     // --- ADMIN: Bắt đầu đếm ngược ---
     socket.on('startCountdown', (seconds) => {
-        io.emit('startCountdown', seconds);
-        io.emit('playSound', seconds === 10 ? 'countdown_10s' : 'countdown_15s');
+        const state = getActiveState(socket);
+io.emit('startCountdown', seconds);
+        playSoundInRoom(socket, seconds === 10 ? 'countdown_10s' : 'countdown_15s');
     });
 
 // Duplicate claimTeam removed
@@ -2022,17 +2070,17 @@ io.on('connection', (socket) => {
                 isNewBuzz = true;
             }
         }
-
-        if (!gameState.isBuzzerLocked && gameState.buzzedTeam === null) {
-            gameState.isBuzzerLocked = true;
-            clearBuzzerTimeout();
-            io.emit('playSound', 'buzzed');
+        const state = getActiveState(socket);
+if (!state.isBuzzerLocked && state.buzzedTeam === null) {
+            state.isBuzzerLocked = true;
+            clearBuzzerTimeout(state);
+            playSoundInRoom(socket, 'buzzed');
             
-            let delay = gameState.settings.buzzerDelayMs !== undefined ? gameState.settings.buzzerDelayMs : 500;
+            let delay = state.settings && state.settings.buzzerDelayMs !== undefined ? state.settings.buzzerDelayMs : 500;
             if (delay > 0) {
-                gameState.pendingBuzzerTeam = teamId;
-                if (gameState.buzzerDelayTimer) clearTimeout(gameState.buzzerDelayTimer);
-                gameState.buzzerDelayTimer = setTimeout(() => {
+                state.pendingBuzzerTeam = teamId;
+                if (state.buzzerDelayTimer) clearTimeout(state.buzzerDelayTimer);
+                state.buzzerDelayTimer = setTimeout(() => {
                     if (gameState.pendingBuzzerTeam === teamId) {
                         gameState.buzzedTeam = teamId;
                         gameState.pendingBuzzerTeam = null;
@@ -2063,79 +2111,87 @@ io.on('connection', (socket) => {
 
     // --- ANTI-CHEAT: Ghi nhận gian lận và mở khoá ---
     socket.on('antiCheatViolation', (data) => {
-        console.log("RECEIVED VIOLATION:", data);
+        const state = getActiveState(socket);
+console.log("RECEIVED VIOLATION:", data);
         let tid = data.teamId;
         if (!tid) return;
 
-        if (!gameState.antiCheatViolations) gameState.antiCheatViolations = {};
-        if (!gameState.bannedTeams) gameState.bannedTeams = [];
+        if (!state.antiCheatViolations) state.antiCheatViolations = {};
+        if (!state.bannedTeams) state.bannedTeams = [];
 
-        if (gameState.bannedTeams.includes(tid)) return; // Already banned
+        if (state.bannedTeams.includes(tid)) return; // Already banned
 
-        gameState.antiCheatViolations[tid] = (gameState.antiCheatViolations[tid] || 0) + 1;
-        let count = gameState.antiCheatViolations[tid];
+        state.antiCheatViolations[tid] = (state.antiCheatViolations[tid] || 0) + 1;
+        let count = state.antiCheatViolations[tid];
 
         if (count >= 3) {
-            gameState.bannedTeams.push(tid);
+            state.bannedTeams.push(tid);
             io.emit('antiCheatBanned', { teamId: tid });
-            io.emit('playSound', 'wrong');
+            playSoundInRoom(socket, 'wrong');
         } else {
             io.emit('antiCheatWarning', { teamId: tid, count: count, reason: data.reason });
         }
 
-        io.emit('updateState', gameState);
+        broadcastState(socket);
     });
     
     socket.on('unbanTeam', (teamId) => {
-        if (!gameState.bannedTeams) return;
-        gameState.bannedTeams = gameState.bannedTeams.filter(id => id !== teamId);
-        if (gameState.antiCheatViolations) {
-            gameState.antiCheatViolations[teamId] = 0;
+        const state = getActiveState(socket);
+if (!state.bannedTeams) return;
+        state.bannedTeams = state.bannedTeams.filter(id => id !== teamId);
+        if (state.antiCheatViolations) {
+            state.antiCheatViolations[teamId] = 0;
         }
         io.emit('antiCheatUnbanned', { teamId: teamId });
-        io.emit('updateState', gameState);
+        broadcastState(socket);
     });
 
     // --- LỐI THOÁT KHẨN CẤP BÍ MẬT ---
     socket.on('secretExitRequest', (data) => {
-        // Broadcast tới tất cả Admin
-        io.emit('secretExitRequest', data); 
+        const state = getActiveState(socket);
+// Broadcast tới tất cả Admin
+        io.emit('secretExitRequest', data);
     });
     
     socket.on('approveSecretExit', (data) => {
-        if (!socket.isAdmin) return;
+        const state = getActiveState(socket);
+if (!socket.isAdmin) return;
         // Gửi lệnh thoát trực tiếp tới socket của đội yêu cầu
-        for (let tid in gameState.claimedTeams) {
+        for (let tid in state.claimedTeams) {
             if (tid === data.teamId) {
-                io.to(gameState.claimedTeams[tid].socketId).emit('approveSecretExit');
+                io.to(state.claimedTeams[tid].socketId).emit('approveSecretExit');
                 break;
             }
         }
     });
 
     socket.on('showOverlayGrid', () => {
-        gameState.isGridVisibleOnOverlay = true;
-        io.emit('updateState', gameState);
-        io.emit('playSound', 'choose_package');
+        const state = getActiveState(socket);
+state.isGridVisibleOnOverlay = true;
+        broadcastState(socket);
+        playSoundInRoom(socket, 'choose_package');
     });
 
     socket.on('hideOverlayGrid', () => {
-        gameState.isGridVisibleOnOverlay = false;
-        io.emit('updateState', gameState);
+        const state = getActiveState(socket);
+state.isGridVisibleOnOverlay = false;
+        broadcastState(socket);
     });
 
     socket.on('playSound', (sound) => {
-        io.emit('playSound', sound);
+        playSoundInRoom(socket, sound);
     });
 
     // --- ADMIN: Bảng Điểm Tổng Hợp ---
     socket.on('toggleOverallScoreboard', (show) => {
-        gameState.showOverallScoreboard = show;
-        io.emit('updateState', gameState);
+        const state = getActiveState(socket);
+state.showOverallScoreboard = show;
+        broadcastState(socket);
     });
 
     socket.on('updateScoreboardBg', (base64Data) => {
-        try {
+        const state = getActiveState(socket);
+try {
             const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
             if (matches && matches.length === 3) {
                 const buffer = Buffer.from(matches[2], 'base64');
@@ -2143,8 +2199,8 @@ io.on('connection', (socket) => {
                 const filename = `bg_custom_${Date.now()}.${ext}`;
                 const bgPath = path.join(basePath, 'Themes', 'Background', filename);
                 fs.writeFileSync(bgPath, buffer);
-                gameState.scoreboardBg = `/Themes/Background/${filename}`;
-                io.emit('updateState', gameState);
+                state.scoreboardBg = `/Themes/Background/${filename}`;
+                broadcastState(socket);
             }
         } catch(e) {
             console.error("Lỗi cập nhật ảnh nền bảng điểm:", e);
@@ -2152,17 +2208,18 @@ io.on('connection', (socket) => {
     });
 
     socket.on('updateTeamAvatar', (data) => {
-        try {
+        const state = getActiveState(socket);
+try {
             const matches = data.base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
             if (matches && matches.length === 3) {
                 const buffer = Buffer.from(matches[2], 'base64');
                 const avatarPath = path.join(basePath, 'Themes', 'Avatars', `${data.teamId}.png`);
                 fs.writeFileSync(avatarPath, buffer);
                 
-                if (!gameState.avatarTimestamps) gameState.avatarTimestamps = {};
-                gameState.avatarTimestamps[data.teamId] = Date.now();
+                if (!state.avatarTimestamps) state.avatarTimestamps = {};
+                state.avatarTimestamps[data.teamId] = Date.now();
                 
-                io.emit('updateState', gameState);
+                broadcastState(socket);
             }
         } catch(e) {
             console.error("Lỗi cập nhật avatar đội:", e);
@@ -2170,8 +2227,9 @@ io.on('connection', (socket) => {
     });
 
     socket.on('setQuestionCount', (counts) => {
-        gameState.questionCount = counts;
-        io.emit('updateState', gameState);
+        const state = getActiveState(socket);
+state.questionCount = counts;
+        broadcastState(socket);
     });
 
     socket.on('getSystemFonts', () => {

@@ -383,6 +383,11 @@
                 .then(data => {
                     if (data && data.success && data.gameState) {
                         handleUpdateState(data.gameState);
+                        if (typeof armSkeletonTimeout === 'function') armSkeletonTimeout(); // reset timer after state received
+                    } else if (data && !data.success) {
+                        // Room gone - redirect immediately
+                        alert(data.message || 'Phòng không tồn tại hoặc đã đóng!');
+                        window.location.href = './index.html';
                     }
                 })
                 .catch(e => console.log('HTTP state fetch note:', e.message));
@@ -393,7 +398,39 @@
         let isSelected = false; // Luôn chờ xác thực từ Server trước khi tự động khóa vào đội
         let currentTeamCount = null;
 
-        socket.on('connect', () => {
+        // FAILSAFE: If skeleton still showing after 6s (network/server issue), retry
+        let skeletonTimeoutId = null;
+        function armSkeletonTimeout() {
+            if (skeletonTimeoutId) clearTimeout(skeletonTimeoutId);
+            skeletonTimeoutId = setTimeout(() => {
+                const container = document.getElementById('teamBtns');
+                if (container && container.querySelector('.skeleton-card')) {
+                    // Skeleton still there - render default teams or retry fetch
+                    if (window.currentState && window.currentState.teams) {
+                        renderSelect(window.currentState.teams, window.currentState.claimedTeams || {});
+                    } else if (roomPin) {
+                        fetch('/api/room/state?pin=' + encodeURIComponent(roomPin))
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data && data.success && data.gameState && data.gameState.teams) {
+                                    handleUpdateState(data.gameState);
+                                } else {
+                                    // Room doesn't exist - redirect
+                                    alert('Phòng không tồn tại hoặc đã đóng!');
+                                    window.location.href = './index.html';
+                                }
+                            })
+                            .catch(() => {
+                                alert('Không thể kết nối tới server!');
+                                window.location.href = './index.html';
+                            });
+                    }
+                }
+            }, 6000);
+        }
+        armSkeletonTimeout();
+
+                socket.on('connect', () => {
             socket.emit('joinRoom', roomPin, (res) => {
                 if (!res || !res.success) {
                     alert(res && res.message ? res.message : 'Phòng không tồn tại hoặc đã đóng!');
@@ -747,7 +784,12 @@
                 let isClaimed = false;
                 if (claimed) {
                     for (let k in claimed) { 
-                        if (parseInt(k) === tObj.id) isClaimed = true; 
+                        if (parseInt(k) === tObj.id) {
+                            // Only show as claimed if it's NOT our own selection
+                            if (!myClientId || !claimed[k] || claimed[k].clientId !== myClientId) {
+                                isClaimed = true;
+                            }
+                        }
                     }
                 }
                 
@@ -811,7 +853,7 @@
             alert('Quản trị viên đã giải phóng thiết bị của đội bạn. Vui lòng chọn lại đội.');
             isSelected = false;
             myTeamId = null;
-            sessionStorage.removeItem('claimedTeamId');
+            sessionStorage.removeItem('claimedTeamId_' + roomPin);
             selectScreen.style.display = 'flex';
             buzzScreen.style.display = 'none';
             if (window.currentState) renderSelect(window.currentState.teams || [], window.currentState.claimedTeams || {});
@@ -910,6 +952,7 @@
                 selectScreen.style.display = 'flex';
                 buzzScreen.style.display = 'none';
                 renderSelect(state.teams || [], state.claimedTeams || {});
+                if (typeof skeletonTimeoutId !== 'undefined' && skeletonTimeoutId) { clearTimeout(skeletonTimeoutId); skeletonTimeoutId = null; }
                 return;
             } else {
                 selectScreen.style.display = 'none';
