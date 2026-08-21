@@ -220,6 +220,10 @@
 
         const TEAM_ICONS = ['🌿', '🔥', '💎', '⚡'];
         const socket = io();
+        socket.on('connect', () => {
+            const roomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
+            if (roomPin) socket.emit('joinRoom', roomPin);
+        });
         let myTeamId = null;
         let previousScore = 0;
         let isSelected = false;

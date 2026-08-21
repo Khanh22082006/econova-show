@@ -501,9 +501,10 @@
 
         // === AUTH ===
         const mcPin = sessionStorage.getItem('mcAuth');
-        if (mcPin) {
-            socket.emit('mcLogin', mcPin, (res) => {
-                if (!res.success) {
+        const roomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
+        if (mcPin && roomPin) {
+            socket.emit('mcLogin', { pin: roomPin, password: mcPin }, (res) => {
+                if (!res || !res.success) {
                     alert('Sai mã PIN quản trị! Đang chuyển về trang đăng nhập...');
                     sessionStorage.removeItem('mcAuth');
                     window.location.href = './index.html';
@@ -517,9 +518,10 @@
             document.getElementById('connText').innerText = 'Đã kết nối';
             // Auto re-authenticate on socket reconnect if PIN is available in sessionStorage
             const mcPin = sessionStorage.getItem('mcAuth');
-            if (mcPin) {
-                socket.emit('mcLogin', mcPin, (res) => {
-                    if (!res.success) {
+            const roomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
+            if (mcPin && roomPin) {
+                socket.emit('mcLogin', { pin: roomPin, password: mcPin }, (res) => {
+                    if (!res || !res.success) {
                         sessionStorage.removeItem('mcAuth');
                         window.location.href = './index.html';
                     }

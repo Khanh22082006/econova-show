@@ -332,9 +332,17 @@
         }
 
         socket.on('connect', () => {
-            if (isSelected && myTeamId !== null) {
-                socket.emit('claimTeam', { teamId: myTeamId, clientId: myClientId });
-            }
+            const roomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
+            socket.emit('joinRoom', roomPin, (res) => {
+                if (!res || !res.success) {
+                    alert('Phòng không tồn tại hoặc đã đóng!');
+                    window.location.href = './index.html';
+                } else {
+                    if (isSelected && myTeamId !== null) {
+                        socket.emit('claimTeam', { teamId: myTeamId, clientId: myClientId });
+                    }
+                }
+            });
         });
         
         let timerInterval = null;

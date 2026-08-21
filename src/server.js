@@ -143,10 +143,7 @@ app.post('/api/room/verify_contestant', (req, res) => {
     res.json(result);
 });
 
-app.get('/api/admin_pin', (req, res) => {
-    const defaultRoom = roomManager.getRoom("DEFAULT");
-    res.json({ success: true, pin: defaultRoom ? defaultRoom.password : "admin123" });
-});
+
 
 app.use('/Themes', express.static(path.join(basePath, 'Themes')));
 const thumbsDir = path.join(os.tmpdir(), 'econova_ppt_thumbs');
@@ -572,7 +569,7 @@ io.on('connection', (socket) => {
 
     // --- MULTI-ROOM SOCKET JOIN & AUTH HANDLERS ---
     socket.on('joinRoom', (pin, callback) => {
-        const roomPin = (pin || "DEFAULT").toString().toUpperCase().trim();
+        const roomPin = (pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0');
         const room = roomManager.getRoom(roomPin);
         if (room) {
             socket.join(roomPin);
@@ -591,7 +588,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('verifyRoomPIN', (pin, callback) => {
-        const roomPin = (pin || "").toString().toUpperCase().trim();
+        const roomPin = (pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0');
         const result = roomManager.verifyContestant(roomPin);
         if (result.success) {
             socket.join(roomPin);
@@ -602,14 +599,27 @@ io.on('connection', (socket) => {
     });
 
     socket.on('adminLogin', (data, callback) => {
-        let pin = "DEFAULT";
-        let pass = "";
+        let pin = '';
+        let pass = '';
         if (typeof data === 'string') {
             pass = data;
+            // Legacy desktop: try ADMIN_PIN first
+            if (pass === ADMIN_PIN) {
+                socket.isAdmin = true;
+                if (typeof callback === 'function') callback({ success: true });
+                return;
+            }
         } else if (data && typeof data === 'object') {
-            pin = data.pin || "DEFAULT";
-            pass = data.password || "";
+            pin = (data.pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0');
+            pass = data.password || '';
         }
+
+        if (process.env.IS_DESKTOP_APP === 'true' && pass === ADMIN_PIN) {
+            socket.isAdmin = true;
+            if (typeof callback === 'function') callback({ success: true });
+            return;
+        }
+
         const result = roomManager.verifyAdmin(pin, pass);
         if (result.success) {
             socket.isAdmin = true;
@@ -620,14 +630,26 @@ io.on('connection', (socket) => {
     });
 
     socket.on('mcLogin', (data, callback) => {
-        let pin = "DEFAULT";
-        let pass = "";
+        let pin = '';
+        let pass = '';
         if (typeof data === 'string') {
             pass = data;
+            if (pass === ADMIN_PIN) {
+                socket.isMC = true;
+                if (typeof callback === 'function') callback({ success: true });
+                return;
+            }
         } else if (data && typeof data === 'object') {
-            pin = data.pin || "DEFAULT";
-            pass = data.password || "";
+            pin = (data.pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0');
+            pass = data.password || '';
         }
+
+        if (process.env.IS_DESKTOP_APP === 'true' && pass === ADMIN_PIN) {
+            socket.isMC = true;
+            if (typeof callback === 'function') callback({ success: true });
+            return;
+        }
+
         const result = roomManager.verifyMC(pin, pass);
         if (result.success) {
             socket.isMC = true;
@@ -655,8 +677,10 @@ io.on('connection', (socket) => {
         io.emit('playSound', sound);
     });
 
-    socket.emit('updateState', gameState);
-    socket.emit('timer-config-updated', gameState.timerConfig);
+    if (process.env.IS_DESKTOP_APP === 'true') {
+        socket.emit('updateState', gameState);
+        socket.emit('timer-config-updated', gameState.timerConfig);
+    }
     socket.emit('serverIPs', getLocalIPs());
     if (global.activeTunnel) socket.emit('publicLinkResult', { success: true, url: global.activeTunnel.url });
     console.log('[SERVER] Socket connected and updateState emitted to client:', socket.id);
@@ -665,33 +689,23 @@ io.on('connection', (socket) => {
 
     // Allow clients to request current state (for late-connecting listeners)
     socket.on('get-state', () => {
+        if (socket.currentRoomPin) {
+            const room = roomManager.getRoom(socket.currentRoomPin);
+            if (room) { socket.emit('updateState', room.gameState); return; }
+        }
         socket.emit('updateState', gameState);
     });
 
     socket.on('requestState', () => {
         console.log('[SERVER] Client requesting state...');
+        if (socket.currentRoomPin) {
+            const room = roomManager.getRoom(socket.currentRoomPin);
+            if (room) { socket.emit('updateState', room.gameState); return; }
+        }
         socket.emit('updateState', gameState);
     });
 
-    // Xác thực Admin
-    socket.on('adminLogin', (password, callback) => {
-        if (password === ADMIN_PIN) {
-            socket.isAdmin = true;
-            callback({ success: true });
-        } else {
-            callback({ success: false, message: 'Sai mã PIN quản trị!' });
-        }
-    });
 
-    // Xác thực MC
-    socket.on('mcLogin', (password, callback) => {
-        if (password === ADMIN_PIN) {
-            socket.isMC = true;
-            callback({ success: true });
-        } else {
-            callback({ success: false, message: 'Sai mã PIN quản trị!' });
-        }
-    });
 
     // Mở phòng / Đóng phòng
     socket.on('toggleRoom', (isOpen, pin) => {

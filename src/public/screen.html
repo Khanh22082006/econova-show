@@ -536,6 +536,10 @@
         try {
             window.socket = window.socket || io();
             socket = window.socket;
+            socket.on('connect', () => {
+                const roomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
+                if (roomPin) socket.emit('joinRoom', roomPin);
+            });
         } catch (e) {
             console.warn('Socket.io unavailable on screen page:', e);
             socket = { on: () => {}, emit: () => {}, off: () => {} };

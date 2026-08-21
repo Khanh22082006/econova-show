@@ -628,15 +628,6 @@
                 </div>
             </div>
             <div class="control-row" id="mode2SettingsRow" style="display: none; margin-top: 10px;">
-                <div style="flex: 1;">
-                    <label style="color:#f1f2f6;">Số dòng lưới Mode 2:</label>
-                    <input type="number" id="settingMode2Rows" value="3" min="1" max="6" style="background:#2d3436; border:1px solid #747d8c; color:#fff; width: 80px;" onchange="applyModeSettings()">
-                </div>
-            </div>
-            <div style="font-size: 12px; color: #a4b0be; margin-top: 5px; margin-bottom: 15px;" data-i18n="adm_change_warn">Lưu ý: Thay đổi sẽ Reset toàn bộ điểm số và câu hỏi.</div>
-            <div class="control-row">
-                <div style="flex: 1;">
-                    <label style="color:#fdcb6e;" data-i18n="adm_turn_rule">Quy tắc thứ tự lượt chơi:</label>
                     <select id="settingTurnOrderRule" onchange="applySettings()" style="background:#2d3436; border:1px solid #fdcb6e; color:#fdcb6e;">
                         <option value="mode_order" data-i18n="adm_tr_seq">Theo thứ tự đội (1 -> 4)</option>
                         <option value="mode_desc" data-i18n="adm_tr_desc">Điểm từ Cao xuống Thấp</option>
@@ -660,10 +651,12 @@
     
 
         const adminPin = sessionStorage.getItem('adminAuth');
+        const adminRoomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
         if (adminPin) {
-            socket.emit('adminLogin', adminPin, (res) => {
-                if (!res.success) {
-                    alert(t('adm_err_auth', currentGlobalLang));
+            const loginPayload = adminRoomPin ? { pin: adminRoomPin, password: adminPin } : adminPin;
+            socket.emit('adminLogin', loginPayload, (res) => {
+                if (!res || !res.success) {
+                    alert(res && res.message ? res.message : t('adm_err_auth', currentGlobalLang));
                     window.location.href = './index.html';
                 }
             });

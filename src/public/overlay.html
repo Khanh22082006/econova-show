@@ -406,6 +406,10 @@
 
     <script>
         const socket = io();
+        socket.on('connect', () => {
+            const roomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
+            if (roomPin) socket.emit('joinRoom', roomPin);
+        });
         var currentTheme = 'v3';
         function autoResizeText() {
             if (typeof currentTheme === 'undefined') return;
