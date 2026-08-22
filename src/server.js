@@ -277,6 +277,46 @@ async function loadRoomsOnStartup() {
 // Fire and forget — don't block server startup
 loadRoomsOnStartup().catch(e => console.error('[RoomPersist] Startup error:', e));
 
+// ===================================================================
+// TỰ ĐỘNG GIẢI PHÓNG PHÒNG KHÔNG HOẠT ĐỘNG SAU 3 PHÚT
+// Điều kiện: không có client nào đang kết nối VÀ admin không ở trong phòng
+// Kiểm tra mỗi 60 giây
+// ===================================================================
+const ROOM_IDLE_TIMEOUT_MS = 3 * 60 * 1000; // 3 phút
+
+setInterval(() => {
+    const now = Date.now();
+    const toDelete = [];
+
+    roomManager.rooms.forEach((room, pin) => {
+        // Đếm số socket đang thực sự kết nối tới phòng này
+        const roomSocketSet = io.sockets.adapter.rooms.get(pin);
+        const connectedCount = roomSocketSet ? roomSocketSet.size : 0;
+
+        // Nếu có client online → bỏ qua, cập nhật lastActive
+        if (connectedCount > 0) {
+            room.lastActive = now;
+            return;
+        }
+
+        // Không có ai → kiểm tra thời gian không hoạt động
+        const idleMs = now - (room.lastActive || room.createdAt || now);
+        if (idleMs >= ROOM_IDLE_TIMEOUT_MS) {
+            toDelete.push(pin);
+        }
+    });
+
+    if (toDelete.length > 0) {
+        toDelete.forEach(pin => {
+            console.log(`[RoomIdle] Tự động gỡ phòng ${pin} (không hoạt động ${Math.round(ROOM_IDLE_TIMEOUT_MS / 60000)} phút)`);
+            io.to(pin).emit('roomClosed', { message: 'Phòng thi đã tự động đóng do không có hoạt động trong 3 phút.' });
+            roomManager.deleteRoom(pin);
+        });
+        saveRooms().catch(e => console.error('[RoomIdle] Save after cleanup error:', e));
+    }
+}, 60 * 1000); // Kiểm tra mỗi 60 giây
+
+
 app.post('/api/room/delete', (req, res) => {
     try {
         const { pin, password } = req.body || {};
