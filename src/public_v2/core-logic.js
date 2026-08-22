@@ -315,23 +315,49 @@ class EconovaDisplayController {
         }
     }
 
-    playVideo(url) {
+    playVideo(rawUrl) {
         const videoOverlay = document.getElementById('videoOverlay');
         const mainVideo = document.getElementById('mainVideo');
-        if (videoOverlay && mainVideo && url) {
-            videoOverlay.style.display = 'flex';
-            if (/^[a-zA-Z]:[\\\/]/.test(url) || url.includes('\\')) {
-                mainVideo.src = '/api/video?path=' + encodeURIComponent(url);
-            } else if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/')) {
-                mainVideo.src = '/' + url;
-            } else {
-                mainVideo.src = url;
+        const iframe = document.getElementById('mainVideoIframe');
+        if (!videoOverlay || !rawUrl) return;
+
+        let url = rawUrl.trim();
+        const gDriveMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+        if (gDriveMatch && gDriveMatch[1]) {
+            url = `https://drive.google.com/uc?export=download&id=${gDriveMatch[1]}`;
+        } else if (/^[a-zA-Z]:[\\\/]/.test(url) || url.includes('\\')) {
+            url = '/api/video?path=' + encodeURIComponent(url);
+        } else if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/')) {
+            url = '/' + url;
+        }
+
+        const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+        if (ytMatch && ytMatch[1]) {
+            const videoId = ytMatch[1];
+            if (mainVideo) { mainVideo.pause(); mainVideo.style.display = 'none'; }
+            if (iframe) {
+                iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&enablejsapi=1&rel=0`;
+                iframe.style.display = 'block';
             }
-            mainVideo.play().catch(e => {
-                console.warn('Auto-play blocked, retrying muted:', e);
-                mainVideo.muted = true;
-                mainVideo.play().catch(() => {});
-            });
+            videoOverlay.style.display = 'flex';
+            return;
+        }
+
+        if (iframe) { iframe.src = ''; iframe.style.display = 'none'; }
+        if (mainVideo) {
+            mainVideo.style.display = 'block';
+            mainVideo.preload = 'auto';
+            mainVideo.src = url;
+            try { mainVideo.load(); } catch(e) {}
+            videoOverlay.style.display = 'flex';
+            const p = mainVideo.play();
+            if (p !== undefined) {
+                p.catch(e => {
+                    console.warn('Auto-play blocked, retrying muted:', e);
+                    mainVideo.muted = true;
+                    mainVideo.play().catch(() => {});
+                });
+            }
         }
     }
 

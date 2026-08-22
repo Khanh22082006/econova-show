@@ -652,13 +652,18 @@
                 }
                 if (mainVideo) {
                     mainVideo.style.display = 'block';
+                    mainVideo.preload = 'auto';
                     mainVideo.src = url;
+                    try { mainVideo.load(); } catch(e) {}
                     if (videoOverlay) videoOverlay.style.display = 'flex';
-                    mainVideo.play().catch((e) => {
-                        console.warn('Auto-play blocked, retrying muted:', e);
-                        mainVideo.muted = true;
-                        mainVideo.play().catch(() => {});
-                    });
+                    const p = mainVideo.play();
+                    if (p !== undefined) {
+                        p.catch((e) => {
+                            console.warn('Auto-play blocked, retrying muted:', e);
+                            mainVideo.muted = true;
+                            mainVideo.play().catch(() => {});
+                        });
+                    }
                 }
             });
 

@@ -575,10 +575,79 @@ app.post('/api/font/upload', (req, res) => {
     }
 });
 
-const videosDir = path.join(basePath, 'public', 'videos');
-if (!fs.existsSync(videosDir)) {
-    try { fs.mkdirSync(videosDir, { recursive: true }); } catch(e) {}
+function streamVideoFile(filePath, req, res) {
+    try {
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).send('Video not found');
+        }
+        const stat = fs.statSync(filePath);
+        const fileSize = stat.size;
+        const range = req.headers.range;
+
+        const ext = path.extname(filePath).toLowerCase();
+        const mimeTypes = {
+            '.mp4': 'video/mp4',
+            '.webm': 'video/webm',
+            '.ogg': 'video/ogg',
+            '.mov': 'video/quicktime',
+            '.mkv': 'video/x-matroska'
+        };
+        const contentType = mimeTypes[ext] || 'video/mp4';
+
+        if (range) {
+            const parts = range.replace(/bytes=/, "").split("-");
+            const start = parseInt(parts[0], 10);
+            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+            
+            if (start >= fileSize) {
+                res.status(416).send('Requested range not satisfiable\n' + start + ' >= ' + fileSize);
+                return;
+            }
+
+            const chunksize = (end - start) + 1;
+            const file = fs.createReadStream(filePath, { start, end });
+            const head = {
+                'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+                'Accept-Ranges': 'bytes',
+                'Content-Length': chunksize,
+                'Content-Type': contentType,
+            };
+            res.writeHead(206, head);
+            file.pipe(res);
+        } else {
+            const head = {
+                'Content-Length': fileSize,
+                'Content-Type': contentType,
+                'Accept-Ranges': 'bytes'
+            };
+            res.writeHead(200, head);
+            fs.createReadStream(filePath).pipe(res);
+        }
+    } catch(err) {
+        console.error('Lỗi khi stream video:', err);
+        if (!res.headersSent) res.status(500).send('Internal video stream error');
+    }
 }
+
+const videosDir1 = path.join(__dirname, 'public', 'videos');
+const videosDir2 = path.join(basePath, 'public', 'videos');
+try { fs.mkdirSync(videosDir1, { recursive: true }); } catch(e) {}
+try { fs.mkdirSync(videosDir2, { recursive: true }); } catch(e) {}
+
+app.get('/videos/:filename', (req, res) => {
+    const fn = path.basename(req.params.filename);
+    const candidates = [
+        path.join(videosDir1, fn),
+        path.join(videosDir2, fn),
+        path.join(basePath, 'videos', fn)
+    ];
+    for (const cand of candidates) {
+        if (fs.existsSync(cand)) {
+            return streamVideoFile(cand, req, res);
+        }
+    }
+    res.status(404).send('Video not found');
+});
 
 app.post('/api/video/upload', (req, res) => {
     try {
@@ -589,10 +658,13 @@ app.post('/api/video/upload', (req, res) => {
         const ext = path.extname(fileName).toLowerCase() || '.mp4';
         const baseName = path.basename(fileName, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
         const finalName = `${baseName}_${Date.now()}${ext}`;
-        const targetFile = path.join(videosDir, finalName);
         
         const base64Data = fileData.replace(/^data:.*?;base64,/, '');
-        fs.writeFileSync(targetFile, Buffer.from(base64Data, 'base64'));
+        const buf = Buffer.from(base64Data, 'base64');
+        fs.writeFileSync(path.join(videosDir1, finalName), buf);
+        if (videosDir1 !== videosDir2) {
+            try { fs.writeFileSync(path.join(videosDir2, finalName), buf); } catch(e) {}
+        }
         
         const publicUrl = `/videos/${finalName}`;
         console.log(`[VideoUpload] Đã lưu video mới: ${publicUrl}`);
@@ -724,7 +796,7 @@ app.delete('/api/questions/:setId', (req, res) => {
 
 let authorizedVideoPath = null;
 
-// Stream video cục bộ từ đường dẫn tuyệt đối hoặc public
+// Stream video cục bộ từ đường dẫn tuyệt đối hoặc public với hỗ trợ HTTP Range (Partial Content)
 app.get('/api/video', (req, res) => {
     const videoPath = req.query.path;
     if (!videoPath) {
@@ -732,15 +804,21 @@ app.get('/api/video', (req, res) => {
     }
     let resolved = path.resolve(videoPath);
     if (fs.existsSync(resolved)) {
-        return res.sendFile(resolved);
+        return streamVideoFile(resolved, req, res);
     }
-    const candidate = path.join(basePath, 'public', videoPath.replace(/^\//, ''));
-    if (fs.existsSync(candidate)) {
-        return res.sendFile(candidate);
-    }
-    const candidateThemes = path.join(basePath, videoPath.replace(/^\//, ''));
-    if (fs.existsSync(candidateThemes)) {
-        return res.sendFile(candidateThemes);
+    const cleanPath = videoPath.replace(/^[\/\\]+/, '');
+    const candidates = [
+        path.join(videosDir1, path.basename(videoPath)),
+        path.join(videosDir2, path.basename(videoPath)),
+        path.join(__dirname, 'public', cleanPath),
+        path.join(basePath, 'public', cleanPath),
+        path.join(basePath, cleanPath),
+        path.join(basePath, 'Themes', cleanPath)
+    ];
+    for (const cand of candidates) {
+        if (fs.existsSync(cand)) {
+            return streamVideoFile(cand, req, res);
+        }
     }
     res.status(404).send('Video not found');
 });
