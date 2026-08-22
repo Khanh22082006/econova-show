@@ -575,6 +575,34 @@ app.post('/api/font/upload', (req, res) => {
     }
 });
 
+const videosDir = path.join(basePath, 'public', 'videos');
+if (!fs.existsSync(videosDir)) {
+    try { fs.mkdirSync(videosDir, { recursive: true }); } catch(e) {}
+}
+
+app.post('/api/video/upload', (req, res) => {
+    try {
+        const { fileName, fileData } = req.body || {};
+        if (!fileName || !fileData) {
+            return res.status(400).json({ success: false, message: 'Thiếu dữ liệu file video!' });
+        }
+        const ext = path.extname(fileName).toLowerCase() || '.mp4';
+        const baseName = path.basename(fileName, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
+        const finalName = `${baseName}_${Date.now()}${ext}`;
+        const targetFile = path.join(videosDir, finalName);
+        
+        const base64Data = fileData.replace(/^data:.*?;base64,/, '');
+        fs.writeFileSync(targetFile, Buffer.from(base64Data, 'base64'));
+        
+        const publicUrl = `/videos/${finalName}`;
+        console.log(`[VideoUpload] Đã lưu video mới: ${publicUrl}`);
+        res.json({ success: true, url: publicUrl, message: 'Đã tải lên video thành công!' });
+    } catch(err) {
+        console.error('Lỗi khi tải video lên:', err);
+        res.status(500).json({ success: false, message: 'Lỗi khi lưu video: ' + err.message });
+    }
+});
+
 app.post('/api/admin_login', (req, res) => {
     res.json({ success: req.body.pass === ADMIN_PIN, pin: ADMIN_PIN });
 });

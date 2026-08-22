@@ -355,7 +355,8 @@
     </div>
     
     <div id="videoOverlay">
-        <video id="mainVideo" src=""></video>
+        <video id="mainVideo" playsinline webkit-playsinline controls src="" style="max-width: 100%; max-height: 100%; object-fit: contain;"></video>
+        <iframe id="mainVideoIframe" style="display: none; width: 90%; height: 80%; border: none; border-radius: 12px; box-shadow: 0 0 30px rgba(0,0,0,0.8);" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>
     </div>
 
     <div id="overallScoreboardOverlay" style="position: fixed; inset: 0; background: #040f21 url('/Themes/Background/B1.png') center/cover no-repeat; z-index: 6000; display: none; flex-direction: column; align-items: center; justify-content: center;">
@@ -531,6 +532,8 @@
     <audio id="snd_choose_package" src="/sounds/choose_package.mp3" preload="auto"></audio>
 
     <script>
+        var currentTheme = 'v3';
+        var currentState = null;
         var timerInterval = null;
 
         var socket;
@@ -600,30 +603,77 @@
             socket.on('playSound', (soundId) => { playSound(soundId); });
         }
 
+        function resolveVideoUrl(url) {
+            if (!url) return '';
+            let u = url.trim();
+            const gDriveMatch = u.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+            if (gDriveMatch && gDriveMatch[1]) {
+                return `https://drive.google.com/uc?export=download&id=${gDriveMatch[1]}`;
+            }
+            if (/^[a-zA-Z]:[\\\/]/.test(u) || u.includes('\\')) {
+                return '/api/video?path=' + encodeURIComponent(u);
+            }
+            if (!u.startsWith('http://') && !u.startsWith('https://') && !u.startsWith('/')) {
+                return '/' + u;
+            }
+            return u;
+        }
+
         const videoOverlay = document.getElementById('videoOverlay');
         const mainVideo = document.getElementById('mainVideo');
+        const mainVideoIframe = document.getElementById('mainVideoIframe');
+
         if (socket && typeof socket.on === 'function') {
-            socket.on('playVideo', (url) => {
-                if (url) {
-                    videoOverlay.style.display = 'flex';
-                    if (/^[a-zA-Z]:[\\\/]/.test(url) || url.includes('\\')) {
-                        mainVideo.src = '/api/video?path=' + encodeURIComponent(url);
-                    } else if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/')) {
-                        mainVideo.src = '/' + url;
-                    } else {
-                        mainVideo.src = url;
+            socket.on('playVideo', (rawUrl) => {
+                if (!rawUrl) return;
+                const url = resolveVideoUrl(rawUrl);
+                const iframe = document.getElementById('mainVideoIframe');
+                
+                // YouTube Embed
+                const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+                if (ytMatch && ytMatch[1]) {
+                    const videoId = ytMatch[1];
+                    if (mainVideo) {
+                        mainVideo.pause();
+                        mainVideo.style.display = 'none';
                     }
+                    if (iframe) {
+                        iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&enablejsapi=1&rel=0`;
+                        iframe.style.display = 'block';
+                    }
+                    if (videoOverlay) videoOverlay.style.display = 'flex';
+                    return;
+                }
+
+                // Normal HTML5 video (.mp4, .webm, stream, direct URL)
+                if (iframe) {
+                    iframe.src = '';
+                    iframe.style.display = 'none';
+                }
+                if (mainVideo) {
+                    mainVideo.style.display = 'block';
+                    mainVideo.src = url;
+                    if (videoOverlay) videoOverlay.style.display = 'flex';
                     mainVideo.play().catch((e) => {
-                        console.warn('Auto-play blocked or failed, retrying muted:', e);
+                        console.warn('Auto-play blocked, retrying muted:', e);
                         mainVideo.muted = true;
                         mainVideo.play().catch(() => {});
                     });
                 }
             });
+
             socket.on('closeVideo', () => {
-                mainVideo.pause();
-                mainVideo.src = '';
-                videoOverlay.style.display = 'none';
+                if (mainVideo) {
+                    mainVideo.pause();
+                    mainVideo.src = '';
+                    mainVideo.style.display = 'block';
+                }
+                const iframe = document.getElementById('mainVideoIframe');
+                if (iframe) {
+                    iframe.src = '';
+                    iframe.style.display = 'none';
+                }
+                if (videoOverlay) videoOverlay.style.display = 'none';
             });
         }
 
