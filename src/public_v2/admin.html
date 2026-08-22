@@ -1666,6 +1666,8 @@
                                     return;
                                 }
                             }
+                            const vText = document.getElementById('adminVText');
+                            if (vText) vText.innerText = url;
                             document.getElementById('videoUploadInput').click();
                             return;
                         }

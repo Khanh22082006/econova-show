@@ -609,13 +609,15 @@ function streamVideoFile(filePath, req, res) {
         if (range) {
             const parts = range.replace(/bytes=/, "").split("-");
             const start = parseInt(parts[0], 10);
-            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+            const CHUNK_LIMIT = 2 * 1024 * 1024; // 2MB chunk for instant playback & smooth streaming
+            let end = parts[1] ? parseInt(parts[1], 10) : Math.min(start + CHUNK_LIMIT - 1, fileSize - 1);
             
             if (start >= fileSize) {
                 res.status(416).send('Requested range not satisfiable\n' + start + ' >= ' + fileSize);
                 return;
             }
 
+            if (end >= fileSize) end = fileSize - 1;
             const chunksize = (end - start) + 1;
             const file = fs.createReadStream(filePath, { start, end });
             const head = {

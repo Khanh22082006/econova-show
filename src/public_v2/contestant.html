@@ -76,11 +76,6 @@
             background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05));
             border: 2px solid rgba(255, 255, 255, 0.18);
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-            animation: fadeIn 0.3s ease-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(6px); }
-            to { opacity: 1; transform: translateY(0); }
         }
         .team-btn:active:not(:disabled) { transform: scale(0.97); }
         .team-btn:disabled {
@@ -274,20 +269,6 @@
     </style>
 </head>
 <body>
-    <!-- VIDEO CHỈNH ÂM LƯỢNG ĐỘC LẬP -->
-    <div id="videoOverlay">
-        <video id="mainVideo" playsinline webkit-playsinline src="" style="width: 100%; height: 100%; object-fit: contain;"></video>
-        <iframe id="mainVideoIframe" style="display: none; width: 90%; height: 80%; border: none; border-radius: 12px; box-shadow: 0 0 30px rgba(0,0,0,0.8);" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>
-        <div id="videoErrorNotice" style="display:none; color:#ff4757; font-size: 20px; text-align:center; padding: 20px; background: rgba(0,0,0,0.92); border: 2px solid #ff4757; border-radius: 12px; max-width: 85%; line-height: 1.5; z-index: 9999;">
-            ⚠️ <b>Chưa tìm thấy video trên máy chủ</b><br>
-            <span style="color:#feca57; font-size: 15px; word-break: break-all;" id="videoErrorPath"></span>
-        </div>
-        <div class="volume-container">
-            <span style="font-size: 20px;">🔊</span>
-            <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1">
-        </div>
-    </div>
-
     <!-- CHỐNG GIAN LẬN -->
     <div id="antiCheatOverlay">
         <h1 id="acTitle" data-i18n="con_cheat_title">🚨 CẢNH BÁO GIAN LẬN!</h1>
@@ -563,104 +544,6 @@
             return '/api/video?path=' + encodeURIComponent(u);
         }
 
-        const mainVideoIframe = document.getElementById('mainVideoIframe');
-
-        function unmuteVideoOnInteraction() {
-            if (mainVideo && mainVideo.muted) {
-                mainVideo.muted = false;
-                const vs = document.getElementById('volumeSlider');
-                mainVideo.volume = vs ? parseFloat(vs.value) : 1.0;
-            }
-        }
-        document.addEventListener('pointerdown', unmuteVideoOnInteraction, { capture: true });
-        document.addEventListener('keydown', unmuteVideoOnInteraction, { capture: true });
-        document.addEventListener('click', unmuteVideoOnInteraction, { capture: true });
-
-        socket.on('unmuteVideo', () => {
-            unmuteVideoOnInteraction();
-        });
-
-        socket.on('playVideo', (rawUrl) => {
-            if (!rawUrl) return;
-            const url = resolveVideoUrl(rawUrl);
-            const iframe = document.getElementById('mainVideoIframe');
-            
-            // YouTube Embed
-            const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
-            if (ytMatch && ytMatch[1]) {
-                const videoId = ytMatch[1];
-                if (mainVideo) {
-                    mainVideo.pause();
-                    mainVideo.style.display = 'none';
-                }
-                if (iframe) {
-                    iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&enablejsapi=1&rel=0`;
-                    iframe.style.display = 'block';
-                }
-                if (videoOverlay) videoOverlay.style.display = 'flex';
-                return;
-            }
-
-            const errNotice = document.getElementById('videoErrorNotice');
-            const errPath = document.getElementById('videoErrorPath');
-            if (errNotice) errNotice.style.display = 'none';
-
-            // HTML5 Video
-            if (iframe) {
-                iframe.src = '';
-                iframe.style.display = 'none';
-            }
-            if (mainVideo) {
-                mainVideo.style.display = 'block';
-                mainVideo.preload = 'auto';
-                mainVideo.src = url;
-                mainVideo.muted = false;
-                const vs = document.getElementById('volumeSlider');
-                mainVideo.volume = vs ? parseFloat(vs.value) : 1.0;
-                
-                mainVideo.onerror = function() {
-                    console.error('Lỗi khi tải nguồn video:', url);
-                    if (errNotice && errPath) {
-                        errPath.innerText = rawUrl;
-                        errNotice.style.display = 'block';
-                    }
-                };
-                
-                mainVideo.onplaying = function() {
-                    if (errNotice) errNotice.style.display = 'none';
-                };
-
-                try { mainVideo.load(); } catch(e) {}
-                if (videoOverlay) videoOverlay.style.display = 'flex';
-                const p = mainVideo.play();
-                if (p !== undefined) {
-                    p.then(() => {
-                        mainVideo.muted = false;
-                    }).catch(e => {
-                        console.warn('Auto-play blocked or failed, retrying muted:', e);
-                        mainVideo.muted = true;
-                        mainVideo.play().catch(() => {});
-                    });
-                }
-            }
-        });
-
-        socket.on('closeVideo', () => {
-            if (mainVideo) {
-                mainVideo.pause();
-                mainVideo.src = "";
-                mainVideo.style.display = 'block';
-            }
-            const iframe = document.getElementById('mainVideoIframe');
-            if (iframe) {
-                iframe.src = '';
-                iframe.style.display = 'none';
-            }
-            const errNotice = document.getElementById('videoErrorNotice');
-            if (errNotice) errNotice.style.display = 'none';
-            if (videoOverlay) videoOverlay.style.display = 'none';
-        });
-        
         let antiCheatEnabled = false;
         let isBanned = false;
         let lastReportTime = 0;
@@ -938,7 +821,6 @@
             if (!container) return;
             
             if (!teams || !Array.isArray(teams) || teams.length === 0) {
-                // Fallback nếu phòng chưa có danh sách đội
                 teams = [
                     { id: 1, name: "Đội 1", school: "" },
                     { id: 2, name: "Đội 2", school: "" },
@@ -948,13 +830,28 @@
             }
             claimed = claimed || (window.currentState ? window.currentState.claimedTeams : {});
             
-            container.innerHTML = '';
-            teams.forEach(tObj => {
+            const existingBtns = container.querySelectorAll('.team-btn');
+            if (existingBtns.length !== teams.length) {
+                container.innerHTML = '';
+                teams.forEach(tObj => {
+                    let btn = document.createElement('button');
+                    btn.className = 'team-btn';
+                    btn.dataset.t = tObj.id;
+                    btn.onclick = () => chooseTeam(tObj.id);
+                    container.appendChild(btn);
+                });
+            }
+
+            const currentBtns = container.querySelectorAll('.team-btn');
+            teams.forEach((tObj, idx) => {
+                const btn = currentBtns[idx];
+                if (!btn) return;
+                btn.dataset.t = tObj.id;
+                
                 let isClaimed = false;
                 if (claimed) {
                     for (let k in claimed) { 
                         if (parseInt(k) === tObj.id) {
-                            // Only show as claimed if it's NOT our own selection
                             if (!myClientId || !claimed[k] || claimed[k].clientId !== myClientId) {
                                 isClaimed = true;
                             }
@@ -962,14 +859,12 @@
                     }
                 }
                 
-                let btn = document.createElement('button');
-                btn.className = 'team-btn';
-                btn.dataset.t = tObj.id;
                 btn.disabled = isClaimed;
                 let claimedText = isClaimed ? ' ' + (typeof t === 'function' ? t('con_claimed', lang) : '(Đã có người chọn)') : '';
-                btn.innerHTML = `<span>${tObj.name || ('Đội ' + tObj.id)}${claimedText}</span><span class="school">${tObj.school || ''}</span>`;
-                btn.onclick = () => chooseTeam(tObj.id);
-                container.appendChild(btn);
+                let newHtml = `<span>${tObj.name || ('Đội ' + tObj.id)}${claimedText}</span><span class="school">${tObj.school || ''}</span>`;
+                if (btn.innerHTML !== newHtml) {
+                    btn.innerHTML = newHtml;
+                }
             });
         }
 
