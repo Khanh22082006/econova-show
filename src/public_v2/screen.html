@@ -658,12 +658,38 @@
         const mainVideo = document.getElementById('mainVideo');
         const mainVideoIframe = document.getElementById('mainVideoIframe');
 
+        async function getVideoBlobUrl(url, rawUrl) {
+            try {
+                const targetStr = url || rawUrl || '';
+                const baseName = targetStr.split('/').pop().split('\\').pop().split('?')[0];
+                if (baseName && window.indexedDB) {
+                    const blob = await new Promise((resolve) => {
+                        const req = indexedDB.open('EconovaVideoCache_v1', 1);
+                        req.onsuccess = () => {
+                            const db = req.result;
+                            if (!db.objectStoreNames.contains('videos')) return resolve(null);
+                            const tx = db.transaction('videos', 'readonly');
+                            const store = tx.objectStore('videos');
+                            const getReq = store.get(baseName);
+                            getReq.onsuccess = () => resolve(getReq.result ? getReq.result.blob : null);
+                            getReq.onerror = () => resolve(null);
+                        };
+                        req.onerror = () => resolve(null);
+                    });
+                    if (blob) {
+                        return URL.createObjectURL(blob);
+                    }
+                }
+            } catch(e) {}
+            return null;
+        }
+
         if (socket && typeof socket.on === 'function') {
             socket.on('unmuteVideo', () => {
                 unmuteVideoOnInteraction();
             });
 
-            socket.on('playVideo', (rawUrl) => {
+            socket.on('playVideo', async (rawUrl) => {
                 if (!rawUrl) return;
                 const url = resolveVideoUrl(rawUrl);
                 const iframe = document.getElementById('mainVideoIframe');
@@ -698,7 +724,10 @@
                 if (mainVideo) {
                     mainVideo.style.display = 'block';
                     mainVideo.preload = 'auto';
-                    mainVideo.src = url;
+                    
+                    // Check if video exists in local IndexedDB blob cache for 0ms zero-lag instant streaming
+                    const localBlobUrl = await getVideoBlobUrl(url, rawUrl);
+                    mainVideo.src = localBlobUrl || url;
                     mainVideo.muted = false;
                     mainVideo.volume = 1.0;
                     
