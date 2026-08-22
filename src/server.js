@@ -1337,8 +1337,10 @@ if (!state.isRoomOpen) {
     // --- ADMIN: Bật/Tắt Ngôi sao hy vọng ---
     socket.on('toggleHopeStar', (teamId) => {
         const state = getActiveState(socket);
-// Toggle: nếu đang bật thì tắt, nếu đang tắt thì bật
-        var wasOn = state.currentQuestion.isHopeStar;
+        if (!state.currentQuestion) {
+            state.currentQuestion = { active: false, isHopeStar: false, points: 0, isHidden: true, mainTeamId: null };
+        }
+        var wasOn = Boolean(state.currentQuestion.isHopeStar);
         state.currentQuestion.isHopeStar = !wasOn;
 
         if (state.currentQuestion.isHopeStar) {
@@ -1361,18 +1363,22 @@ if (!state.isRoomOpen) {
     // --- ADMIN: Ép chọn lượt chơi (cho đội) ---
     socket.on('forceTurn', (teamId) => {
         const state = getActiveState(socket);
-state.forcedTeamId = teamId;
+        state.forcedTeamId = teamId;
         // Find team in turnOrder and move to front
-        let idx = state.turnOrder.indexOf(teamId);
+        let idx = state.turnOrder ? state.turnOrder.indexOf(teamId) : -1;
         if (idx > -1) {
             state.turnOrder.splice(idx, 1);
             state.turnOrder.unshift(teamId);
         }
 
         // Tắt câu hỏi hiện tại và dọn dẹp viền sáng
-        state.currentQuestion.active = false;
-        state.currentQuestion.mainTeamId = null;
-        state.currentQuestion.isHopeStar = false;
+        if (!state.currentQuestion) {
+            state.currentQuestion = { active: false, isHopeStar: false, points: 0, isHidden: true, mainTeamId: null };
+        } else {
+            state.currentQuestion.active = false;
+            state.currentQuestion.mainTeamId = null;
+            state.currentQuestion.isHopeStar = false;
+        }
         state.isGridVisibleOnOverlay = false;
 
         broadcastState(socket);
@@ -1758,12 +1764,14 @@ let q = state.currentQuestion;
     // --- ADMIN: Đóng câu hỏi, quay về Grid ---
     socket.on('closeQuestion', () => {
         const state = getActiveState(socket);
-let mainTeamId = state.currentQuestion.mainTeamId;
+        let mainTeamId = (state.currentQuestion && state.currentQuestion.mainTeamId) ? state.currentQuestion.mainTeamId : null;
 
-        state.currentQuestion.active = false;
-        state.currentQuestion.mainTeamId = null;
-        state.currentQuestion.isHopeStar = false;
-        state.currentQuestion.resolved = false; // Reset trạng thái
+        if (state.currentQuestion) {
+            state.currentQuestion.active = false;
+            state.currentQuestion.mainTeamId = null;
+            state.currentQuestion.isHopeStar = false;
+            state.currentQuestion.resolved = false; // Reset trạng thái
+        }
 
         state.buzzedTeam = null;
         state.isBuzzerLocked = true;
@@ -1772,14 +1780,15 @@ let mainTeamId = state.currentQuestion.mainTeamId;
 
         // Tăng đếm số câu đã chơi SAU KHI đóng câu hỏi
         if (mainTeamId !== null) {
+            if (!state.turnStats) state.turnStats = {};
             if (!state.turnStats[mainTeamId]) {
                 state.turnStats[mainTeamId] = 0;
             }
             state.turnStats[mainTeamId]++;
             
             if (state.turnStats[mainTeamId] >= (state.settings.questionsPerTeam || 3)) {
-                state.turnOrder = state.turnOrder.filter(id => id !== mainTeamId);
-                if (state.turnOrder.length === 0) updateTurnOrder(state);
+                if (state.turnOrder) state.turnOrder = state.turnOrder.filter(id => id !== mainTeamId);
+                if (!state.turnOrder || state.turnOrder.length === 0) updateTurnOrder(state);
                 state.isGridVisibleOnOverlay = false;
                 playSoundInRoom(socket, 'finish_turn');
             } else {
@@ -1793,8 +1802,8 @@ let mainTeamId = state.currentQuestion.mainTeamId;
     // --- ADMIN: Sửa câu hỏi hiện tại ---
     socket.on('editCurrentQuestion', (data) => {
         const state = getActiveState(socket);
-if (!socket.isAdmin) return;
-        if (state.currentQuestion.active) {
+        if (!socket.isAdmin) return;
+        if (state.currentQuestion && state.currentQuestion.active) {
             state.currentQuestion.text = data.text;
             state.currentQuestion.answer = data.answer;
             broadcastState(socket);
