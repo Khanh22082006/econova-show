@@ -1641,9 +1641,7 @@
                 
                 var withinLockDelay = Boolean(window.clientLockDelay);
                 
-                var showGrid = Boolean((state.isGridVisibleOnOverlay || withinLockDelay) && !window.forceQuestionState);
                 var showQuestion = Boolean((qObj && qObj.active && !withinLockDelay) || window.forceQuestionState);
-                
                 var displayState = showQuestion ? 2 : (showGrid ? 1 : 0);
 
                 var ascendFrame = document.getElementById('ascendFrame');
@@ -1656,7 +1654,23 @@
                 var v3Wrapper = document.getElementById('v3-wrapper');
                 var v3Master = document.getElementById('v3MasterContainer');
 
-                if (!showQuestion) {
+                if (showQuestion) {
+                    var defQText = document.getElementById('defaultQText');
+                    var ascQText = document.getElementById('ascendQText');
+                    if (qObj.text) {
+                        if (defQText && theme === 'default') {
+                            if (defQText.innerHTML !== qObj.text) defQText.innerHTML = qObj.text;
+                        }
+                        if (ascQText && theme === 'ascend_2026') {
+                            if (ascQText.innerHTML !== qObj.text) {
+                                ascQText.classList.remove('ascend-qtext-anim');
+                                void ascQText.offsetWidth; 
+                                ascQText.innerHTML = qObj.text;
+                                ascQText.classList.add('ascend-qtext-anim');
+                            }
+                        }
+                    }
+                } else {
                     clearThemeQuestionText(theme);
                 }
 
@@ -1722,7 +1736,7 @@
                 } else if (displayState === 1) {
                     if (defScoreboard) defScoreboard.style.setProperty('display', 'flex', 'important');
                     if (defQArea) defQArea.style.setProperty('display', 'none', 'important');
-                    if (defQBox) defQBox.style.setProperty('display', 'none', 'important');
+                    if (defQBox) defQBox.style.setProperty('display', 'flex', 'important');
                     if (qGridNode) qGridNode.style.setProperty('display', 'flex', 'important');
                 } else {
                     if (defScoreboard) defScoreboard.style.setProperty('display', 'none', 'important');
@@ -1758,17 +1772,24 @@
             
             if (state.lockedPackage) {
                 var lockKey = state.lockedPackage.lockedAt || 1;
+                var isLiveQuestion = Boolean(state.currentQuestion && state.currentQuestion.active);
+                var isFreshLock = state.lockedPackage.lockedAt ? ((Date.now() - state.lockedPackage.lockedAt) < 2500) : false;
+
                 if (window.lastSeenLockedPackage !== lockKey) {
                     window.lastSeenLockedPackage = lockKey;
-                    window.clientLockDelay = true;
-                    clearTimeout(window.packageTransitionTimeout);
-                    window.packageTransitionTimeout = setTimeout(() => {
+                    if (!isLiveQuestion && isFreshLock) {
+                        window.clientLockDelay = true;
+                        clearTimeout(window.packageTransitionTimeout);
+                        window.packageTransitionTimeout = setTimeout(() => {
+                            window.clientLockDelay = false;
+                            window.packageTransitionTimeout = null;
+                            handleUpdateState(window.currentState || state);
+                            autoResizeText();
+                            setTimeout(autoResizeText, 50);
+                        }, 1000);
+                    } else {
                         window.clientLockDelay = false;
-                        window.packageTransitionTimeout = null;
-                        applyVisibility(window.currentState || state);
-                        autoResizeText();
-                        setTimeout(autoResizeText, 50);
-                    }, 1000);
+                    }
                 }
             } else {
                 window.lastSeenLockedPackage = null;

@@ -1280,17 +1280,24 @@
             if (currentTheme !== 'v3') {
                 if (state.lockedPackage) {
                     var lockKey = state.lockedPackage.lockedAt || 1;
+                    var isLiveQuestion = Boolean(state.currentQuestion && state.currentQuestion.active);
+                    var isFreshLock = state.lockedPackage.lockedAt ? ((Date.now() - state.lockedPackage.lockedAt) < 2500) : false;
+
                     if (window.lastSeenLockedPackage !== lockKey) {
                         window.lastSeenLockedPackage = lockKey;
-                        window.clientLockDelay = true;
-                        clearTimeout(window.packageTransitionTimeout);
-                        window.packageTransitionTimeout = setTimeout(() => {
+                        if (!isLiveQuestion && isFreshLock) {
+                            window.clientLockDelay = true;
+                            clearTimeout(window.packageTransitionTimeout);
+                            window.packageTransitionTimeout = setTimeout(() => {
+                                window.clientLockDelay = false;
+                                window.packageTransitionTimeout = null;
+                                handleUpdateState(window.currentState || state);
+                                autoResizeText();
+                                setTimeout(autoResizeText, 50);
+                            }, 1000);
+                        } else {
                             window.clientLockDelay = false;
-                            window.packageTransitionTimeout = null;
-                            applyVisibility(window.currentState || state);
-                            autoResizeText();
-                            setTimeout(autoResizeText, 50);
-                        }, 1000);
+                        }
                     }
                 } else {
                     window.lastSeenLockedPackage = null;
