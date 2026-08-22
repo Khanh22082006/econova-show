@@ -649,6 +649,41 @@ app.get('/videos/:filename', (req, res) => {
     res.status(404).send('Video not found');
 });
 
+app.post('/api/video/upload_raw', (req, res) => {
+    try {
+        const rawFilename = decodeURIComponent(req.query.filename || 'video.mp4');
+        const ext = path.extname(rawFilename).toLowerCase() || '.mp4';
+        const baseName = path.basename(rawFilename, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
+        const exactName = `${baseName}${ext}`;
+        const finalName = `${baseName}_${Date.now()}${ext}`;
+        
+        const target1 = path.join(videosDir1, finalName);
+        const writeStream = fs.createWriteStream(target1);
+        req.pipe(writeStream);
+        
+        writeStream.on('finish', () => {
+            try {
+                fs.copyFileSync(target1, path.join(videosDir1, exactName));
+                if (videosDir1 !== videosDir2) {
+                    fs.copyFileSync(target1, path.join(videosDir2, finalName));
+                    fs.copyFileSync(target1, path.join(videosDir2, exactName));
+                }
+            } catch(e) {}
+            
+            const publicUrl = `/videos/${finalName}`;
+            console.log(`[VideoUploadRaw] Đã lưu video thành công: ${publicUrl}`);
+            res.json({ success: true, url: publicUrl, exactUrl: `/videos/${exactName}`, originalName: rawFilename, message: 'Đã tải lên video thành công!' });
+        });
+        writeStream.on('error', (err) => {
+            console.error('Lỗi khi ghi file video raw:', err);
+            res.status(500).json({ success: false, message: 'Lỗi ghi file video: ' + err.message });
+        });
+    } catch(err) {
+        console.error('Lỗi upload raw:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 app.post('/api/video/upload', (req, res) => {
     try {
         const { fileName, fileData } = req.body || {};
@@ -657,18 +692,23 @@ app.post('/api/video/upload', (req, res) => {
         }
         const ext = path.extname(fileName).toLowerCase() || '.mp4';
         const baseName = path.basename(fileName, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
+        const exactName = `${baseName}${ext}`;
         const finalName = `${baseName}_${Date.now()}${ext}`;
         
         const base64Data = fileData.replace(/^data:.*?;base64,/, '');
         const buf = Buffer.from(base64Data, 'base64');
         fs.writeFileSync(path.join(videosDir1, finalName), buf);
+        fs.writeFileSync(path.join(videosDir1, exactName), buf);
         if (videosDir1 !== videosDir2) {
-            try { fs.writeFileSync(path.join(videosDir2, finalName), buf); } catch(e) {}
+            try { 
+                fs.writeFileSync(path.join(videosDir2, finalName), buf); 
+                fs.writeFileSync(path.join(videosDir2, exactName), buf);
+            } catch(e) {}
         }
         
         const publicUrl = `/videos/${finalName}`;
         console.log(`[VideoUpload] Đã lưu video mới: ${publicUrl}`);
-        res.json({ success: true, url: publicUrl, message: 'Đã tải lên video thành công!' });
+        res.json({ success: true, url: publicUrl, exactUrl: `/videos/${exactName}`, message: 'Đã tải lên video thành công!' });
     } catch(err) {
         console.error('Lỗi khi tải video lên:', err);
         res.status(500).json({ success: false, message: 'Lỗi khi lưu video: ' + err.message });
@@ -2414,6 +2454,15 @@ if (newCount < 2 || newCount > 6) return;
         state.turnOrder = [];
         updateTurnOrder(state, false);
         broadcastState(socket);
+    });
+
+    // --- ADMIN: Cập nhật Video câu hỏi ---
+    socket.on('updateCurrentQuestionVideo', (data) => {
+        const state = getActiveState(socket);
+        if (state.currentQuestion) {
+            state.currentQuestion.vid = (data && data.vid) ? data.vid : "";
+            broadcastState(socket);
+        }
     });
 
     // --- ADMIN: Phát Video ---

@@ -547,10 +547,16 @@
             if (/^[a-zA-Z]:[\\\/]/.test(u) || u.includes('\\')) {
                 return '/api/video?path=' + encodeURIComponent(u);
             }
-            if (!u.startsWith('http://') && !u.startsWith('https://') && !u.startsWith('/')) {
+            if (u.startsWith('http://') || u.startsWith('https://')) {
+                return u;
+            }
+            if (u.startsWith('/')) {
+                return u;
+            }
+            if (u.startsWith('videos/')) {
                 return '/' + u;
             }
-            return u;
+            return '/api/video?path=' + encodeURIComponent(u);
         }
 
         const mainVideoIframe = document.getElementById('mainVideoIframe');
