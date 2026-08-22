@@ -458,26 +458,76 @@
                 el.style.fontSize = currentSize + 'px';
             }
         }
-        let audioContextUnlocked = true;
-        document.addEventListener('DOMContentLoaded', () => {
-            const overlay = document.getElementById('audioUnlockOverlay');
-            if (overlay) overlay.style.display = 'none';
-        });
+        // --- STUDIO-GRADE WEB AUDIO ENGINE ---
+        let audioCtx = null;
+        let audioBuffers = {};
+        const soundFiles = {
+            'choose_each_question': '/sounds/choose_each_question.mp3',
+            'open_question': '/sounds/open_question.mp3',
+            'question_open': '/sounds/question_open.mp3',
+            'question_open_mode1': '/sounds/question_open.mp3',
+            'buzzer_5s': '/sounds/buzzer_5s.mp3',
+            'buzzed': '/sounds/buzzed.mp3',
+            'correct': '/sounds/correct.mp3',
+            'wrong': '/sounds/wrong.mp3',
+            'hope_star': '/sounds/hope_star.mp3',
+            'countdown_10s': '/sounds/countdown_10s.mp3',
+            'countdown_15s': '/sounds/countdown_15s.mp3',
+            'finish_turn': '/sounds/finish_turn.mp3',
+            'on_stage': '/sounds/on_stage.mp3',
+            'choose_package': '/sounds/choose_package.mp3'
+        };
 
-        function unlockAudio() {
-            document.getElementById('audioUnlockOverlay').style.display = 'none';
-            if (audioContextUnlocked) return;
-            audioContextUnlocked = true;
-            let testAudio = new Audio(); testAudio.play().catch(e => {});
+        async function initAudioContext() {
+            try {
+                if (!audioCtx) {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContextClass) {
+                        audioCtx = new AudioContextClass();
+                    }
+                }
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    await audioCtx.resume();
+                }
+                audioContextUnlocked = true;
+
+                for (const [sId, sUrl] of Object.entries(soundFiles)) {
+                    if (!audioBuffers[sId]) {
+                        fetch(sUrl)
+                            .then(r => r.arrayBuffer())
+                            .then(buf => audioCtx.decodeAudioData(buf))
+                            .then(decoded => { audioBuffers[sId] = decoded; })
+                            .catch(() => {});
+                    }
+                }
+
+                document.querySelectorAll('audio').forEach(a => {
+                    try { a.load(); } catch(e) {}
+                });
+            } catch(e) {}
         }
 
-        document.addEventListener('click', unlockAudio, { once: true });
-        document.addEventListener('keydown', unlockAudio, { once: true });
+        document.addEventListener('pointerdown', initAudioContext, { capture: true });
+        document.addEventListener('keydown', initAudioContext, { capture: true });
+        document.addEventListener('click', initAudioContext, { capture: true });
 
         function playSound(soundId) {
-            if (!audioContextUnlocked) return;
+            if (audioCtx && audioBuffers[soundId]) {
+                try {
+                    const source = audioCtx.createBufferSource();
+                    source.buffer = audioBuffers[soundId];
+                    source.connect(audioCtx.destination);
+                    source.start(0);
+                    return;
+                } catch(e) {}
+            }
             const el = document.getElementById('snd_' + soundId);
-            if (el) { el.currentTime = 0; el.play().catch(e => {}); }
+            if (el) {
+                el.currentTime = 0;
+                el.play().catch(e => {
+                    console.warn('Click page to enable audio:', e.message);
+                });
+            }
         }
         socket.on('playSound', (soundId) => { playSound(soundId); });
 

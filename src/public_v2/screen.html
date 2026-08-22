@@ -613,21 +613,91 @@
         });
         window.addEventListener('load', hideUnlockOverlay);
 
-        function unlockAudio(event) {
-            if (event && event.stopPropagation) event.stopPropagation();
-            hideUnlockOverlay();
-            if (audioContextUnlocked) return;
-            audioContextUnlocked = true;
-            var testAudio = new Audio(); testAudio.play().catch(e => {});
+        // --- STUDIO-GRADE WEB AUDIO ENGINE ---
+        let audioCtx = null;
+        let audioBuffers = {};
+        const soundFiles = {
+            'choose_each_question': '/sounds/choose_each_question.mp3',
+            'open_question': '/sounds/open_question.mp3',
+            'question_open': '/sounds/question_open.mp3',
+            'question_open_mode1': '/sounds/question_open.mp3',
+            'buzzer_5s': '/sounds/buzzer_5s.mp3',
+            'buzzed': '/sounds/buzzed.mp3',
+            'correct': '/sounds/correct.mp3',
+            'wrong': '/sounds/wrong.mp3',
+            'hope_star': '/sounds/hope_star.mp3',
+            'countdown_10s': '/sounds/countdown_10s.mp3',
+            'countdown_15s': '/sounds/countdown_15s.mp3',
+            'finish_turn': '/sounds/finish_turn.mp3',
+            'on_stage': '/sounds/on_stage.mp3',
+            'choose_package': '/sounds/choose_package.mp3'
+        };
+
+        async function initAudioContext() {
+            try {
+                if (!audioCtx) {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContextClass) {
+                        audioCtx = new AudioContextClass();
+                    }
+                }
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    await audioCtx.resume();
+                }
+                audioContextUnlocked = true;
+
+                // Pre-decode sound files into RAM for 0ms instant studio playback
+                for (const [sId, sUrl] of Object.entries(soundFiles)) {
+                    if (!audioBuffers[sId]) {
+                        fetch(sUrl)
+                            .then(r => r.arrayBuffer())
+                            .then(buf => audioCtx.decodeAudioData(buf))
+                            .then(decoded => { audioBuffers[sId] = decoded; })
+                            .catch(() => {});
+                    }
+                }
+
+                // Unlock HTML5 audio elements as fallback
+                document.querySelectorAll('audio').forEach(a => {
+                    try { a.load(); } catch(e) {}
+                });
+                
+                const btn = document.getElementById('audioUnlockFloatingBtn');
+                if (btn) {
+                    btn.innerHTML = '<span>🔊 ĐÃ BẬT ÂM THANH MÀN HÌNH</span>';
+                    btn.style.background = 'rgba(16, 172, 132, 0.9)';
+                    setTimeout(() => { btn.style.display = 'none'; }, 1500);
+                }
+            } catch(e) {}
         }
 
-        document.addEventListener('pointerdown', unlockAudio, { capture: true });
-        document.addEventListener('keydown', unlockAudio, { capture: true });
+        document.addEventListener('pointerdown', initAudioContext, { capture: true });
+        document.addEventListener('keydown', initAudioContext, { capture: true });
+        document.addEventListener('click', initAudioContext, { capture: true });
 
         function playSound(soundId) {
-            if (!audioContextUnlocked) return;
+            if (audioCtx && audioBuffers[soundId]) {
+                try {
+                    const source = audioCtx.createBufferSource();
+                    source.buffer = audioBuffers[soundId];
+                    source.connect(audioCtx.destination);
+                    source.start(0);
+                    return;
+                } catch(e) {}
+            }
+            // Fallback to HTML5 audio element
             const el = document.getElementById('snd_' + soundId);
-            if (el) { el.currentTime = 0; el.play().catch(e => {}); }
+            if (el) {
+                el.currentTime = 0;
+                const p = el.play();
+                if (p !== undefined) {
+                    p.catch(e => {
+                        console.warn('Cần nhấp vào màn hình để mở khóa âm thanh:', e.message);
+                        const btn = document.getElementById('audioUnlockFloatingBtn');
+                        if (btn) btn.style.display = 'flex';
+                    });
+                }
+            }
         }
         if (socket && typeof socket.on === 'function') {
             socket.on('playSound', (soundId) => { playSound(soundId); });
@@ -2374,23 +2444,22 @@ document.addEventListener('DOMContentLoaded', () => {
             var L_grid = (gW - gridW) / 2;
             var dist_grid = (gW/2) - L_grid;
             
-            void tv.offsetWidth;
             layers.forEach((l, i) => {
-                var delay = i * 0.125;
+                var delay = i * 0.08;
                 var op = l === 1 ? '0.3' : (l === 2 ? '0.65' : '1');
                 getEls('left', l).forEach(el => {
-                    el.style.transition = `transform ${dur}s cubic-bezier(0.25, 1, 0.5, 1) ${delay}s, opacity ${dur}s ${delay}s`;
+                    el.style.transition = `transform 0.65s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s, opacity 0.65s ${delay}s`;
                     el.style.transform = `translateX(${-dist_grid}px) scale(1)`;
                     el.style.opacity = op;
                 });
                 getEls('right', l).forEach(el => {
-                    el.style.transition = `transform ${dur}s cubic-bezier(0.25, 1, 0.5, 1) ${delay}s, opacity ${dur}s ${delay}s`;
+                    el.style.transition = `transform 0.65s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s, opacity 0.65s ${delay}s`;
                     el.style.transform = `translateX(${dist_grid}px) scale(1)`;
                     el.style.opacity = op;
                 });
             });
             
-            gridGroup.style.transition = `clip-path ${dur}s cubic-bezier(0.25, 1, 0.5, 1) 0.25s, opacity ${dur}s 0s`;
+            gridGroup.style.transition = `clip-path 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.15s, opacity 0.65s 0s`;
             gridGroup.style.clipPath = `polygon(${toPoly(gShapes.bgPts)})`;
             gridGroup.style.opacity = '1';
 
@@ -2401,13 +2470,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 var isLeft = k.startsWith('al');
                 var endX = isLeft ? 1300 : -1300;
                 tv.querySelectorAll(`.a-${k}`).forEach(el => { 
-                    el.style.transition = `transform ${dur}s cubic-bezier(0.25, 1, 0.5, 1), opacity ${dur}s`; 
+                    el.style.transition = `transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s`; 
                     el.style.transform = `translateX(${endX}px) scale(1)`; 
                     el.style.opacity = '0'; 
                 });
                 tv.querySelectorAll(`.s-g-${k}`).forEach(path => { 
                     if(path) { 
-                        path.style.transition = `transform ${dur}s cubic-bezier(0.25, 1, 0.5, 1), opacity ${dur}s`; 
+                        path.style.transition = `transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s`; 
                         path.style.transform = `translateX(${endX}px) scale(1)`; 
                         path.style.opacity = '0'; 
                     } 
@@ -2415,37 +2484,26 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } else if (targetState === 'closing') {
             tv.classList.add('is-closing');
+            tv.classList.remove('run-anim');
             
-            if (v3IsFirstEntry) {
-                tv.classList.remove('run-anim');
-                void tv.offsetWidth;
-                tv.classList.add('run-anim');
-                window.v3RunAnimTimeout = setTimeout(() => {
-                    tv.classList.remove('run-anim');
-                    window.v3RunAnimTimeout = null;
-                }, 3000);
-            } else {
-                tv.classList.remove('run-anim');
-            }
-            
-            gridGroup.style.transition = `clip-path ${dur}s cubic-bezier(0.25, 1, 0.5, 1) 0s, opacity ${dur}s 0s`;
+            gridGroup.style.transition = `clip-path 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0s, opacity 0.65s 0s`;
             gridGroup.style.clipPath = `polygon(${toPoly(cShapes.bgPts)})`;
             gridGroup.style.opacity = '0';
             
-            qGroup.style.transition = `clip-path ${dur}s cubic-bezier(0.25, 1, 0.5, 1) 0s`;
+            qGroup.style.transition = `clip-path 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0s`;
             qGroup.style.clipPath = `polygon(${toPoly(makeMaskPts(cShapes.bgPts, gH))})`;
             qGroup.style.opacity = '0';
 
             layers.forEach((l, i) => {
-                var delay = (2 - i) * 0.125; 
+                var delay = (2 - i) * 0.08; 
                 var op = l === 1 ? '0.3' : (l === 2 ? '0.65' : '1');
                 getEls('left', l).forEach(el => {
-                    el.style.transition = `transform ${dur}s cubic-bezier(0.25, 1, 0.5, 1) ${delay}s, opacity ${dur}s ${delay}s`;
+                    el.style.transition = `transform 0.65s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s, opacity 0.65s ${delay}s`;
                     el.style.transform = 'translateX(0px) scale(1)';
                     el.style.opacity = op;
                 });
                 getEls('right', l).forEach(el => {
-                    el.style.transition = `transform ${dur}s cubic-bezier(0.25, 1, 0.5, 1) ${delay}s, opacity ${dur}s ${delay}s`;
+                    el.style.transition = `transform 0.65s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s, opacity 0.65s ${delay}s`;
                     el.style.transform = 'translateX(0px) scale(1)';
                     el.style.opacity = op;
                 });
@@ -2463,9 +2521,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 maskWrapper.style.maskImage = 'none';
             }
             
-            if (!v3IsFirstEntry) {
-                tv.classList.remove('run-anim');
-            }
+            tv.classList.remove('run-anim');
 
             ['aln', 'alc', 'arn', 'arc'].forEach(k => {
                 var pts = cShapes[k+'Pts'];
@@ -2485,8 +2541,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             var oBg = qGroup.querySelector('.a-q-bg');
             if (oBg) { oBg.style.clipPath = `polygon(${toPoly(qShapesCfg.bgPts)})`; }
-            var oScore = qGroup.querySelector('.a-q-score');
-            // Do not override score clip-path here, it is correctly generated by renderV3QBox based on layout
             var oSep = qGroup.querySelector('.a-q-sep');
             if (oSep) {
                 oSep.style.transformOrigin = 'bottom left';
@@ -2500,32 +2554,30 @@ document.addEventListener('DOMContentLoaded', () => {
             qGroup.style.opacity = '1';
             
             var dist_question = (gW/2) - pad; // 760px
-            void tv.offsetWidth;
 
             layers.forEach((l, i) => {
-                var delay = i * 0.125;
+                var delay = i * 0.08;
                 var op = l === 1 ? '0.3' : (l === 2 ? '0.65' : '1');
                 getEls('left', l).forEach(el => {
-                    el.style.transition = `transform ${dur}s cubic-bezier(0.25, 1, 0.5, 1) ${delay}s, opacity ${dur}s ${delay}s`;
+                    el.style.transition = `transform 0.75s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s, opacity 0.75s ${delay}s`;
                     el.style.transform = `translateX(${-dist_question}px) scale(1)`;
                     el.style.opacity = op;
                 });
                 getEls('right', l).forEach(el => {
-                    el.style.transition = `transform ${dur}s cubic-bezier(0.25, 1, 0.5, 1) ${delay}s, opacity ${dur}s ${delay}s`;
+                    el.style.transition = `transform 0.75s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s, opacity 0.75s ${delay}s`;
                     el.style.transform = `translateX(${dist_question}px) scale(1)`;
                     el.style.opacity = op;
                 });
             });
 
-            qGroup.style.transition = `clip-path ${dur}s cubic-bezier(0.25, 1, 0.5, 1) 0.25s, opacity ${dur}s 0s`;
+            qGroup.style.transition = `clip-path 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.15s, opacity 0.75s 0s`;
             var endMaskPts = JSON.parse(JSON.stringify(qShapes.bgPts));
-            endMaskPts[1][0] = 3600; // top right
-            endMaskPts[2][0] = 3600 + (qShapes.bgPts[2][0] - qShapes.bgPts[1][0]); // mid right tip
-            endMaskPts[3][0] = 3600; // bottom right
+            endMaskPts[1][0] = 3600; 
+            endMaskPts[2][0] = 3600 + (qShapes.bgPts[2][0] - qShapes.bgPts[1][0]); 
+            endMaskPts[3][0] = 3600; 
             qGroup.style.clipPath = `polygon(${toPoly(makeMaskPts(endMaskPts, gH))})`;
             qGroup.style.opacity = '1';
-            // Remove group clip after animation — child clips handle all shaping
-            setTimeout(() => { qGroup.style.clipPath = 'none'; }, 1200);
+            setTimeout(() => { qGroup.style.clipPath = 'none'; }, 900);
             if (window.doResizeV3) setTimeout(window.doResizeV3, 50);
         }
     }
@@ -2544,83 +2596,82 @@ document.addEventListener('DOMContentLoaded', () => {
         if (newState === 0) {
             applyAnimState('closing');
             window.v3AnimTimeout1 = setTimeout(() => {
-                v3Master.style.transition = 'transform 0.85s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.85s cubic-bezier(0.25, 1, 0.5, 1)';
-                v3Master.style.transform = isScreen ? 'scale(0.8)' : 'scale(0.8)';
+                v3Master.style.transition = 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
+                v3Master.style.transform = isScreen ? 'scale(0.9)' : 'scale(0.9)';
                 v3Master.style.opacity = '0';
                 applyAnimState('exit-sides');
-            }, 1200);
+            }, 700);
             window.v3AnimTimeout2 = setTimeout(() => {
                 v3Master.style.display = 'none'; 
                 v3Master.style.transition = 'none';
                 v3Master.style.transform = '';
                 v3Master.style.opacity = '1';
                 applyAnimState('pre-entry'); 
-                v3Master.style.transition = 'none';
-                v3Master.style.transform = '';
-                v3Master.style.opacity = '1';
                 v3Transitioning = false; 
                 window.v3TransitionTargetState = null;
                 currentV3State = 0; 
                 if (window.currentState) renderV3(window.currentState);
-            }, 2050);
+            }, 1400);
         } else if (newState === 1) {
-            v3Master.style.display = 'block'; renderV3Grid(stateObj); 
-            var tStart = Date.now() + 50;
-            var now = Date.now();
+            v3Master.style.display = 'block'; 
+            renderV3Grid(stateObj); 
             if (currentV3State === 0) {
                 applyAnimState('pre-entry');
                 v3Master.style.transition = 'none';
-                v3Master.style.transform = isScreen ? 'scale(0.8)' : 'scale(0.8)';
+                v3Master.style.transform = isScreen ? 'scale(0.9)' : 'scale(0.9)';
                 v3Master.style.opacity = '0';
             }
-            var delayClosing = Math.max(0, tStart - now);
-            var delayGrid = Math.max(0, (tStart + 1200) - now);
-            var delayEnd = Math.max(0, (tStart + 2400) - now);
 
             window.v3AnimTimeout1 = setTimeout(() => {
                 applyAnimState('closing'); 
-                v3Master.style.transition = 'transform 0.85s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.85s cubic-bezier(0.25, 1, 0.5, 1)';
+                v3Master.style.transition = 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
                 v3Master.style.transform = isScreen ? 'scale(1)' : 'scale(0.92)';
                 v3Master.style.opacity = '1';
-            }, delayClosing);
+            }, 50);
 
             window.v3AnimTimeout2 = setTimeout(() => {
                 applyAnimState('grid');
-            }, delayGrid);
+            }, 450);
 
             window.v3AnimTimeout3 = setTimeout(() => {
                 v3Transitioning = false;
                 window.v3TransitionTargetState = null;
                 currentV3State = 1;
                 if (window.currentState) renderV3(window.currentState);
-            }, delayEnd);
+            }, 1100);
         } else if (newState === 2) {
             v3Master.style.display = 'block'; 
             if (currentV3State === 0) {
                 applyAnimState('pre-entry');
                 v3Master.style.transition = 'none';
-                v3Master.style.transform = isScreen ? 'scale(0.8)' : 'scale(0.8)';
+                v3Master.style.transform = isScreen ? 'scale(0.9)' : 'scale(0.9)';
                 v3Master.style.opacity = '0';
             }
 
+            // If coming from grid, smooth 1s closing sequence
+            var isFromGrid = (currentV3State === 1);
+            var tClose = isFromGrid ? 1000 : 50;
+            var tReveal = isFromGrid ? 1750 : 450;
+            var tEnd = isFromGrid ? 2500 : 1200;
+
             window.v3AnimTimeout1 = setTimeout(() => {
                 applyAnimState('closing'); 
-                v3Master.style.transition = 'transform 0.85s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.85s cubic-bezier(0.25, 1, 0.5, 1)';
+                v3Master.style.transition = 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
                 v3Master.style.transform = isScreen ? 'scale(1)' : 'scale(0.92)';
                 v3Master.style.opacity = '1';
-            }, 1000);
+            }, tClose);
 
             window.v3AnimTimeout2 = setTimeout(() => {
                 renderV3QBox(stateObj);
                 applyAnimState('question');
-            }, 2200);
+            }, tReveal);
 
             window.v3AnimTimeout3 = setTimeout(() => {
                 v3Transitioning = false;
                 window.v3TransitionTargetState = null;
                 currentV3State = 2;
                 if (window.currentState) renderV3(window.currentState);
-            }, 3400);
+            }, tEnd);
         }
     }
 

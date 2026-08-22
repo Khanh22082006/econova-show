@@ -2708,9 +2708,6 @@ state.isGridVisibleOnOverlay = false;
         broadcastState(socket);
     });
 
-    socket.on('playSound', (sound) => {
-        playSoundInRoom(socket, sound);
-    });
 
     // --- ADMIN: Bảng Điểm Tổng Hợp ---
     socket.on('toggleOverallScoreboard', (show) => {
