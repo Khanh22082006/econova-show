@@ -392,7 +392,7 @@
 
         let savedTeam = sessionStorage.getItem('claimedTeamId_' + roomPin);
         let myTeamId = (savedTeam && !isNaN(parseInt(savedTeam))) ? parseInt(savedTeam) : null;
-        let isSelected = false; // Luôn chờ xác thực từ Server trước khi tự động khóa vào đội
+        let isSelected = (myTeamId !== null);
         let isRoomJoined = false; // Track WebSocket joinRoom completion
         let pendingClaimTeamId = null; // Queue claimTeam if fired before joinRoom completes
         let currentTeamCount = null;
@@ -1043,8 +1043,8 @@
                 }
             }
 
-            let me = (state.teams && isSelected) ? state.teams.find(t => t.id === myTeamId) : null;
-            if (!isSelected || !me) {
+            let me = (state.teams && myTeamId !== null) ? state.teams.find(t => Number(t.id) === Number(myTeamId)) : null;
+            if (!me) {
                 // Chưa chọn đội hoặc đội không tồn tại trong phòng này -> Hiển thị màn hình chọn đội
                 isSelected = false;
                 myTeamId = null;
@@ -1055,6 +1055,7 @@
                 if (typeof skeletonTimeoutId !== 'undefined' && skeletonTimeoutId) { clearTimeout(skeletonTimeoutId); skeletonTimeoutId = null; }
                 return;
             } else {
+                isSelected = true;
                 selectScreen.style.display = 'none';
                 buzzScreen.style.display = 'flex';
 
