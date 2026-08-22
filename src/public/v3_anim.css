@@ -1508,7 +1508,7 @@ body.v3 .v3-pt-box.active {
 
 
 /* V3 THEME COMPLETE LAYOUT OVERHAUL — 2026-06-23 */
-body.v3.main-screen { --v3-w: 1920px !important; --v3-height: 1080px !important; --v3-skew: 100px !important; background: #030a1c !important; }
+body.v3.main-screen { --v3-w: 1920px !important; --v3-height: 1080px !important; --v3-skew: 100px !important; background: url('/Olympia_22_background-_1_.png') center/cover no-repeat fixed !important; background-color: #030a1c !important; }
 body.v3:not(.main-screen) { --v3-w: 100% !important; --v3-height: 250px !important; --v3-skew: 60px !important; }
 
 body.v3 #v3-wrapper { width: var(--v3-w) !important; height: var(--v3-height) !important; }
