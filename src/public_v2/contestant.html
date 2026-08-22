@@ -1173,9 +1173,9 @@
                         buzzBtn.classList.remove('unlocked', 'success');
                         buzzRing.classList.remove('animating');
                         btnIcon.innerHTML = `<span style="font-size: 42px; display:block; margin-bottom: 2px;">🚫</span><span style="font-size: 15px; font-weight: 700; display:block;">ĐỘI CHÍNH</span>`;
-                        statusText.textContent = typeof t === 'function' ? t('con_no_buzz', (state.settings && state.settings.language) || currentGlobalLang) : 'BẠN LÀ ĐỘI CHÍNH';
-                        statusText.style.color = 'rgba(255,255,255,0.6)';
-                        statusText.style.borderColor = 'rgba(255,255,255,0.18)';
+                        statusText.textContent = typeof t === 'function' ? t('con_no_buzz', (state.settings && state.settings.language) || currentGlobalLang) : '🚫 BẠN LÀ ĐỘI CHÍNH (CHUÔNG ĐANG MỞ CHO CÁC ĐỘI KHÁC)';
+                        statusText.style.color = '#ff6b81';
+                        statusText.style.borderColor = '#ff6b81';
                     } else {
                         buzzBtn.classList.remove('locked', 'success');
                         buzzBtn.classList.add('unlocked');
