@@ -1059,10 +1059,18 @@
                 html += buildGridHTML();
             } else if (mode == 2) {
                 html += '<div style="color: #a4b0be; font-style: italic; margin-bottom: 5px;">Quản trị viên chọn ' + qPerTeam + ' câu hỏi từ lưới dưới đây để tạo thành gói:</div>';
-                if (currentState && currentState.pendingPackage && currentState.pendingPackage.mode === 2 && adminSelectedQuestions.length === 0) {
-                    let pQ = currentState.pendingPackage.questions || currentState.pendingPackage.package;
-                    if (pQ) {
-                        adminSelectedQuestions = pQ.map((q, i) => ({ points: q.points, idx: q.idx, slotIndex: i }));
+                let hasRealSelection2 = adminSelectedQuestions.some(q => q && q.points !== null);
+                if (!hasRealSelection2) {
+                    if (currentState && currentState.pendingPackage && currentState.pendingPackage.mode === 2) {
+                        let pQ = currentState.pendingPackage.questions || currentState.pendingPackage.package;
+                        if (pQ && pQ.length > 0) {
+                            adminSelectedQuestions = pQ.map((q, i) => ({ points: q.points, idx: q.idx, slotIndex: i }));
+                        }
+                    } else if (currentState && currentState.lockedPackage && currentState.lockedPackage.mode === 2) {
+                        let lQ = currentState.lockedPackage.questions || [];
+                        if (lQ && lQ.length > 0) {
+                            adminSelectedQuestions = lQ.map((q, i) => ({ points: q.points, idx: q.idx, slotIndex: i }));
+                        }
                     }
                 }
                 while (adminSelectedQuestions.length < qPerTeam) {
@@ -1088,10 +1096,16 @@
             } else if (mode == 3) {
                 html += '<div style="color: #a4b0be; font-style: italic; margin-bottom: 5px;">Mode 3 - Chọn điểm cho từng câu (server sẽ random chọn câu tương ứng):</div>';
                 
-                // Restore from pending package if needed
-                if (currentState && currentState.pendingPackage && currentState.pendingPackage.mode === 3 && adminSelectedQuestions.length === 0) {
-                    let pQ = currentState.pendingPackage.questions || currentState.pendingPackage.package;
-                    if (pQ) adminSelectedQuestions = pQ.map((q, i) => ({ points: q.points, idx: -1, slotIndex: i }));
+                // Restore from pending package or locked package if needed
+                let hasRealSelection3 = adminSelectedQuestions.some(q => q && q.points !== null);
+                if (!hasRealSelection3) {
+                    if (currentState && currentState.pendingPackage && currentState.pendingPackage.mode === 3) {
+                        let pQ = currentState.pendingPackage.questions || currentState.pendingPackage.package;
+                        if (pQ && pQ.length > 0) adminSelectedQuestions = pQ.map((q, i) => ({ points: q.points, idx: -1, slotIndex: i }));
+                    } else if (currentState && currentState.lockedPackage && currentState.lockedPackage.mode === 3) {
+                        let lQ = currentState.lockedPackage.questions || [];
+                        if (lQ && lQ.length > 0) adminSelectedQuestions = lQ.map((q, i) => ({ points: q.points, idx: -1, slotIndex: i }));
+                    }
                 }
                 
                 // Ensure adminSelectedQuestions has qPerTeam slots
@@ -1265,20 +1279,29 @@
 
         function lockPackage() {
             const teamSelect = document.getElementById('mainTeam');
-            let teamId = teamSelect ? parseInt(teamSelect.value) : -1;
-            if (isNaN(teamId)) teamId = -1;
+            let teamId = teamSelect ? parseInt(teamSelect.value, 10) : -1;
+            if (isNaN(teamId) || teamId <= 0) {
+                if (currentState && currentState.turnOrder && currentState.turnOrder.length > 0) {
+                    teamId = currentState.turnOrder[0];
+                } else if (currentState && currentState.teams && currentState.teams.length > 0) {
+                    teamId = currentState.teams[0].id;
+                } else {
+                    teamId = 1;
+                }
+                if (teamSelect) teamSelect.value = teamId;
+            }
             
-            const mode = (currentState && currentState.settings) ? (currentState.settings.questionSelectionMode || 1) : 1;
-            const qPerTeam = (currentState && currentState.settings) ? (currentState.settings.questionsPerTeam || 3) : 3;
+            const mode = (currentState && currentState.settings) ? (parseInt(currentState.settings.questionSelectionMode, 10) || 1) : 1;
+            const qPerTeam = (currentState && currentState.settings) ? (parseInt(currentState.settings.questionsPerTeam, 10) || 3) : 3;
             
             let packageData = [];
             
             if (mode == 2 || mode == 3) {
                 let filledCount = 0;
                 if (mode == 2) {
-                    filledCount = adminSelectedQuestions.filter(q => q.points !== null && q.idx !== -1).length;
+                    filledCount = adminSelectedQuestions.filter(q => q && q.points !== null && q.idx !== -1).length;
                 } else {
-                    filledCount = adminSelectedQuestions.filter(q => q.points !== null).length;
+                    filledCount = adminSelectedQuestions.filter(q => q && q.points !== null).length;
                 }
                 
                 if (filledCount !== qPerTeam) {

@@ -1440,8 +1440,10 @@ try {
     // --- ADMIN: Chốt gói câu hỏi (Mode 2 & 3) ---
     socket.on('lockPackage', (data) => {
         const state = getActiveState(socket);
-try {
-            let mainTeamId = parseInt(data.mainTeamId);
+        try {
+            if (!data) return;
+            const mode = parseInt(data.mode, 10) || 1;
+            let mainTeamId = parseInt(data.mainTeamId, 10);
             if (isNaN(mainTeamId) || mainTeamId <= 0) {
                 if (state.turnOrder && state.turnOrder.length > 0) {
                     mainTeamId = state.turnOrder[0];
@@ -1454,22 +1456,23 @@ try {
 
             let finalPackage = [];
             
-            if (data.mode === 2) {
+            if (mode === 2) {
                 // Mode 2: data.package is [{points, idx}, ...]
-                finalPackage = data.package;
+                finalPackage = Array.isArray(data.package) ? data.package : [];
                 // Mode 2: Mark all chosen questions as played immediately
                 finalPackage.forEach(q => {
-                    if (q.points && q.idx !== undefined && q.idx !== -1) {
+                    if (q && q.points && q.idx !== undefined && q.idx !== -1) {
                         if (!state.playedQuestions[q.points]) state.playedQuestions[q.points] = [];
                         if (!state.playedQuestions[q.points].includes(q.idx)) {
                             state.playedQuestions[q.points].push(q.idx);
                         }
                     }
                 });
-            } else if (data.mode === 3) {
+            } else if (mode === 3) {
                 // Mode 3: data.package is [{points, idx}, ...]
-                data.package.forEach(item => {
-                    let points = (item && typeof item === 'object') ? parseInt(item.points) : parseInt(item);
+                const pkgArr = Array.isArray(data.package) ? data.package : [];
+                pkgArr.forEach(item => {
+                    let points = (item && typeof item === 'object') ? parseInt(item.points, 10) : parseInt(item, 10);
                     if (isNaN(points)) return;
                     let totalQs = state.questionCount[points] || 0;
                     let played = state.playedQuestions[points] || [];
@@ -1492,7 +1495,7 @@ try {
             state.isGridVisibleOnOverlay = false;
             state.pendingPackage = null;
             state.lockedPackage = {
-                mode: data.mode,
+                mode: mode,
                 mainTeamId: mainTeamId,
                 questions: finalPackage,
                 currentIndex: -1,
@@ -1503,10 +1506,10 @@ try {
             if (!state.teamQuestionHistory) state.teamQuestionHistory = { 1: [], 2: [], 3: [], 4: [] };
             if (!state.teamQuestionHistory[mainTeamId]) state.teamQuestionHistory[mainTeamId] = [];
             finalPackage.forEach(q => {
-                if (q.points && q.idx !== undefined) {
+                if (q && q.points && q.idx !== undefined) {
                     let exists = state.teamQuestionHistory[mainTeamId].find(x => x.points == q.points && x.idx == q.idx);
                     if (!exists) {
-                        state.teamQuestionHistory[mainTeamId].push({ points: q.points, idx: q.idx, mode: data.mode });
+                        state.teamQuestionHistory[mainTeamId].push({ points: q.points, idx: q.idx, mode: mode });
                     }
                 }
             });
@@ -1539,79 +1542,82 @@ try {
 
     // --- ADMIN: Chuyển câu trong gói (Mode 2 & 3) ---
     socket.on('nextQuestionInPackage', (data) => {
-        const state = getActiveState(socket);
-if (data.cancel) {
-            state.lockedPackage = null;
-            state.pendingPackage = null;
-            
-            if (state.currentQuestion && state.currentQuestion.active) {
-                state.currentQuestion.active = false;
-                state.currentQuestion.mainTeamId = null;
-                state.currentQuestion.isHopeStar = false;
-                state.buzzedTeam = null;
-                state.isBuzzerLocked = true;
-                clearBuzzerTimeout(typeof state !== 'undefined' ? state : gameState);
-            }
-        state.currentQuestion = null;
-            broadcastState(socket);
-            return;
-        }
-
-        let pkg = state.lockedPackage;
-        if (!pkg) return;
-
-        if (data.revealOnly) {
-            state.currentQuestion.isHidden = false;
-            state.currentQuestion.text = data.text || "";
-            state.currentQuestion.answer = data.answer || "";
-            state.currentQuestion.vid = data.vid || "";
-            state.currentQuestion.points = pkg.questions[pkg.currentIndex].points;
-            broadcastState(socket);
-            return;
-        }
-
-        pkg.currentIndex++;
-
-        if (pkg.currentIndex < pkg.questions.length) {
-            let qText = data.text || "";
-            let qAns = data.answer || "";
-            let qVid = data.vid || "";
-            if (!qText && state.questionBank && state.questionBank[qData.points] && state.questionBank[qData.points][qData.idx]) {
-                qText = state.questionBank[qData.points][qData.idx].q || "";
-                qAns = state.questionBank[qData.points][qData.idx].a || "";
-                qVid = state.questionBank[qData.points][qData.idx].vid || "";
+        try {
+            const state = getActiveState(socket);
+            if (!data) data = {};
+            if (data.cancel) {
+                state.lockedPackage = null;
+                state.pendingPackage = null;
+                
+                if (state.currentQuestion && state.currentQuestion.active) {
+                    state.currentQuestion.active = false;
+                    state.currentQuestion.mainTeamId = null;
+                    state.currentQuestion.isHopeStar = false;
+                    state.buzzedTeam = null;
+                    state.isBuzzerLocked = true;
+                    clearBuzzerTimeout(typeof state !== 'undefined' ? state : gameState);
+                }
+                state.currentQuestion = null;
+                broadcastState(socket);
+                return;
             }
 
-            state.currentQuestion = {
-                active: true,
-                resolved: false,
-                points: qData.points || 0,
-                mainTeamId: pkg.mainTeamId || 1,
-                isHopeStar: false,
-                deductedFromMain: false,
-                text: qText,
-                answer: qAns,
-                vid: qVid,
-                idx: qData.idx,
-                isHidden: false,
-                mode: pkg.mode
-            };
-            
+            let pkg = state.lockedPackage;
+            if (!pkg || !Array.isArray(pkg.questions)) return;
 
-            state.isGridVisibleOnOverlay = false;
-            broadcastState(socket);
-            
-            resetBuzzerState(typeof state !== 'undefined' ? state : gameState);
-            state.isGridVisibleOnOverlay = false;
-            
-            broadcastState(socket);
-            
-            // playSoundInRoom(socket, 'question_open'); // Removed as per request
-        } else {
-            // End of package
-            state.lockedPackage = null;
-            state.isGridVisibleOnOverlay = false;
-            broadcastState(socket);
+            if (data.revealOnly) {
+                if (state.currentQuestion) {
+                    state.currentQuestion.isHidden = false;
+                    state.currentQuestion.text = data.text || state.currentQuestion.text || "";
+                    state.currentQuestion.answer = data.answer || state.currentQuestion.answer || "";
+                    state.currentQuestion.vid = data.vid || state.currentQuestion.vid || "";
+                    if (pkg.questions[pkg.currentIndex]) {
+                        state.currentQuestion.points = pkg.questions[pkg.currentIndex].points;
+                    }
+                }
+                broadcastState(socket);
+                return;
+            }
+
+            pkg.currentIndex++;
+
+            if (pkg.currentIndex < pkg.questions.length) {
+                let qData = pkg.questions[pkg.currentIndex] || {};
+                let qText = data.text || "";
+                let qAns = data.answer || "";
+                let qVid = data.vid || "";
+                if (!qText && state.questionBank && state.questionBank[qData.points] && state.questionBank[qData.points][qData.idx]) {
+                    qText = state.questionBank[qData.points][qData.idx].q || "";
+                    qAns = state.questionBank[qData.points][qData.idx].a || "";
+                    qVid = state.questionBank[qData.points][qData.idx].vid || "";
+                }
+
+                state.currentQuestion = {
+                    active: true,
+                    resolved: false,
+                    points: qData.points || 0,
+                    mainTeamId: pkg.mainTeamId || 1,
+                    isHopeStar: false,
+                    deductedFromMain: false,
+                    text: qText,
+                    answer: qAns,
+                    vid: qVid,
+                    idx: qData.idx,
+                    isHidden: false,
+                    mode: pkg.mode
+                };
+                
+                state.isGridVisibleOnOverlay = false;
+                resetBuzzerState(typeof state !== 'undefined' ? state : gameState);
+                broadcastState(socket);
+            } else {
+                // End of package
+                state.lockedPackage = null;
+                state.isGridVisibleOnOverlay = false;
+                broadcastState(socket);
+            }
+        } catch (err) {
+            console.error("Lỗi khi nextQuestionInPackage:", err);
         }
     });
 
