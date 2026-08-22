@@ -4,26 +4,42 @@
 
     <script>
     window.onerror = function(message, source, lineno, colno, error) {
-        let errBox = document.getElementById('debug-error-box');
-        if (!errBox) {
-            errBox = document.createElement('div');
-            errBox.id = 'debug-error-box';
-            errBox.style.position = 'fixed';
-            errBox.style.top = '10px';
-            errBox.style.left = '10px';
-            errBox.style.backgroundColor = 'rgba(255, 0, 0, 0.9)';
-            errBox.style.color = 'white';
-            errBox.style.padding = '20px';
-            errBox.style.zIndex = '999999';
-            errBox.style.fontSize = '20px';
-            errBox.style.maxWidth = '80%';
-            errBox.style.wordWrap = 'break-word';
-            document.body.appendChild(errBox);
+        const msgStr = String(message || '');
+        const srcStr = String(source || '');
+        if (msgStr.includes('M_ID') || msgStr.includes('extension') || srcStr.includes('chrome-extension') || srcStr.includes('moz-extension') || (msgStr === 'Script error.' && !source)) {
+            console.warn('Ignored external/extension script error:', message);
+            return true;
         }
-        errBox.innerHTML += `<b>ERROR:</b> ${message} at ${source}:${lineno}:${colno}<br>`;
+        console.error('App error:', message, source, lineno, colno, error);
+        
+        if (new URLSearchParams(window.location.search).get('debug') === '1') {
+            let errBox = document.getElementById('debug-error-box');
+            if (!errBox) {
+                errBox = document.createElement('div');
+                errBox.id = 'debug-error-box';
+                errBox.style.position = 'fixed';
+                errBox.style.top = '10px';
+                errBox.style.left = '10px';
+                errBox.style.backgroundColor = 'rgba(255, 0, 0, 0.9)';
+                errBox.style.color = 'white';
+                errBox.style.padding = '20px';
+                errBox.style.zIndex = '999999';
+                errBox.style.fontSize = '20px';
+                errBox.style.maxWidth = '80%';
+                errBox.style.wordWrap = 'break-word';
+                document.body.appendChild(errBox);
+            }
+            errBox.innerHTML += `<b>ERROR:</b> ${message} at ${source}:${lineno}:${colno}<br>`;
+        }
+        return false;
     };
     window.addEventListener('unhandledrejection', function(event) {
-        window.onerror(event.reason, 'Promise', 0, 0, event.reason);
+        const reason = event.reason;
+        const rStr = String(reason || '');
+        if (rStr.includes('M_ID') || rStr.includes('extension') || rStr.includes('play() request was interrupted')) {
+            return;
+        }
+        console.error('Unhandled Promise Rejection:', reason);
     });
     </script>
     
