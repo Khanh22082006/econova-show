@@ -1475,11 +1475,13 @@ const roomPin = (pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0'
         if (existing) {
             const existingSocket = io.sockets.sockets.get(existing.socketId);
             const isOnline = existingSocket && existingSocket.connected;
-            const isSameClient = existing.clientId === clientId;
-            if (isOnline && !isSameClient) {
-                if (typeof callback === 'function') callback({ success: false, message: 'Đội này đã có thí sinh khác chọn!' });
-                socket.emit('claimError', { message: 'Đội này đã có thí sinh khác chọn! Vui lòng chọn đội khác.' });
-                return;
+            const isSameClient = existing.clientId && clientId && existing.clientId === clientId;
+            if (!isSameClient) {
+                if (isOnline || !existing.disconnectedAt || (Date.now() - existing.disconnectedAt < 60000)) {
+                    if (typeof callback === 'function') callback({ success: false, message: 'Đội này đã có thí sinh khác chọn trên thiết bị khác!' });
+                    socket.emit('claimError', { message: 'Đội này đã có thí sinh khác chọn trên thiết bị khác! Vui lòng chọn đội khác.' });
+                    return;
+                }
             }
         }
 
@@ -1573,7 +1575,6 @@ if (!state.isRoomOpen) {
                 if (item.school !== undefined) state.teams[idx].school = item.school.trim();
             }
         });
-        state.claimedTeams = {};
         updateTurnOrder(state);
         broadcastState(socket);
     });

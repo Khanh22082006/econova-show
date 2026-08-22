@@ -853,6 +853,9 @@
                 }
                 
                 if (btn.disabled !== isClaimed) btn.disabled = isClaimed;
+                btn.style.opacity = isClaimed ? '0.45' : '1';
+                btn.style.cursor = isClaimed ? 'not-allowed' : 'pointer';
+                btn.style.filter = isClaimed ? 'grayscale(0.6)' : 'none';
                 let claimedText = isClaimed ? ' ' + (typeof t === 'function' ? t('con_claimed', lang) : '(Đã có người chọn)') : '';
                 let targetName = (tObj.name || ('Đội ' + tObj.id)) + claimedText;
                 let targetSchool = tObj.school || '';
