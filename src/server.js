@@ -1466,12 +1466,20 @@ const roomPin = (pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0'
     });
 
     // --- THÍ SINH: Chọn đội ---
-    socket.on('claimTeam', (data, callback) => {
+    socket.on('claimTeam', async (data, callback) => {
         // Accept pin from payload as fallback (race condition: HTTP prefetch faster than WebSocket joinRoom)
         let pin = socket.currentRoomPin;
         if (!pin && data && data.pin) {
             const fallbackPin = (data.pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0');
-            const fallbackRoom = roomManager.getRoom(fallbackPin);
+            let fallbackRoom = roomManager.getRoom(fallbackPin);
+            if (!fallbackRoom) {
+                try {
+                    await loadRoomsFromCloud();
+                    fallbackRoom = roomManager.getRoom(fallbackPin);
+                } catch (e) {
+                    console.error('[ClaimTeam] Cloud restore error:', e.message);
+                }
+            }
             if (fallbackRoom) {
                 // Auto-join the socket to this room
                 socket.join(fallbackPin);
@@ -1482,12 +1490,18 @@ const roomPin = (pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0'
             }
         }
         if (!pin) {
-            if (typeof callback === 'function') callback({ success: false, message: 'Chưa vào phòng! Vui lòng tải lại trang.' });
+            if (typeof callback === 'function') callback({ success: false, message: 'Phòng không tồn tại hoặc chưa tham gia phòng!' });
             return;
         }
-        const room = roomManager.getRoom(pin);
+        let room = roomManager.getRoom(pin);
         if (!room) {
-            if (typeof callback === 'function') callback({ success: false, message: 'Phòng không tồn tại! Vui lòng tải lại trang.' });
+            try {
+                await loadRoomsFromCloud();
+                room = roomManager.getRoom(pin);
+            } catch (e) {}
+        }
+        if (!room) {
+            if (typeof callback === 'function') callback({ success: false, message: 'Phòng không tồn tại hoặc đã đóng!' });
             return;
         }
         const state = room.gameState;
