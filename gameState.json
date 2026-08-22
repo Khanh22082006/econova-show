@@ -28,6 +28,10 @@
   ],
   "activeTeam": 2,
   "lockedPackage": null,
+  "isBuzzerLocked": true,
+  "buzzedTeam": null,
+  "buzzTimes": {},
+  "claimedTeams": {},
   "currentQuestion": {
     "active": false
   }

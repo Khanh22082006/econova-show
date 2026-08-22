@@ -777,9 +777,15 @@
             if (qGrid2) qGrid2.style.display = 'none';
             const bc = document.getElementById('buzzerContainer');
             if (bc) bc.style.display = 'flex';
-            if (statusText) statusText.innerText = typeof t === 'function' ? t('con_wait_admin', currentGlobalLang) : '⏳ ĐANG CHỜ CÂU HỎI...';
-            if (btnIcon) btnIcon.innerText = "⏳";
-            if (buzzBtn) buzzBtn.classList.add('locked');
+            if (statusText) {
+                statusText.innerText = typeof t === 'function' ? t('con_wait_admin', currentGlobalLang) : '⏳ ĐANG CHỜ CÂU HỎI...';
+                statusText.style.color = 'rgba(255,255,255,0.5)';
+            }
+            if (btnIcon) btnIcon.innerText = "🔒";
+            if (buzzBtn) {
+                buzzBtn.className = 'buzz-btn locked';
+            }
+            if (buzzRing) buzzRing.classList.remove('animating');
             
             // Cập nhật tên và điểm tức thì trên giao diện
             if (window.currentState && window.currentState.teams) {
@@ -1101,40 +1107,40 @@
                         buzzBtn.classList.add('success');
                         buzzBtn.classList.remove('locked');
                         btnIcon.textContent = '⏱ ' + myTime;
-                        statusText.textContent = t('con_you', state.settings.language);
+                        statusText.textContent = typeof t === 'function' ? t('con_you', (state.settings && state.settings.language) || currentGlobalLang) : 'BẠN ĐÃ BẤM CHUÔNG!';
                         buzzRing.classList.add('active-success');
                     } else {
                         buzzBtn.classList.add('locked');
                         buzzBtn.classList.remove('success');
                         btnIcon.textContent = '🔒';
-                        statusText.textContent = t('con_other', state.settings.language);
+                        statusText.textContent = typeof t === 'function' ? t('con_other', (state.settings && state.settings.language) || currentGlobalLang) : 'ĐỘI KHÁC ĐÃ BẤM CHUÔNG';
                         buzzRing.classList.remove('active-success');
                     }
                 } 
-                // NẾU CHUÔNG ĐANG MỞ (VÀ CHƯA CÓ AI BẤM)
-                else if (!state.isBuzzerLocked) {
-                    if (state.currentQuestion.active && state.currentQuestion.mainTeamId === myTeamId) {
+                // NẾU CHUÔNG ĐANG MỞ (VÀ CHƯA CÓ AI BẤM VÀ CÂU HỎI ĐANG DIỄN RA)
+                else if (state.isBuzzerLocked === false && state.currentQuestion && state.currentQuestion.active) {
+                    if (state.currentQuestion.mainTeamId === myTeamId) {
                         buzzBtn.classList.add('locked');
                         buzzBtn.classList.remove('unlocked', 'success');
                         buzzRing.classList.remove('animating');
                         btnIcon.textContent = '🚫';
-                        statusText.textContent = t('con_no_buzz', state.settings.language);
+                        statusText.textContent = typeof t === 'function' ? t('con_no_buzz', (state.settings && state.settings.language) || currentGlobalLang) : 'BẠN LÀ ĐỘI CHÍNH';
                     } else {
                         buzzBtn.classList.remove('locked', 'success');
                         buzzBtn.classList.add('unlocked');
                         buzzRing.classList.add('animating');
-                        btnIcon.textContent = t('con_buzz_exclaim', state.settings.language);
-                        statusText.textContent = t('con_buzz_open', state.settings.language);
+                        btnIcon.textContent = typeof t === 'function' ? t('con_buzz_exclaim', (state.settings && state.settings.language) || currentGlobalLang) : '🔔 BẤM CHUÔNG!';
+                        statusText.textContent = typeof t === 'function' ? t('con_buzz_open', (state.settings && state.settings.language) || currentGlobalLang) : 'CHUÔNG ĐANG MỞ!';
                         statusText.style.color = '#10ac84';
                     }
                 } 
-                // NẾU CHUÔNG KHÓA (CHỜ CÂU HỎI)
+                // NẾU CHUÔNG KHÓA HOẶC CHƯA CÓ CÂU HỎI
                 else {
                     buzzBtn.classList.add('locked');
                     buzzBtn.classList.remove('unlocked', 'success');
                     buzzRing.classList.remove('animating');
                     btnIcon.textContent = '🔒';
-                    statusText.textContent = t('con_locked', state.settings.language);
+                    statusText.textContent = typeof t === 'function' ? t('con_locked', (state.settings && state.settings.language) || currentGlobalLang) : 'CHUÔNG KHÓA';
                     statusText.style.color = 'rgba(255,255,255,0.5)';
                 }
             }

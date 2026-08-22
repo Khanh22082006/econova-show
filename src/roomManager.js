@@ -80,6 +80,10 @@ class RoomManager {
         const initialGameState = JSON.parse(JSON.stringify(this.defaultStateTemplate));
         initialGameState.isRoomOpen = true;
         initialGameState.roomPIN = cleanPin;
+        initialGameState.isBuzzerLocked = true;
+        initialGameState.buzzedTeam = null;
+        initialGameState.buzzTimes = {};
+        initialGameState.claimedTeams = {};
 
         const roomData = {
             pin: cleanPin,

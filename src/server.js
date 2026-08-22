@@ -2194,21 +2194,22 @@ io.emit('startCountdown', seconds);
     // --- THÍ SINH: Bấm chuông ---
     socket.on('buzz', (teamId, token) => {
         teamId = parseInt(teamId);
+        const state = getActiveState(socket);
+        if (!state) return;
         
         // Chống gian lận: Yêu cầu phải gửi kèm buzzToken khớp với server
-        if (gameState.buzzToken && token !== gameState.buzzToken) {
-            console.log(`[BUZZ] Token mismatch for team ${teamId} (client token: ${token}, server token: ${gameState.buzzToken}).`);
-            // Dự phòng: nếu chuông thực sự đang mở và chưa ai bấm, cho phép bỏ qua kiểm tra token để tránh nghẽn/mất sync
-            if (gameState.isBuzzerLocked || gameState.buzzedTeam !== null) {
+        if (state.buzzToken && token !== state.buzzToken) {
+            console.log(`[BUZZ] Token mismatch for team ${teamId} (client token: ${token}, server token: ${state.buzzToken}).`);
+            if (state.isBuzzerLocked || state.buzzedTeam !== null) {
                 return;
             }
         }
         
         // Xác minh xem socket này có đúng là người sở hữu đội không
-        let claim = gameState.claimedTeams[teamId];
+        if (!state.claimedTeams) state.claimedTeams = {};
+        let claim = state.claimedTeams[teamId];
         if (!claim) return;
         if (claim.socketId !== socket.id) {
-            // Reconnection fallback: check if client IDs match
             if (socket.clientId && claim.clientId === socket.clientId) {
                 console.log(`[BUZZ] Reconnection fallback: Auto-updating socketId for team ${teamId} from ${claim.socketId} to ${socket.id}`);
                 claim.socketId = socket.id;
@@ -2218,19 +2219,18 @@ io.emit('startCountdown', seconds);
         }
         
         // Ngăn đội chính bấm chuông giành quyền trong câu hỏi của chính họ
-        if (gameState.currentQuestion.active && gameState.currentQuestion.mainTeamId === teamId) return;
+        if (state.currentQuestion && state.currentQuestion.active && state.currentQuestion.mainTeamId === teamId) return;
 
         let isNewBuzz = false;
-        
-        if (gameState.buzzerUnlockTime && typeof gameState.buzzTimes[teamId] !== 'number') {
-            let elapsed = Date.now() - gameState.buzzerUnlockTime;
+        if (state.buzzerUnlockTime && state.buzzTimes && typeof state.buzzTimes[teamId] !== 'number') {
+            let elapsed = Date.now() - state.buzzerUnlockTime;
             if (elapsed <= 5000) {
-                gameState.buzzTimes[teamId] = elapsed;
+                state.buzzTimes[teamId] = elapsed;
                 isNewBuzz = true;
             }
         }
-        const state = getActiveState(socket);
-if (!state.isBuzzerLocked && state.buzzedTeam === null) {
+
+        if (!state.isBuzzerLocked && state.buzzedTeam === null) {
             state.isBuzzerLocked = true;
             clearBuzzerTimeout(state);
             playSoundInRoom(socket, 'buzzed');
@@ -2240,19 +2240,19 @@ if (!state.isBuzzerLocked && state.buzzedTeam === null) {
                 state.pendingBuzzerTeam = teamId;
                 if (state.buzzerDelayTimer) clearTimeout(state.buzzerDelayTimer);
                 state.buzzerDelayTimer = setTimeout(() => {
-                    if (gameState.pendingBuzzerTeam === teamId) {
-                        gameState.buzzedTeam = teamId;
-                        gameState.pendingBuzzerTeam = null;
-                        io.emit('updateState', gameState);
+                    if (state.pendingBuzzerTeam === teamId) {
+                        state.buzzedTeam = teamId;
+                        state.pendingBuzzerTeam = null;
+                        broadcastState(socket);
                     }
                 }, delay);
             } else {
-                gameState.buzzedTeam = teamId;
-                io.emit('updateState', gameState);
+                state.buzzedTeam = teamId;
+                broadcastState(socket);
             }
         } else if (isNewBuzz) {
             // Cập nhật lại cho admin thấy thời gian của các đội khác
-            io.emit('updateState', gameState);
+            broadcastState(socket);
         }
     });
 
