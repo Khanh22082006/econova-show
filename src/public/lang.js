@@ -511,17 +511,21 @@ const I18N = {
     }
 };
 
+let currentAppliedLang = null;
 function applyTranslations(lang) {
+    if (!lang) lang = currentGlobalLang || 'vi';
+    if (currentAppliedLang === lang) return;
+    currentAppliedLang = lang;
     const dict = I18N[lang] || I18N['vi'];
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (dict[key]) {
             if (el.tagName === 'INPUT' && (el.type === 'text' || el.type === 'number')) {
-                el.placeholder = dict[key];
+                if (el.placeholder !== dict[key]) el.placeholder = dict[key];
             } else if (el.tagName === 'INPUT' && el.type === 'button') {
-                el.value = dict[key];
+                if (el.value !== dict[key]) el.value = dict[key];
             } else {
-                el.innerHTML = dict[key];
+                if (el.innerHTML !== dict[key]) el.innerHTML = dict[key];
             }
         }
     });

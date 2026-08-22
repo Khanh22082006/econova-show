@@ -267,6 +267,17 @@
         body { user-select: none; -webkit-user-select: none; }
         input, textarea { user-select: text; -webkit-user-select: text; }
     </style>
+    <script>
+        try {
+            const cachedFont = localStorage.getItem('econova_font_rules');
+            if (cachedFont) {
+                const s = document.createElement('style');
+                s.id = 'dynamic-font-styles-global';
+                s.textContent = cachedFont;
+                document.head.appendChild(s);
+            }
+        } catch(e) {}
+    </script>
 </head>
 <body>
     <!-- CHỐNG GIAN LẬN -->
@@ -842,6 +853,7 @@
                     btn.className = 'team-btn';
                     btn.dataset.t = tObj.id;
                     btn.onclick = () => chooseTeam(tObj.id);
+                    btn.innerHTML = `<span>${tObj.name || ('Đội ' + tObj.id)}</span><span class="school">${tObj.school || ''}</span>`;
                     container.appendChild(btn);
                 });
             }
@@ -863,11 +875,18 @@
                     }
                 }
                 
-                btn.disabled = isClaimed;
+                if (btn.disabled !== isClaimed) btn.disabled = isClaimed;
                 let claimedText = isClaimed ? ' ' + (typeof t === 'function' ? t('con_claimed', lang) : '(Đã có người chọn)') : '';
-                let newHtml = `<span>${tObj.name || ('Đội ' + tObj.id)}${claimedText}</span><span class="school">${tObj.school || ''}</span>`;
-                if (btn.innerHTML !== newHtml) {
-                    btn.innerHTML = newHtml;
+                let targetName = (tObj.name || ('Đội ' + tObj.id)) + claimedText;
+                let targetSchool = tObj.school || '';
+
+                let nameSpan = btn.querySelector('span:first-child');
+                let schoolSpan = btn.querySelector('span.school');
+                if (!nameSpan || !schoolSpan) {
+                    btn.innerHTML = `<span>${targetName}</span><span class="school">${targetSchool}</span>`;
+                } else {
+                    if (nameSpan.textContent !== targetName) nameSpan.textContent = targetName;
+                    if (schoolSpan.textContent !== targetSchool) schoolSpan.textContent = targetSchool;
                 }
             });
         }
@@ -985,6 +1004,7 @@
                     if (styleEl.innerHTML !== rules) {
                         styleEl.innerHTML = rules;
                     }
+                    try { localStorage.setItem('econova_font_rules', rules); } catch(e) {}
                 }
             }
 
