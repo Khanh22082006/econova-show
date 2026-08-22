@@ -983,7 +983,34 @@ if (fs.existsSync(STATE_FILE) && process.env.ECONOVA_WATCH_STATE === '1') {
 // =============================================
 // HELPER: Auto-sort turn order
 // =============================================
-function resetBuzzerState(state) {
+// QUẢN LÝ TIMER CHUÔNG NGOÀI GAMESTATE (TRÁNH LỖI CIRCULAR SOCKET.IO)
+// =============================================
+const roomBuzzerTimeouts = new Map();
+const roomBuzzerDelayTimers = new Map();
+
+function setRoomBuzzerTimeout(pin, timer) {
+    const key = pin || 'DEFAULT';
+    if (roomBuzzerTimeouts.has(key)) clearTimeout(roomBuzzerTimeouts.get(key));
+    if (timer) roomBuzzerTimeouts.set(key, timer);
+    else roomBuzzerTimeouts.delete(key);
+}
+
+function clearRoomBuzzerTimeout(pin) {
+    setRoomBuzzerTimeout(pin, null);
+}
+
+function setRoomBuzzerDelayTimer(pin, timer) {
+    const key = pin || 'DEFAULT';
+    if (roomBuzzerDelayTimers.has(key)) clearTimeout(roomBuzzerDelayTimers.get(key));
+    if (timer) roomBuzzerDelayTimers.set(key, timer);
+    else roomBuzzerDelayTimers.delete(key);
+}
+
+function clearRoomBuzzerDelayTimer(pin) {
+    setRoomBuzzerDelayTimer(pin, null);
+}
+
+function resetBuzzerState(state, pin = null) {
     if (!state) state = gameState;
     state.buzzedTeam = null;
     state.pendingBuzzerTeam = null;
@@ -991,27 +1018,26 @@ function resetBuzzerState(state) {
     state.buzzerUnlockTime = null;
     state.buzzTimes = {};
     state.wrongBuzzes = [];
-    if (state.buzzerDelayTimer) {
-        clearTimeout(state.buzzerDelayTimer);
-        state.buzzerDelayTimer = null;
-    }
+    delete state.buzzerTimeout;
+    delete state.buzzerDelayTimer;
+    clearRoomBuzzerDelayTimer(pin || state.roomPIN);
 }
 
-function clearBuzzerTimeout(state) {
+function clearBuzzerTimeout(state, pin = null) {
     if (!state) state = gameState;
-    if (state.buzzerTimeout) {
-        clearTimeout(state.buzzerTimeout);
-        state.buzzerTimeout = null;
-    }
+    delete state.buzzerTimeout;
+    clearRoomBuzzerTimeout(pin || state.roomPIN);
 }
 
-function closeCurrentQuestion() {
-    gameState.currentQuestion.active = false;
-    gameState.currentQuestion.mainTeamId = null;
-    gameState.currentQuestion.isHopeStar = false;
-    gameState.currentQuestion.resolved = false;
-    resetBuzzerState(typeof state !== 'undefined' ? state : gameState);
-    clearBuzzerTimeout(typeof state !== 'undefined' ? state : gameState);
+function closeCurrentQuestion(pin = null) {
+    if (gameState.currentQuestion) {
+        gameState.currentQuestion.active = false;
+        gameState.currentQuestion.mainTeamId = null;
+        gameState.currentQuestion.isHopeStar = false;
+        gameState.currentQuestion.resolved = false;
+    }
+    resetBuzzerState(gameState, pin);
+    clearBuzzerTimeout(gameState, pin);
 }
         gameState.currentQuestion = null;
 
@@ -1949,13 +1975,13 @@ state.activeBankSlot = slotId;
             }
         }
 
-        if (state.buzzerTimeout) clearTimeout(state.buzzerTimeout);
-        state.buzzerTimeout = setTimeout(() => {
+        const roomPin = socket.currentRoomPin || (state && state.roomPIN) || null;
+        setRoomBuzzerTimeout(roomPin, setTimeout(() => {
             if (!state.isBuzzerLocked && state.buzzedTeam === null) {
                 state.isBuzzerLocked = true;
                 broadcastState(socket);
             }
-        }, duration * 1000);
+        }, duration * 1000));
     });
 
     // --- ADMIN: Đội giành quyền ĐÚNG ---
@@ -2589,16 +2615,16 @@ if (newCount < 2 || newCount > 6) return;
             playSoundInRoom(socket, 'buzzed');
             
             let delay = state.settings && state.settings.buzzerDelayMs !== undefined ? state.settings.buzzerDelayMs : 500;
+            const roomPin = socket.currentRoomPin || (state && state.roomPIN) || null;
             if (delay > 0) {
                 state.pendingBuzzerTeam = teamId;
-                if (state.buzzerDelayTimer) clearTimeout(state.buzzerDelayTimer);
-                state.buzzerDelayTimer = setTimeout(() => {
+                setRoomBuzzerDelayTimer(roomPin, setTimeout(() => {
                     if (state.pendingBuzzerTeam === teamId) {
                         state.buzzedTeam = teamId;
                         state.pendingBuzzerTeam = null;
                         broadcastState(socket);
                     }
-                }, delay);
+                }, delay));
             } else {
                 state.buzzedTeam = teamId;
                 broadcastState(socket);
