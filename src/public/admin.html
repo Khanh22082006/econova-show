@@ -5,7 +5,7 @@
     <title data-i18n="adm_title">Command Center - Kỹ thuật viên</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=Inter:wght@400;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@600;700;800&family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=Inter:wght@400;600;700&family=Kanit:wght@600;700;800&family=Montserrat:wght@600;700;800;900&family=Orbitron:wght@400;700;900&family=Oswald:wght@600;700&family=Roboto:wght@500;700;900&family=Russo+One&family=Teko:wght@600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
     <script src="import_excel.js" defer></script>
     <script src="/socket.io/socket.io.js"></script>
@@ -457,14 +457,12 @@
             <div style="display: flex; gap: 15px; margin-bottom: 15px;">
                 <div style="flex: 1;">
                     <label data-i18n="adm_sb_font_team">Font Tên Đội:</label>
-                    <select id="settingFontTeamName" onchange="applySettings()" style="font-size: 13px;">
-                        <option value="Orbitron">Orbitron</option>
+                    <select id="settingFontTeamName" onchange="let s=document.getElementById('settingFontTeamNameGlobal'); if(s) s.value=this.value; applySettings()" style="font-size: 13px;">
                     </select>
                 </div>
                 <div style="flex: 1;">
                     <label data-i18n="adm_sb_font_score">Font Điểm Số:</label>
-                    <select id="settingFontScore" onchange="applySettings()" style="font-size: 13px;">
-                        <option value="Myriad Pro">Myriad Pro</option>
+                    <select id="settingFontScore" onchange="let s=document.getElementById('settingFontScoreGlobal'); if(s) s.value=this.value; applySettings()" style="font-size: 13px;">
                     </select>
                 </div>
             </div>
@@ -616,13 +614,13 @@
                     </div>
                     <div style="flex: 1; padding-left: 10px;">
                         <label data-i18n="adm_font_team">Font Tên Đội (Team Name):</label>
-                        <select id="settingFontTeamNameGlobal" onchange="document.getElementById('settingFontTeamName').value=this.value; applySettings()"></select>
+                        <select id="settingFontTeamNameGlobal" onchange="let s=document.getElementById('settingFontTeamName'); if(s) s.value=this.value; applySettings()"></select>
                     </div>
                 </div>
                 <div class="control-row">
                     <div style="flex: 1; padding-right: 10px;">
                         <label data-i18n="adm_font_score">Font Điểm số (Score):</label>
-                        <select id="settingFontScoreGlobal" onchange="document.getElementById('settingFontScore').value=this.value; applySettings()"></select>
+                        <select id="settingFontScoreGlobal" onchange="let s=document.getElementById('settingFontScore'); if(s) s.value=this.value; applySettings()"></select>
                     </div>
                     <div style="flex: 1; padding-left: 10px;">
                         <label data-i18n="adm_font_question">Font Câu hỏi (Question):</label>
@@ -1538,7 +1536,33 @@
         let _fontsCache = null;
         let _pendingFontState = null;
 
+        const DEFAULT_FONTS = [
+            "Be Vietnam Pro",
+            "Montserrat",
+            "Orbitron",
+            "Myriad Pro",
+            "SF Pro Display Bold",
+            "Roboto",
+            "Oswald",
+            "Anton",
+            "Kanit",
+            "Russo One",
+            "Teko",
+            "Barlow Condensed",
+            "Arial",
+            "Segoe UI",
+            "Impact",
+            "Tahoma",
+            "Verdana",
+            "Times New Roman",
+            "Calibri",
+            "Bahnschrift"
+        ];
+
         function populateFontSelects(fonts, settings) {
+            let fontList = (Array.isArray(fonts) && fonts.length > 0) ? fonts : (_fontsCache || DEFAULT_FONTS);
+            _fontsCache = fontList;
+            
             const ids = ['settingFontGlobal', 'settingFontGeneral', 'settingFontTeamName',
                          'settingFontScore', 'settingFontQuestion',
                          'settingFontTeamNameGlobal', 'settingFontScoreGlobal'];
@@ -1554,51 +1578,53 @@
                 'settingFontScoreGlobal':  { key: 'fontScore',   fallback: 'Myriad Pro' }
             };
 
+            const s = settings || (window.currentState && window.currentState.settings) || null;
+
             ids.forEach(id => {
                 let el = document.getElementById(id);
                 if (!el) return;
                 
-                // Build options
+                let targetVal = el.value;
+                if (s) {
+                    let map = fontMap[id];
+                    targetVal = s[map.key] || map.fallback;
+                }
+                if (!targetVal) targetVal = fontMap[id].fallback;
+
+                const allFonts = Array.from(new Set([targetVal, ...fontList])).filter(Boolean);
+                allFonts.sort((a, b) => a.localeCompare(b));
+
                 el.innerHTML = '';
-                fonts.forEach(f => {
+                allFonts.forEach(f => {
                     let opt = document.createElement('option');
                     opt.value = f;
                     opt.textContent = f;
+                    if (f === targetVal) opt.selected = true;
                     el.appendChild(opt);
                 });
-
-                // Set value from settings
-                if (settings) {
-                    let map = fontMap[id];
-                    let val = settings[map.key] || map.fallback;
-                    el.value = val;
-                    // If value wasn't found in options list, add it manually
-                    if (el.value !== val) {
-                        let opt = document.createElement('option');
-                        opt.value = val;
-                        opt.textContent = val + ' (đang dùng)';
-                        el.insertBefore(opt, el.firstChild);
-                        el.value = val;
-                    }
-                }
+                el.value = targetVal;
             });
         }
 
         function loadFontList(settings) {
+            // First populate immediately with default fonts so dropdown is never empty
+            populateFontSelects(DEFAULT_FONTS, settings);
+
             fetch('/api/fonts')
                 .then(res => {
                     if (!res.ok) throw new Error('HTTP ' + res.status);
                     return res.json();
                 })
                 .then(fonts => {
-                    _fontsCache = fonts;
-                    // Use provided settings, or fall back to currentState
-                    let s = settings || (currentState && currentState.settings) || null;
-                    populateFontSelects(fonts, s);
+                    if (Array.isArray(fonts) && fonts.length > 0) {
+                        _fontsCache = fonts;
+                        let s = settings || (window.currentState && window.currentState.settings) || null;
+                        populateFontSelects(fonts, s);
+                    }
                 })
                 .catch(err => {
-                    console.error('Failed to load fonts, retrying in 2s:', err);
-                    setTimeout(() => loadFontList(settings), 2000);
+                    console.log('Using default font list, retry in 3s:', err.message);
+                    setTimeout(() => loadFontList(settings), 3000);
                 });
         }
 
@@ -2348,6 +2374,16 @@
             turnList.style.width = '100%';
             turnList.innerHTML = '';
             
+            if (!Array.isArray(state.turnOrder)) {
+                state.turnOrder = [];
+            }
+            if (state.turnOrder.length === 0) {
+                const hasFinishedAny = state.turnStats && Object.values(state.turnStats).some(v => v > 0);
+                if (!hasFinishedAny && Array.isArray(state.teams)) {
+                    state.turnOrder = state.teams.map(t => t.id);
+                }
+            }
+
             const playedTeams = state.teams.filter(team => !state.turnOrder.includes(team.id));
             playedTeams.forEach(team => {
                 turnList.innerHTML += `<div class="turn-item played" style="flex: 1; padding: 10px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-width: 0;"><div style="font-weight: bold; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${team.name}</div><div style="font-size: 11px; margin-top: 5px;">${window.t("adm_to_played", currentGlobalLang)}</div></div>`;
@@ -2355,6 +2391,7 @@
             
             state.turnOrder.forEach((tid, idx) => {
                 let teamObj = state.teams.find(x => x.id === tid);
+                if (!teamObj) return;
                 let endBtn = `<button class="btn-red" style="padding:2px 8px; font-size:11px; width:auto;" onclick="finishTurnForTeam(${teamObj.id})">${window.t("adm_to_end", currentGlobalLang)}</button>`;
                 let stats = state.turnStats && state.turnStats[teamObj.id] ? state.turnStats[teamObj.id] : 0;
                 let statText = stats > 0 ? `<div style="color: #feca57; font-size: 12px; margin-top: 3px;">${window.t("adm_to_stats", currentGlobalLang).replace("{played}", stats).replace("{total}", state.settings?.questionsPerTeam || 3)}</div>` : '';
@@ -2947,54 +2984,8 @@
             }
         });
 
-        // Request & receive system fonts
-        const POPULAR_FONTS = ["Myriad Pro", "Orbitron", "Arial", "Montserrat", "Roboto", "Times New Roman", "Tahoma", "Courier New", "Impact", "Segoe UI", "Calibri", "Verdana", "Bahnschrift"];
-
-        function buildFontSelect(selectId, currentValue) {
-            let sel = document.getElementById(selectId);
-            if (!sel) return;
-            let savedVal = currentValue || sel.value;
-            // Will be filled by buildFontList
-            sel._pendingValue = savedVal;
-        }
-
         function buildFontList(fonts) {
-            if (!fonts || fonts.length === 0) return;
-            // Deduplicate and get base family names
-            let allFontSet = new Set(fonts.map(f => f.trim()).filter(f => f.length > 0));
-            let others = Array.from(allFontSet).filter(f => !POPULAR_FONTS.includes(f)).sort();
-
-            // Build option HTML with two groups
-            var language = document.getElementById('settingLanguage') ? document.getElementById('settingLanguage').value : 'vi'; let html = `<optgroup label="${t('adm_font_pop', language)}">`;
-            POPULAR_FONTS.forEach(f => {
-                html += `<option value="${f}">${f}</option>`;
-            });
-            html += '</optgroup>';
-            if (others.length > 0) {
-                html += `<optgroup label="${t('adm_font_all', language)}">`;
-                others.forEach(f => {
-                    html += `<option value="${f}">${f}</option>`;
-                });
-                html += '</optgroup>';
-            }
-
-            // Populate both font selects
-            ['settingFontTeamName', 'settingFontScore'].forEach(id => {
-                let sel = document.getElementById(id);
-                if (!sel) return;
-                let prev = sel._pendingValue || sel.value;
-                sel.innerHTML = html;
-                // Restore saved value if it exists in options
-                if (prev) sel.value = prev;
-                // If value not found in options (custom font), add it
-                if (sel.value !== prev) {
-                    let opt = document.createElement('option');
-                    var language = document.getElementById('settingLanguage') ? document.getElementById('settingLanguage').value : 'vi'; opt.text = prev + t('adm_font_custom', language);
-                    opt.value = prev;
-                    sel.insertBefore(opt, sel.firstChild);
-                    sel.value = prev;
-                }
-            });
+            populateFontSelects(fonts, (window.currentState && window.currentState.settings) || null);
         }
 
         let fontRetryCount = 0;

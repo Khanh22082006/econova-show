@@ -192,6 +192,9 @@ function restoreRoomsFromSnapshot(data) {
             // Đảm bảo trạng thái phòng luôn mở và gán đúng PIN
             room.gameState.isRoomOpen = true;
             room.gameState.roomPIN = r.pin;
+            if (!Array.isArray(room.gameState.turnOrder) || (room.gameState.turnOrder.length === 0 && (!room.gameState.turnStats || Object.keys(room.gameState.turnStats).length === 0))) {
+                room.gameState.turnOrder = (room.gameState.teams || []).map(t => t.id);
+            }
             count++;
         }
     });
@@ -448,6 +451,28 @@ app.get('/api/admin_pin', (req, res) => {
 // =============================================
 // FONT SCANNER & DELIVERY
 // =============================================
+const STANDARD_FONTS = [
+    'Be Vietnam Pro',
+    'Montserrat',
+    'Orbitron',
+    'Myriad Pro',
+    'SF Pro Display Bold',
+    'Roboto',
+    'Oswald',
+    'Anton',
+    'Kanit',
+    'Russo One',
+    'Teko',
+    'Barlow Condensed',
+    'Arial',
+    'Segoe UI',
+    'Impact',
+    'Tahoma',
+    'Verdana',
+    'Helvetica Neue',
+    'Trebuchet MS',
+    'Times New Roman'
+];
 let fontDictionary = {};
 let fontScanPromise = null;
 
@@ -846,7 +871,7 @@ function updateTurnOrder(targetState = gameState, lockActive = true) {
 
 // Khởi tạo lượt chơi nếu mảng trống (ví dụ: lần đầu chạy server)
 if (gameState.turnOrder.length === 0) {
-    updateTurnOrder(state);
+    updateTurnOrder(gameState);
 }
 
 // =============================================
@@ -866,19 +891,27 @@ function getRoomClientsList(roomPin) {
         totalConnected: 0
     };
     
-    const teamCount = (gameState.teams && gameState.teams.length) ? gameState.teams.length : 4;
-    for (let tid = 1; tid <= teamCount; tid++) {
-        const claim = gameState.claimedTeams ? gameState.claimedTeams[tid] : null;
-        const teamObj = gameState.teams ? gameState.teams.find(t => t.id === tid) : null;
+    let targetState = gameState;
+    if (roomPin && roomManager && typeof roomManager.getRoom === 'function') {
+        const room = roomManager.getRoom(roomPin);
+        if (room && room.gameState) {
+            targetState = room.gameState;
+        }
+    }
+
+    const teams = targetState.teams || [];
+    teams.forEach(teamObj => {
+        const tid = teamObj.id;
+        const claim = targetState.claimedTeams ? targetState.claimedTeams[tid] : null;
         list.teams[tid] = {
             id: tid,
-            name: teamObj ? teamObj.name : `Đội ${tid}`,
-            school: teamObj ? (teamObj.school || '') : '',
+            name: teamObj.name || `Đội ${tid}`,
+            school: teamObj.school || '',
             claimed: !!claim,
             socketId: claim ? claim.socketId : null,
             online: false
         };
-    }
+    });
 
     const pin = roomPin || 'DEFAULT';
     const socketsInRoom = io.sockets.adapter.rooms.get(pin);
@@ -1944,7 +1977,7 @@ let oldQuestionsPerTeam = state.settings.questionsPerTeam || 3;
         }
 
         if (newSettings.turnOrderRule !== undefined && oldRule !== newRule) {
-            updateTurnOrder(false);
+            updateTurnOrder(state, false);
         }
 
         broadcastState(socket);
@@ -1964,7 +1997,7 @@ let oldQuestionsPerTeam = state.settings.questionsPerTeam || 3;
 
     socket.on('forceUpdateTurnOrder', () => {
         const state = getActiveState(socket);
-        updateTurnOrder(false);
+        updateTurnOrder(state, false);
         broadcastState(socket);
     });
 
@@ -1982,7 +2015,7 @@ let oldQuestionsPerTeam = state.settings.questionsPerTeam || 3;
         state.forcedTeamId = null;
         state.turnStats = {};
         state.turnOrder = [];
-        updateTurnOrder(false);
+        updateTurnOrder(state, false);
         broadcastState(socket);
     });
 
@@ -2216,7 +2249,7 @@ if (newCount < 2 || newCount > 6) return;
         state.playedQuestions = { "10": [], "20": [], "40": [] };
         state.turnStats = {};
         state.turnOrder = [];
-        updateTurnOrder(false);
+        updateTurnOrder(state, false);
         broadcastState(socket);
     });
 
@@ -2507,15 +2540,18 @@ state.questionCount = counts;
     });
 
     socket.on('getSystemFonts', () => {
-        socket.emit('systemFonts', Object.keys(fontDictionary).sort());
+        const systemFonts = Object.keys(fontDictionary);
+        const combined = Array.from(new Set([...STANDARD_FONTS, ...systemFonts])).sort((a, b) => a.localeCompare(b));
+        socket.emit('systemFonts', combined);
     });
 });
 
-// Use fontDictionary keys for precise system font delivery
+// Use fontDictionary keys merged with standard web fonts for precise font delivery
 app.get('/api/fonts', async (req, res) => {
-    // Wait for font scan to complete if still in progress
     if (fontScanPromise) await fontScanPromise;
-    res.json(Object.keys(fontDictionary).sort());
+    const systemFonts = Object.keys(fontDictionary);
+    const combined = Array.from(new Set([...STANDARD_FONTS, ...systemFonts])).sort((a, b) => a.localeCompare(b));
+    res.json(combined);
 });
 
 const PORT = process.env.PORT || 39281;
