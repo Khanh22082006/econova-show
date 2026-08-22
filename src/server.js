@@ -2552,9 +2552,17 @@ if (newCount < 2 || newCount > 6) return;
         // Xác minh xem socket này có đúng là người sở hữu đội không
         if (!state.claimedTeams) state.claimedTeams = {};
         let claim = state.claimedTeams[teamId];
-        if (!claim) return;
-        if (claim.socketId !== socket.id) {
-            if (socket.clientId && claim.clientId === socket.clientId) {
+        if (!claim) {
+            if (socket.teamId && Number(socket.teamId) === Number(teamId)) {
+                state.claimedTeams[teamId] = { socketId: socket.id, clientId: socket.clientId, teamId: teamId };
+                claim = state.claimedTeams[teamId];
+            } else {
+                console.log(`[BUZZ REJECTED] Team ${teamId} has no claim in room ${socket.currentRoomPin}`);
+                return;
+            }
+        }
+        if (claim && claim.socketId !== socket.id) {
+            if ((socket.clientId && claim.clientId === socket.clientId) || (socket.teamId && Number(socket.teamId) === Number(teamId))) {
                 console.log(`[BUZZ] Reconnection fallback: Auto-updating socketId for team ${teamId} from ${claim.socketId} to ${socket.id}`);
                 claim.socketId = socket.id;
             } else {
@@ -2600,35 +2608,32 @@ if (newCount < 2 || newCount > 6) return;
         }
     });
 
-    // --- NGẮT KẾT NỐI -> Giải phóng đội ---
+    // --- NGẮT KẾT NỐI -> Xử lý giải phóng đội an toàn (có grace period) ---
     socket.on('disconnect', () => {
         const roomPin = socket.currentRoomPin;
         if (roomPin) {
             const room = roomManager.getRoom(roomPin);
             if (room) {
-                // Clean up claimed teams in room
-                let changed = false;
+                if (room.connectedClients) room.connectedClients.delete(socket.id);
                 const state = room.gameState;
                 if (state.claimedTeams) {
                     for (let tid in state.claimedTeams) {
                         if (state.claimedTeams[tid].socketId === socket.id) {
-                            delete state.claimedTeams[tid];
-                            changed = true;
+                            state.claimedTeams[tid].disconnectedAt = Date.now();
+                            // Grace period 30s trước khi giải phóng hoàn toàn
+                            setTimeout(() => {
+                                const currentRoom = roomManager.getRoom(roomPin);
+                                if (currentRoom && currentRoom.gameState && currentRoom.gameState.claimedTeams) {
+                                    const c = currentRoom.gameState.claimedTeams[tid];
+                                    if (c && c.socketId === socket.id && c.disconnectedAt) {
+                                        delete currentRoom.gameState.claimedTeams[tid];
+                                        broadcastState(null, 'updateState', currentRoom.gameState);
+                                        scheduleSaveRooms(2000);
+                                    }
+                                }
+                            }, 30000);
                         }
                     }
-                }
-                // Remove from connectedClients
-                if (room.connectedClients) room.connectedClients.delete(socket.id);
-                if (changed) {
-                    // Notify remaining clients in room that a team was freed
-                    const socketsInRoom = io.sockets.adapter.rooms.get(roomPin);
-                    if (socketsInRoom) {
-                        socketsInRoom.forEach(sid => {
-                            const s = io.sockets.sockets.get(sid);
-                            if (s) emitToSocketFiltered(s, 'updateState', state);
-                        });
-                    }
-                    scheduleSaveRooms(2000);
                 }
                 broadcastDeviceStatus(roomPin);
             }

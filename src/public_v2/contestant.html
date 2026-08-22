@@ -865,10 +865,10 @@
                 btn.dataset.t = tObj.id;
                 
                 let isClaimed = false;
-                if (claimed) {
+                if (claimed && typeof claimed === 'object') {
                     for (let k in claimed) { 
-                        if (parseInt(k) === tObj.id) {
-                            if (!myClientId || !claimed[k] || claimed[k].clientId !== myClientId) {
+                        if (Number(k) === Number(tObj.id) && claimed[k]) {
+                            if (!myClientId || claimed[k].clientId !== myClientId) {
                                 isClaimed = true;
                             }
                         }
