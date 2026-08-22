@@ -733,9 +733,9 @@
             let isHopeStar = false;
             let mainTeamId = null;
 
-            if (pkg && pkg.questions && pkg.questions.length > 0) {
+            if (pkg && pkg.questions && pkg.questions.length > 0 && pkg.currentIndex >= 0 && q && q.active && !q.isHidden) {
                 // Package mode (Mode 2/3)
-                let currentIdx = pkg.currentIndex || 0;
+                let currentIdx = pkg.currentIndex;
                 let currentQ = pkg.questions[currentIdx];
                 if (currentQ) {
                     hasQuestion = true;
@@ -745,10 +745,9 @@
                     isHopeStar = q ? !!q.isHopeStar : false;
                     mainTeamId = pkg.mainTeamId || (q && q.mainTeamId);
                 }
-            } else if (q && q.active) {
+            } else if (q && q.active && !q.isHidden) {
                 // Single question mode
                 hasQuestion = true;
-                // Defensively guard properties read from q / currentQuestion
                 questionText = (q && q.text) || '';
                 answerText = (q && q.answer) || '';
                 pointsVal = (q && q.points) || 0;

@@ -1153,6 +1153,17 @@
             
             const actions = document.getElementById('qSelectionActions');
             if (actions) {
+                let pkgCount = 0;
+                let totalPkgQ = 3;
+                if (currentState && currentState.lockedPackage) {
+                    totalPkgQ = (currentState.lockedPackage.questions && currentState.lockedPackage.questions.length) || 3;
+                    if (currentState.lockedPackage.currentIndex >= 0 && currentState.currentQuestion && currentState.currentQuestion.active && !currentState.currentQuestion.isHidden) {
+                        pkgCount = currentState.lockedPackage.currentIndex + 1;
+                    } else {
+                        pkgCount = 0;
+                    }
+                }
+
                 actions.innerHTML = `
                     <div style="display: flex; gap: 10px; width: 100%; margin-bottom: 5px;">
                         <button class="btn-orange" id="btnToggleHopeStar2" style="flex: 1;" onclick="toggleHopeStar()" data-i18n="adm_hopestar">⭐ BẬT NS HY VỌNG</button>
@@ -1164,7 +1175,7 @@
                         ${mode == 1 ? `
                             <button class="btn-blue" style="flex: 1;" id="btnOpenQ" onclick="setQuestion()" data-i18n="adm_open_q">🚀 MỞ CÂU HỎI</button>
                         ` : `
-                            <button class="btn-primary" style="flex: 1.5; background: ${currentState && currentState.lockedPackage ? '#2ecc71' : '#9b59b6'}; font-weight: bold;" onclick="nextQuestionInPackage()">🚀 ${currentState && currentState.lockedPackage ? ('MỞ CÂU TIẾP THEO (' + (currentState.lockedPackage.currentIndex + 2) + '/' + currentState.lockedPackage.questions.length + ')') : 'CHUYỂN CÂU'}</button>
+                            <button class="btn-primary" style="flex: 1.5; background: ${currentState && currentState.lockedPackage ? '#2ecc71' : '#9b59b6'}; font-weight: bold;" onclick="nextQuestionInPackage()">🚀 ${currentState && currentState.lockedPackage ? ('MỞ CÂU TIẾP THEO (' + pkgCount + '/' + totalPkgQ + ')') : 'CHUYỂN CÂU'}</button>
                             <button class="btn-danger" style="flex: 1; background: #e74c3c; color: white; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer;" onclick="cancelLockedPackage()">HUỶ GÓI</button>
                             <button class="btn-orange" style="flex: 1.2; background: ${currentState && currentState.lockedPackage ? '#7f8c8d' : '#e67e22'}; font-weight: bold;" onclick="${currentState && currentState.lockedPackage ? '' : 'lockPackage()'}" ${currentState && currentState.lockedPackage ? 'disabled' : ''}>${currentState && currentState.lockedPackage ? '🔒 ĐÃ CHỐT GÓI' : 'CHỐT GÓI CÂU HỎI'}</button>
                         `}

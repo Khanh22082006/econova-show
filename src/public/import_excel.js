@@ -165,7 +165,6 @@ function parseExcelJson(json) {
             if (q || a) {
                 let isValid = true;
                 if (!q) isValid = false;
-                if (vid && /^https?:\/\//i.test(vid)) isValid = false;
                 
                 parsedExcelData[pts].push({
                     id: Math.random().toString(36).substr(2,9),
@@ -251,7 +250,7 @@ function renderPreviewTable() {
     
     pageData.forEach(item => {
         let errStyle = item.isValid ? "" : "background-color: rgba(231, 76, 60, 0.4);";
-        let vidErr = (item.vid && /^https?:\/\//i.test(item.vid)) ? `<br><small style="color:#ff9f43">Lỗi: Phải là link local</small>` : "";
+        let vidErr = "";
         if (!item.q) vidErr += `<br><small style="color:#ff9f43">Lỗi: Thiếu câu hỏi</small>`;
         
         let rowHtml = `

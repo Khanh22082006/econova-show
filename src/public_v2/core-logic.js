@@ -320,12 +320,18 @@ class EconovaDisplayController {
         const mainVideo = document.getElementById('mainVideo');
         if (videoOverlay && mainVideo && url) {
             videoOverlay.style.display = 'flex';
-            if (url.includes('\\') || url.includes(':\\') || url.startsWith('C:') || url.startsWith('D:')) {
+            if (/^[a-zA-Z]:[\\\/]/.test(url) || url.includes('\\')) {
                 mainVideo.src = '/api/video?path=' + encodeURIComponent(url);
+            } else if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/')) {
+                mainVideo.src = '/' + url;
             } else {
                 mainVideo.src = url;
             }
-            mainVideo.play().catch(() => {});
+            mainVideo.play().catch(e => {
+                console.warn('Auto-play blocked, retrying muted:', e);
+                mainVideo.muted = true;
+                mainVideo.play().catch(() => {});
+            });
         }
     }
 

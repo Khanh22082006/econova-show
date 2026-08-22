@@ -696,16 +696,25 @@ app.delete('/api/questions/:setId', (req, res) => {
 
 let authorizedVideoPath = null;
 
-// Stream video cục bộ từ đường dẫn tuyệt đối
+// Stream video cục bộ từ đường dẫn tuyệt đối hoặc public
 app.get('/api/video', (req, res) => {
     const videoPath = req.query.path;
-    if (!videoPath || !fs.existsSync(videoPath)) {
+    if (!videoPath) {
         return res.status(404).send('Video not found');
     }
-    if (videoPath !== authorizedVideoPath) {
-        return res.status(403).send('Forbidden: Not authorized by Admin');
+    let resolved = path.resolve(videoPath);
+    if (fs.existsSync(resolved)) {
+        return res.sendFile(resolved);
     }
-    res.sendFile(path.resolve(videoPath));
+    const candidate = path.join(basePath, 'public', videoPath.replace(/^\//, ''));
+    if (fs.existsSync(candidate)) {
+        return res.sendFile(candidate);
+    }
+    const candidateThemes = path.join(basePath, videoPath.replace(/^\//, ''));
+    if (fs.existsSync(candidateThemes)) {
+        return res.sendFile(candidateThemes);
+    }
+    res.status(404).send('Video not found');
 });
 
 // =============================================
@@ -2304,7 +2313,7 @@ if (newCount < 2 || newCount > 6) return;
     // --- ADMIN: Phát Video ---
     socket.on('playVideo', (url) => {
         authorizedVideoPath = url;
-        if(socket.currentRoomPin) io.to(socket.currentRoomPin).emit('playVideo'); else io.emit('playVideo', url);
+        if(socket.currentRoomPin) io.to(socket.currentRoomPin).emit('playVideo', url); else io.emit('playVideo', url);
     });
 
     // --- ADMIN: Đóng Video ---
@@ -2314,11 +2323,11 @@ if (newCount < 2 || newCount > 6) return;
     });
 
     socket.on('videoSync', (time) => {
-        socket.broadcast.emit('videoSync', time);
+        if(socket.currentRoomPin) socket.to(socket.currentRoomPin).emit('videoSync', time); else socket.broadcast.emit('videoSync', time);
     });
 
     socket.on('videoPlayState', (state) => {
-        socket.broadcast.emit('videoPlayState', state);
+        if(socket.currentRoomPin) socket.to(socket.currentRoomPin).emit('videoPlayState', state); else socket.broadcast.emit('videoPlayState', state);
     });
 
     // --- ADMIN: Hàm lấy tất cả IP (LAN, VPN)
