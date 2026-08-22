@@ -863,9 +863,13 @@
             });
         }
 
-        // Xử lý đếm ngược
-        socket.on('startCountdown', (seconds) => {
+        // Xử lý đếm ngược thanh thời gian
+        function startCountdownAnimation(seconds) {
             if (!isSelected) return;
+            const timerContainer = document.getElementById('timerContainer');
+            const timerBar = document.getElementById('timerBar');
+            if (!timerContainer || !timerBar) return;
+
             timerContainer.style.display = 'block';
             let startTime = Date.now();
             let duration = (typeof seconds === 'number' && seconds > 0) ? seconds * 1000 : 5000;
@@ -878,7 +882,8 @@
                 
                 // Nếu chuông đang mở và là đội được bấm -> cập nhật số giây còn lại trực tiếp lên statusText!
                 if (window.currentState && window.currentState.isBuzzerLocked === false && window.currentState.buzzedTeam === null) {
-                    let isMainTeam = (window.currentState.currentQuestion && window.currentState.currentQuestion.active && window.currentState.currentQuestion.mainTeamId != null && Number(window.currentState.currentQuestion.mainTeamId) === Number(myTeamId));
+                    let isMainTeam = (window.currentState.currentQuestion && window.currentState.currentQuestion.mainTeamId != null && Number(window.currentState.currentQuestion.mainTeamId) === Number(myTeamId));
+                    const statusText = document.getElementById('statusText');
                     if (!isMainTeam && statusText) {
                         statusText.textContent = `🚨 CHUÔNG ĐANG MỞ: ${remaining.toFixed(1)}S (BẤM NGAY)!`;
                         statusText.style.color = '#2ed573';
@@ -896,7 +901,9 @@
                 }
                 timerBar.style.width = percent + '%';
             }, 50);
-        });
+        }
+
+        socket.on('startCountdown', startCountdownAnimation);
 
         // Xử lý Bấm Chuông
         const handleBuzz = (e) => {
@@ -916,8 +923,30 @@
 
         function tryBuzz() {
             if (myTeamId !== null && !isBanned) {
+                try { if (navigator.vibrate) navigator.vibrate([60]); } catch(e) {}
                 const token = window.currentState ? window.currentState.buzzToken : null;
+
+                // 1. Gửi qua WebSocket ngay tức thì
                 socket.emit('buzz', { teamId: myTeamId, token: token, clientId: myClientId, pin: roomPin });
+
+                // 2. Gửi dự phòng HTTP POST để đảm bảo 100% không bao giờ rớt tín hiệu
+                if (roomPin) {
+                    fetch('/api/room/buzz', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ pin: roomPin, teamId: myTeamId, token: token, clientId: myClientId })
+                    }).then(r => r.json()).then(res => {
+                        if (res && res.success) {
+                            if (window.currentState) {
+                                window.currentState.buzzedTeam = myTeamId;
+                                window.currentState.isBuzzerLocked = true;
+                            }
+                            renderBuzzerUI();
+                        }
+                    }).catch(() => {});
+                }
+
+                // 3. Phản hồi xúc giác tức thì trên UI
                 if (buzzBtn && !buzzBtn.classList.contains('locked')) {
                     btnIcon.innerHTML = `<span style="font-size: 38px; display:block; margin-bottom: 2px;">⚡</span><span style="font-size: 15px; font-weight: 700; display:block;">ĐÃ BẤM CHUÔNG!</span>`;
                     if (statusText) statusText.textContent = '⚡ ĐANG GỬI TÍN HIỆU...';
@@ -964,8 +993,10 @@
                 } else {
                     buzzBtn.classList.add('locked');
                     buzzBtn.classList.remove('success');
+                    let buzzedTeamObj = state.teams ? state.teams.find(t => Number(t.id) === Number(state.buzzedTeam)) : null;
+                    let buzzedName = buzzedTeamObj ? buzzedTeamObj.name : ('Đội ' + state.buzzedTeam);
                     btnIcon.innerHTML = `<span style="font-size: 42px; display:block; margin-bottom: 2px;">🔒</span><span style="font-size: 15px; font-weight: 700; display:block;">ĐỘI KHÁC ĐÃ BẤM</span>`;
-                    statusText.textContent = typeof t === 'function' ? t('con_other', (state.settings && state.settings.language) || currentGlobalLang) : '🔒 ĐỘI KHÁC ĐÃ BẤM CHUÔNG';
+                    statusText.textContent = `🔒 ${buzzedName.toUpperCase()} ĐÃ GIÀNH QUYỀN TRẢ LỜI`;
                     statusText.style.color = 'rgba(255,255,255,0.7)';
                     statusText.style.borderColor = 'rgba(255,255,255,0.18)';
                     buzzRing.classList.remove('active-success');
@@ -973,7 +1004,7 @@
             }
             // 2. NẾU CHUÔNG ĐANG MỞ (VÀ CHƯA CÓ AI BẤM)
             else if (state.isBuzzerLocked === false) {
-                let isMainTeam = (state.currentQuestion && state.currentQuestion.active && state.currentQuestion.mainTeamId != null && Number(state.currentQuestion.mainTeamId) === Number(myTeamId));
+                let isMainTeam = (state.currentQuestion && state.currentQuestion.mainTeamId != null && Number(state.currentQuestion.mainTeamId) === Number(myTeamId));
                 if (isMainTeam) {
                     buzzBtn.classList.add('locked');
                     buzzBtn.classList.remove('unlocked', 'success');
@@ -1007,7 +1038,9 @@
                     btnIcon.innerHTML = `<span style="font-size: 42px; display:block; margin-bottom: 2px;">🔒</span><span style="font-size: 15px; font-weight: 700; display:block;">CHUÔNG KHÓA</span>`;
                     let isQuestionActive = state.currentQuestion && state.currentQuestion.active;
                     if (isQuestionActive) {
-                        statusText.textContent = '🔒 ĐỘI CHÍNH ĐANG TRẢ LỜI...';
+                        let mainTeamObj = state.teams ? state.teams.find(t => Number(t.id) === Number(state.currentQuestion.mainTeamId)) : null;
+                        let mainName = mainTeamObj ? mainTeamObj.name : 'ĐỘI CHÍNH';
+                        statusText.textContent = `🔒 ${mainName.toUpperCase()} ĐANG TRẢ LỜI...`;
                         statusText.style.color = '#feca57';
                         statusText.style.borderColor = '#feca57';
                     } else {
@@ -1029,6 +1062,8 @@
                 window.currentState.currentQuestion.mainTeamId = data.mainTeamId;
             }
             renderBuzzerUI();
+            const dur = (data && typeof data.duration === 'number' && data.duration > 0) ? data.duration : 5;
+            startCountdownAnimation(dur);
         });
 
         socket.on('buzzed', (data) => {
@@ -1045,6 +1080,25 @@
             }
             renderBuzzerUI();
         });
+
+        // Self-healing State Heartbeat every 2s
+        setInterval(() => {
+            if (!roomPin || !isSelected) return;
+            fetch('/api/room/state?pin=' + encodeURIComponent(roomPin))
+                .then(r => r.json())
+                .then(data => {
+                    if (data && data.success && data.gameState) {
+                        const st = data.gameState;
+                        if (!window.currentState || 
+                            window.currentState.isBuzzerLocked !== st.isBuzzerLocked || 
+                            window.currentState.buzzedTeam !== st.buzzedTeam ||
+                            (st.currentQuestion && (!window.currentState.currentQuestion || window.currentState.currentQuestion.text !== st.currentQuestion.text))) {
+                            handleUpdateState(st);
+                        }
+                    }
+                })
+                .catch(() => {});
+        }, 2000);
 
         socket.on('updateState', handleUpdateState);
         

@@ -424,6 +424,54 @@ app.get('/api/room/state', async (req, res) => {
     res.json({ success: true, room: { pin: room.pin, name: room.name, theme: room.theme }, gameState: safeState });
 });
 
+// HTTP Buzzer Fallback: Cho phép thí sinh bấm chuông qua HTTP POST nếu Socket gián đoạn
+app.post('/api/room/buzz', async (req, res) => {
+    try {
+        const { pin, teamId, token, clientId } = req.body || {};
+        const normalizedPin = (pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0');
+        const room = roomManager.getRoom(normalizedPin);
+        if (!room || !room.gameState) {
+            return res.status(404).json({ success: false, message: 'Phòng không tồn tại' });
+        }
+        const state = room.gameState;
+        const tid = parseInt(teamId);
+        if (isNaN(tid)) return res.json({ success: false, message: 'TeamId không hợp lệ' });
+
+        if (state.isBuzzerLocked || state.buzzedTeam !== null) {
+            return res.json({ success: false, message: 'Chuông đang khóa hoặc đã có đội bấm', buzzedTeam: state.buzzedTeam });
+        }
+
+        if (state.currentQuestion && state.currentQuestion.active && state.currentQuestion.mainTeamId != null && Number(state.currentQuestion.mainTeamId) === Number(tid)) {
+            return res.json({ success: false, message: 'Đội chính không thể bấm chuông' });
+        }
+
+        let elapsed = state.buzzerUnlockTime ? Math.max(0, Date.now() - state.buzzerUnlockTime) : 0;
+        if (!state.buzzTimes) state.buzzTimes = {};
+        state.buzzTimes[tid] = elapsed;
+
+        state.isBuzzerLocked = true;
+        clearBuzzerTimeout(state);
+        state.buzzedTeam = tid;
+
+        const buzzedPayload = {
+            buzzedTeam: tid,
+            buzzTimes: state.buzzTimes,
+            pin: normalizedPin
+        };
+        io.to(normalizedPin).emit('buzzed', buzzedPayload);
+        io.sockets.sockets.forEach(s => {
+            if (s.currentRoomPin === normalizedPin) s.emit('buzzed', buzzedPayload);
+        });
+        playSoundInRoom(null, 'buzzed', normalizedPin);
+        broadcastState(null, 'updateState', state);
+
+        res.json({ success: true, buzzedTeam: tid, timeMs: elapsed });
+    } catch(err) {
+        console.error('Lỗi khi xử lý HTTP buzz:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 // Static file serving AFTER all API routes (so /api/* requests reach handlers first)
 const staticOptions = {
     setHeaders: (res, path) => {
