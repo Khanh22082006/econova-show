@@ -86,7 +86,7 @@ class RoomManager {
         initialGameState.claimedTeams = {};
 
         // Xử lý danh sách thí sinh / đội thi và số lượng đội do người dùng truyền vào
-        const count = Math.max(2, Math.min(8, parseInt(teamCount, 10) || (Array.isArray(teams) && teams.length ? teams.length : 4)));
+        const count = Math.max(2, Math.min(6, parseInt(teamCount, 10) || (Array.isArray(teams) && teams.length ? teams.length : 4)));
         let cleanTeams = [];
         if (Array.isArray(teams) && teams.length > 0) {
             for (let i = 0; i < count; i++) {

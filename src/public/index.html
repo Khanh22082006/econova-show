@@ -451,10 +451,8 @@
                     <option value="4" selected>4 Người chơi / Đội thi (Chuẩn Olympia)</option>
                     <option value="5">5 Người chơi / Đội thi</option>
                     <option value="6">6 Người chơi / Đội thi</option>
-                    <option value="7">7 Người chơi / Đội thi</option>
-                    <option value="8">8 Người chơi / Đội thi</option>
                 </select>
-                <div class="input-hint">💡 Chọn số lượng thí sinh tham gia trận đấu này (từ 2 đến 8 đội).</div>
+                <div class="input-hint">💡 Chọn số lượng thí sinh tham gia trận đấu này (từ 2 đến 6 đội).</div>
             </div>
 
             <div class="form-row" style="margin-bottom: 12px;">
@@ -537,7 +535,7 @@
             
             // Lưu lại giá trị đã nhập trước đó nếu có
             const savedData = [];
-            for (let i = 1; i <= 8; i++) {
+            for (let i = 1; i <= 6; i++) {
                 const nEl = document.getElementById(`createTeamName_${i}`);
                 const sEl = document.getElementById(`createTeamSchool_${i}`);
                 if (nEl) {
