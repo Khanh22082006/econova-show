@@ -1435,10 +1435,12 @@ try {
     socket.on('lockPackage', (data) => {
         const state = getActiveState(socket);
 try {
-            let mainTeamId = data.mainTeamId;
-            if (!mainTeamId || mainTeamId === -1) {
+            let mainTeamId = parseInt(data.mainTeamId);
+            if (isNaN(mainTeamId) || mainTeamId <= 0) {
                 if (state.turnOrder && state.turnOrder.length > 0) {
                     mainTeamId = state.turnOrder[0];
+                } else if (state.teams && state.teams.length > 0) {
+                    mainTeamId = state.teams[0].id;
                 } else {
                     mainTeamId = 1;
                 }

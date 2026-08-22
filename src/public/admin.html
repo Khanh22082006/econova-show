@@ -1264,9 +1264,12 @@
         }
 
         function lockPackage() {
-            const teamId = parseInt(document.getElementById('mainTeam').value);
-            const mode = currentState.settings.questionSelectionMode || 1;
-            const qPerTeam = currentState.settings.questionsPerTeam || 3;
+            const teamSelect = document.getElementById('mainTeam');
+            let teamId = teamSelect ? parseInt(teamSelect.value) : -1;
+            if (isNaN(teamId)) teamId = -1;
+            
+            const mode = (currentState && currentState.settings) ? (currentState.settings.questionSelectionMode || 1) : 1;
+            const qPerTeam = (currentState && currentState.settings) ? (currentState.settings.questionsPerTeam || 3) : 3;
             
             let packageData = [];
             
@@ -1289,6 +1292,13 @@
                     packageData = adminSelectedQuestions.map(q => ({ points: q.points, idx: -1 }));
                 }
             }
+            
+            const statusInd = document.getElementById('statusIndicator');
+            if (statusInd) {
+                statusInd.innerText = '🔒 ĐÃ CHỐT GÓI CÂU HỎI — BẤM "CHUYỂN CÂU" ĐỂ MỞ';
+                statusInd.style.background = '#e67e22';
+            }
+            
             socket.emit('lockPackage', { mainTeamId: teamId, mode: mode, package: packageData });
         }
 

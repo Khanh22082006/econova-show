@@ -1512,13 +1512,7 @@
                 var theme = currentTheme || 'default';
                 var qObj = state.currentQuestion || {};
                 
-                var withinLockDelay = false;
-                if (state.lockedPackage && state.lockedPackage.lockedAt) {
-                    var elapsed = Date.now() - state.lockedPackage.lockedAt;
-                    if (elapsed < 1000) {
-                        withinLockDelay = true;
-                    }
-                }
+                var withinLockDelay = Boolean(window.clientLockDelay);
                 
                 var showGrid = Boolean((state.isGridVisibleOnOverlay || withinLockDelay) && !window.forceQuestionState);
                 var showQuestion = Boolean((qObj && qObj.active && !withinLockDelay) || window.forceQuestionState);
@@ -1636,17 +1630,22 @@
             window.currentState = state;
             
             if (state.lockedPackage) {
-                var elapsed = Date.now() - state.lockedPackage.lockedAt;
-                if (elapsed < 1000) {
+                var lockKey = state.lockedPackage.lockedAt || 1;
+                if (window.lastSeenLockedPackage !== lockKey) {
+                    window.lastSeenLockedPackage = lockKey;
+                    window.clientLockDelay = true;
                     clearTimeout(window.packageTransitionTimeout);
                     window.packageTransitionTimeout = setTimeout(() => {
+                        window.clientLockDelay = false;
                         window.packageTransitionTimeout = null;
-                        applyVisibility(window.currentState);
+                        applyVisibility(window.currentState || state);
                         autoResizeText();
                         setTimeout(autoResizeText, 50);
-                    }, 1000 - elapsed);
+                    }, 1000);
                 }
             } else {
+                window.lastSeenLockedPackage = null;
+                window.clientLockDelay = false;
                 clearTimeout(window.packageTransitionTimeout);
                 window.packageTransitionTimeout = null;
             }
@@ -2278,19 +2277,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (window.currentState) renderV3(window.currentState);
             }, delayEnd);
         } else if (newState === 2) {
-            v3Master.style.display = 'block'; renderV3QBox(stateObj); 
-            var lockedAt = (stateObj.lockedPackage && stateObj.lockedPackage.lockedAt) ? stateObj.lockedPackage.lockedAt : Date.now();
-            var tStart = lockedAt + 1000;
-            var now = Date.now();
-
-            if (now >= tStart + 2400) {
-                applyAnimState('question');
-                v3Transitioning = false;
-                currentV3State = 2;
-                if (window.currentState) renderV3(window.currentState);
-                return;
-            }
-
+            v3Master.style.display = 'block'; 
             if (currentV3State === 0) {
                 applyAnimState('pre-entry');
                 v3Master.style.transition = 'none';
@@ -2298,26 +2285,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 v3Master.style.opacity = '0';
             }
 
-            var delayClosing = Math.max(0, tStart - now);
-            var delayQuestion = Math.max(0, (tStart + 1200) - now);
-            var delayEnd = Math.max(0, (tStart + 2400) - now);
-
             window.v3AnimTimeout1 = setTimeout(() => {
                 applyAnimState('closing'); 
                 v3Master.style.transition = 'transform 0.85s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.85s cubic-bezier(0.25, 1, 0.5, 1)';
                 v3Master.style.transform = isScreen ? 'scale(1)' : 'scale(0.92)';
                 v3Master.style.opacity = '1';
-            }, delayClosing);
+            }, 1000);
 
             window.v3AnimTimeout2 = setTimeout(() => {
+                renderV3QBox(stateObj);
                 applyAnimState('question');
-            }, delayQuestion);
+            }, 2200);
 
             window.v3AnimTimeout3 = setTimeout(() => {
                 v3Transitioning = false;
                 currentV3State = 2;
                 if (window.currentState) renderV3(window.currentState);
-            }, delayEnd);
+            }, 3400);
         }
     }
 
