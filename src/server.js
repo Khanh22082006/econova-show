@@ -2125,9 +2125,9 @@ let oldQuestionsPerTeam = state.settings.questionsPerTeam || 3;
 
     socket.on('resetGame', () => {
         const state = getActiveState(socket);
-state.teams.forEach(t => t.score = 0);
+        state.teams.forEach(t => t.score = 0);
         state.forcedTeamId = null;
-        resetBuzzerState(typeof state !== 'undefined' ? state : gameState);
+        resetBuzzerState(state);
         state.antiCheatViolations = {};
         state.bannedTeams = [];
         state.currentQuestion = {
@@ -2143,11 +2143,16 @@ state.teams.forEach(t => t.score = 0);
         state.isVideoPlaying = false;
         state.playedQuestions = { "10": [], "20": [], "40": [] };
         state.turnStats = {};
-        state.turnOrder = []; // Bắt buộc nạp lại toàn bộ 4 đội
-        updateTurnOrder(false);
-        saveStateToDiskSync();
+        state.turnOrder = []; // Bắt buộc nạp lại toàn bộ các đội
+        updateTurnOrder(state);
+        if (socket.currentRoomPin) {
+            scheduleSaveRooms(100);
+            io.to(socket.currentRoomPin).emit('timer-action', { type: 'STOP' });
+        } else {
+            saveStateToDiskSync();
+            io.emit('timer-action', { type: 'STOP' });
+        }
         broadcastState(socket);
-        io.emit('timer-action', { type: 'STOP' });
     });
 
     socket.on('changeTeamCount', (newCount) => {
