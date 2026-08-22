@@ -2469,6 +2469,10 @@ if (newCount < 2 || newCount > 6) return;
         if (state.currentQuestion) {
             state.currentQuestion.vid = (data && data.vid) ? data.vid : "";
             broadcastState(socket);
+            if (state.currentQuestion.vid) {
+                if (socket.currentRoomPin) io.to(socket.currentRoomPin).emit('preloadVideo', state.currentQuestion.vid);
+                else io.emit('preloadVideo', state.currentQuestion.vid);
+            }
         }
     });
 
