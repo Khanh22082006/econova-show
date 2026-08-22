@@ -763,7 +763,7 @@
                         <div class="dev-item ${t.online ? 'online' : (t.claimed ? 'claimed' : '')}">
                             <div>
                                 <b>${t.name}</b>
-                                <div style="font-size: 11px; color: #a4b0be;">${t.school || 'Đội ' + t.id}</div>
+                                <div style="font-size: 11px; color: #a4b0be; min-height: 14px;">${t.school ? t.school : ''}</div>
                             </div>
                             <div style="display: flex; align-items: center;">
                                 ${statusBadge}
