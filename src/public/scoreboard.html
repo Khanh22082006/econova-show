@@ -7,13 +7,14 @@
     <title data-i18n="sb_page_title">Econova Show - Bảng Điểm</title>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
+        let pinParam = urlParams.get('pin');
         let authParam = urlParams.get('auth');
+        if (pinParam) {
+            sessionStorage.setItem('currentRoomPin', pinParam);
+        }
         if (authParam) {
             sessionStorage.setItem('adminAuth', authParam);
-            window.history.replaceState({}, document.title, window.location.pathname);
-        } else if (!sessionStorage.getItem('adminAuth') && urlParams.get('pass') !== 'obs_score') {
-            document.write(`<h1 style="color:white;text-align:center;margin-top:20%;font-family:\\'SF Pro Display Bold\\', \\'SF Pro Text\\', -apple-system, BlinkMacSystemFont, sans-serif">${t('sb_access_denied', currentGlobalLang)}</h1>`);
-            window.stop();
+            window.history.replaceState({}, document.title, window.location.pathname + (pinParam ? ('?pin=' + encodeURIComponent(pinParam)) : ''));
         }
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -220,10 +221,20 @@
 
         const TEAM_ICONS = ['🌿', '🔥', '💎', '⚡'];
         const socket = io();
-        socket.on('connect', () => {
+        function doJoinRoom() {
             const roomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
-            if (roomPin) socket.emit('joinRoom', roomPin, (res) => { if (res && res.gameState) { if (typeof handleUpdateState === 'function') handleUpdateState(res.gameState); } });
-        });
+            if (roomPin) {
+                socket.emit('joinRoom', roomPin, (res) => {
+                    if (res && res.gameState) {
+                        if (typeof handleUpdateState === 'function') handleUpdateState(res.gameState);
+                    }
+                });
+            }
+        }
+        if (socket.connected) {
+            doJoinRoom();
+        }
+        socket.on('connect', doJoinRoom);
         let myTeamId = null;
         let previousScore = 0;
         let isSelected = false;
@@ -273,7 +284,8 @@
 
 
 
-        socket.on('updateState', (state) => {
+        function handleUpdateState(state) {
+            if (!state) return;
             // ================= FONT LOGIC =================
             if (state.settings) {
                 let s = state.settings;
@@ -369,7 +381,8 @@
             if (state.settings && state.settings.language) {
                 applyTranslations(state.settings.language);
             }
-        });
+        }
+        socket.on('updateState', handleUpdateState);
 
         document.addEventListener("DOMContentLoaded", () => {
             document.title = t('sb_page_title', currentGlobalLang);

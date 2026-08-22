@@ -35,12 +35,12 @@
         const urlParams = new URLSearchParams(window.location.search);
         let authParam = urlParams.get('auth');
         let pinParam = urlParams.get('pin');
+        if (pinParam) {
+            sessionStorage.setItem('currentRoomPin', pinParam);
+        }
         if (authParam) {
             sessionStorage.setItem('adminAuth', authParam);
-            window.history.replaceState({}, document.title, window.location.pathname);
-        } else if (!sessionStorage.getItem('adminAuth') && urlParams.get('pass') !== 'obs_overlay' && !pinParam) {
-            document.write('<div style="background:#0a0a1a;color:white;text-align:center;padding:40px;font-family:sans-serif;"><h1>💡 THÔNG BÁO VỀ OVERLAY LIVESTREAM</h1><p style="color:#a4b0be;max-width:600px;margin:15px auto;line-height:1.6;">Màn hình Overlay này có nền trong suốt 100% (Alpha Channel) chuyên dụng để nhúng làm <b>Browser Source</b> trong phần mềm phát sóng <b>OBS Studio, vMix, Prism Live</b>.<br>Trình duyệt web thông thường luôn hiển thị nền mặc định thay vì trong suốt.</p><a href="./index.html" style="display:inline-block;padding:10px 20px;background:#00d2d3;color:#000;text-decoration:none;border-radius:10px;font-weight:bold;">← Quay Về Cổng Thi Đấu</a></div>');
-            window.stop();
+            window.history.replaceState({}, document.title, window.location.pathname + (pinParam ? ('?pin=' + encodeURIComponent(pinParam)) : ''));
         }
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -406,10 +406,20 @@
 
     <script>
         const socket = io();
-        socket.on('connect', () => {
+        function doJoinRoom() {
             const roomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
-            if (roomPin) socket.emit('joinRoom', roomPin, (res) => { if (res && res.gameState) { if (typeof handleUpdateState === 'function') handleUpdateState(res.gameState); } });
-        });
+            if (roomPin) {
+                socket.emit('joinRoom', roomPin, (res) => {
+                    if (res && res.gameState) {
+                        if (typeof handleUpdateState === 'function') handleUpdateState(res.gameState);
+                    }
+                });
+            }
+        }
+        if (socket.connected) {
+            doJoinRoom();
+        }
+        socket.on('connect', doJoinRoom);
         var currentTheme = 'v3';
         function autoResizeText() {
             if (typeof currentTheme === 'undefined') return;
@@ -644,7 +654,8 @@
         var lastBuzzedTeam = null;
 
         // STATE UPDATE (DÀNH CHO CỔ ĐIỂN VÀ ASCEND)
-        socket.on('updateState', (state) => {
+        function handleUpdateState(state) {
+            if (!state) return;
             window.currentState = state;
             
             var qId = (state.currentQuestion && state.currentQuestion.active) ? (state.currentQuestion.id || state.currentQuestion._id || state.currentQuestion.questionId || state.currentQuestion.idx) : null;
@@ -1158,7 +1169,8 @@
             if (typeof autoScaleTeamNames === "function") {
                 setTimeout(autoScaleTeamNames, 0);
             }
-        });
+        }
+        socket.on('updateState', handleUpdateState);
 
         function applyVisibility(state) {
             const ascendFrame = document.getElementById('ascendFrame');

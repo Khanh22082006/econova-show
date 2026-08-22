@@ -39,15 +39,14 @@
     <script src="/lang.js"></script>
     <script>
         var urlParams = new URLSearchParams(window.location.search);
+        var pinParam = urlParams.get('pin');
         var authParam = urlParams.get('auth');
+        if (pinParam) {
+            sessionStorage.setItem('currentRoomPin', pinParam);
+        }
         if (authParam) {
             sessionStorage.setItem('adminAuth', authParam);
-            window.history.replaceState({}, document.title, window.location.pathname);
-        } else if (!sessionStorage.getItem('adminAuth') && urlParams.get('pass') !== 'obs_screen') {
-            const l = localStorage.getItem('econova_lang') || 'vi';
-            const message = (typeof I18N !== 'undefined' && I18N[l] && I18N[l].con_access_denied) ? I18N[l].con_access_denied : 'Access denied';
-            document.write('<h1 style="color:white;text-align:center;margin-top:20%;font-family: \'SF Pro Display Bold\', \'SF Pro Text\', -apple-system, BlinkMacSystemFont, sans-serif">' + message + '</h1>');
-            window.stop();
+            window.history.replaceState({}, document.title, window.location.pathname + (pinParam ? ('?pin=' + encodeURIComponent(pinParam)) : ''));
         }
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -536,10 +535,20 @@
         try {
             window.socket = window.socket || io();
             socket = window.socket;
-            socket.on('connect', () => {
+            function doJoinRoom() {
                 const roomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
-                if (roomPin) socket.emit('joinRoom', roomPin, (res) => { if (res && res.gameState) { if (typeof handleUpdateState === 'function') handleUpdateState(res.gameState); } });
-            });
+                if (roomPin) {
+                    socket.emit('joinRoom', roomPin, (res) => {
+                        if (res && res.gameState) {
+                            if (typeof handleUpdateState === 'function') handleUpdateState(res.gameState);
+                        }
+                    });
+                }
+            }
+            if (socket.connected) {
+                doJoinRoom();
+            }
+            socket.on('connect', doJoinRoom);
         } catch (e) {
             console.warn('Socket.io unavailable on screen page:', e);
             socket = { on: () => {}, emit: () => {}, off: () => {} };
@@ -839,7 +848,9 @@
         var lastQuestionId = null;
         var lastBuzzedTeam = null;
         
-        socket.on('updateState', (state) => {
+        function handleUpdateState(state) {
+            if (!state) return;
+            window.currentState = state;
             var qId = (state.currentQuestion && state.currentQuestion.active) ? (state.currentQuestion.id || state.currentQuestion._id || state.currentQuestion.questionId || state.currentQuestion.idx) : null;
             var buzzed = state.buzzedTeam;
             var questionChanged = (qId !== lastQuestionId);
@@ -1641,7 +1652,8 @@
             applyVisibility(state);
             autoResizeText();
             setTimeout(autoResizeText, 50);
-        });
+        }
+        socket.on('updateState', handleUpdateState);
 
         function autoResizeText() {
             var theme = currentTheme || 'default';
