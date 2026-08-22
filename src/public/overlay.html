@@ -1758,7 +1758,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function triggerV3Transition(newState, stateObj) {
-        if (v3Transitioning) return;
+        if (v3Transitioning && window.v3TransitionTargetState === newState) return;
+        window.v3TransitionTargetState = newState;
         v3Transitioning = true;
         var v3Master = document.getElementById('v3MasterContainer');
         v3IsFirstEntry = (currentV3State === 0);
@@ -1785,6 +1786,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 v3Master.style.transform = '';
                 v3Master.style.opacity = '1';
                 v3Transitioning = false; 
+                window.v3TransitionTargetState = null;
                 currentV3State = 0; 
                 if (window.currentState) renderV3(window.currentState);
             }, 2050);
@@ -1815,6 +1817,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             window.v3AnimTimeout3 = setTimeout(() => {
                 v3Transitioning = false;
+                window.v3TransitionTargetState = null;
                 currentV3State = 1;
                 if (window.currentState) renderV3(window.currentState);
             }, delayEnd);
@@ -1841,6 +1844,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             window.v3AnimTimeout3 = setTimeout(() => {
                 v3Transitioning = false;
+                window.v3TransitionTargetState = null;
                 currentV3State = 2;
                 if (window.currentState) renderV3(window.currentState);
             }, 3400);

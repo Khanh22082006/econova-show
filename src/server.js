@@ -1483,6 +1483,8 @@ try {
                 });
             }
 
+            state.isGridVisibleOnOverlay = false;
+            state.pendingPackage = null;
             state.lockedPackage = {
                 mode: data.mode,
                 mainTeamId: mainTeamId,
