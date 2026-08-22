@@ -443,6 +443,28 @@
                 </select>
             </div>
 
+            <div class="form-row">
+                <label class="form-label">SỐ LƯỢNG NGƯỜI CHƠI / ĐỘI THI</label>
+                <select id="createTeamCountInput" class="form-input" style="background:#0a0a1a;" onchange="renderCreateTeamsInputs()">
+                    <option value="2">2 Người chơi / Đội thi</option>
+                    <option value="3">3 Người chơi / Đội thi</option>
+                    <option value="4" selected>4 Người chơi / Đội thi (Chuẩn Olympia)</option>
+                    <option value="5">5 Người chơi / Đội thi</option>
+                    <option value="6">6 Người chơi / Đội thi</option>
+                    <option value="7">7 Người chơi / Đội thi</option>
+                    <option value="8">8 Người chơi / Đội thi</option>
+                </select>
+                <div class="input-hint">💡 Chọn số lượng thí sinh tham gia trận đấu này (từ 2 đến 8 đội).</div>
+            </div>
+
+            <div class="form-row" style="margin-bottom: 12px;">
+                <label class="form-label">DANH SÁCH THÍ SINH / ĐỘI THI</label>
+                <div class="input-hint" style="margin-top: -2px; margin-bottom: 10px;">Nhập tên và trường học / đơn vị cho từng thí sinh:</div>
+                <div id="createTeamsContainer" style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+                    <!-- Render động qua renderCreateTeamsInputs() -->
+                </div>
+            </div>
+
             <button class="btn-create-room" onclick="handleCreateRoom()">🚀 KHỞI TẠO PHÒNG ĐẤU</button>
             <div class="error-toast" id="createError"></div>
         </div>
@@ -504,9 +526,56 @@
         // Auto generate random PIN on first load for convenience
         window.addEventListener('DOMContentLoaded', () => {
             generateRandomPin();
+            renderCreateTeamsInputs();
         });
 
-                function togglePasswordVisibility(inputId, btn) {
+        function renderCreateTeamsInputs() {
+            const container = document.getElementById('createTeamsContainer');
+            if (!container) return;
+            const selectEl = document.getElementById('createTeamCountInput');
+            const count = parseInt(selectEl ? selectEl.value : 4, 10) || 4;
+            
+            // Lưu lại giá trị đã nhập trước đó nếu có
+            const savedData = [];
+            for (let i = 1; i <= 8; i++) {
+                const nEl = document.getElementById(`createTeamName_${i}`);
+                const sEl = document.getElementById(`createTeamSchool_${i}`);
+                if (nEl) {
+                    savedData[i] = {
+                        name: nEl.value,
+                        school: sEl ? sEl.value : ''
+                    };
+                }
+            }
+
+            let html = '';
+            for (let i = 1; i <= count; i++) {
+                const prevName = (savedData[i] && savedData[i].name !== undefined && savedData[i].name.trim() !== '') ? savedData[i].name : `Đội ${i}`;
+                const prevSchool = (savedData[i] && savedData[i].school !== undefined) ? savedData[i].school : '';
+                
+                html += `
+                    <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--card-border); border-left: 4px solid #00d2d3; border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px;">
+                        <div style="font-size: 13px; font-weight: 800; color: #ffd700; display: flex; align-items: center; justify-content: space-between;">
+                            <span>👤 Thí sinh / Đội ${i}</span>
+                            <span style="font-size: 11px; color: #a4b0be; font-weight: 500;">Vị trí #${i}</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div>
+                                <label style="font-size: 11px; color: #00d2d3; font-weight: 600; display: block; margin-bottom: 3px;">TÊN THÍ SINH / ĐỘI</label>
+                                <input type="text" id="createTeamName_${i}" class="form-input" style="padding: 8px 12px; font-size: 13.5px;" placeholder="VD: Nguyễn Văn A hoặc Đội ${i}" value="${prevName}">
+                            </div>
+                            <div>
+                                <label style="font-size: 11px; color: #00d2d3; font-weight: 600; display: block; margin-bottom: 3px;">TRƯỜNG / ĐƠN VỊ</label>
+                                <input type="text" id="createTeamSchool_${i}" class="form-input" style="padding: 8px 12px; font-size: 13.5px;" placeholder="VD: THPT Chuyên..." value="${prevSchool}">
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        function togglePasswordVisibility(inputId, btn) {
             const input = document.getElementById(inputId);
             if (!input) return;
             if (input.type === 'password') {
@@ -525,6 +594,9 @@
             document.getElementById('tab-btn-create').classList.toggle('active', tab === 'create');
             document.getElementById('panel-join').style.display = tab === 'join' ? 'flex' : 'none';
             document.getElementById('panel-create').style.display = tab === 'create' ? 'flex' : 'none';
+            if (tab === 'create') {
+                renderCreateTeamsInputs();
+            }
         }
 
         function generateRandomPin() {
@@ -629,6 +701,7 @@
             const password = document.getElementById('createPassInput').value.trim() || 'admin123';
             const mcPassword = document.getElementById('createMcPassInput').value.trim() || 'mc123';
             const theme = document.getElementById('createThemeInput').value;
+            const teamCount = parseInt(document.getElementById('createTeamCountInput').value, 10) || 4;
             const errEl = document.getElementById('createError');
             errEl.style.display = 'none';
 
@@ -639,11 +712,25 @@
                 finalPin = pinInput.padStart(6, '0');
             }
 
+            const teams = [];
+            for (let i = 1; i <= teamCount; i++) {
+                const nEl = document.getElementById(`createTeamName_${i}`);
+                const sEl = document.getElementById(`createTeamSchool_${i}`);
+                const teamName = (nEl && nEl.value.trim()) ? nEl.value.trim() : `Đội ${i}`;
+                const teamSchool = (sEl && sEl.value.trim()) ? sEl.value.trim() : '';
+                teams.push({
+                    id: i,
+                    name: teamName,
+                    school: teamSchool,
+                    score: 0
+                });
+            }
+
             try {
                 const res = await fetch('/api/room/create', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, pin: finalPin, password, mcPassword, theme })
+                    body: JSON.stringify({ name, pin: finalPin, password, mcPassword, theme, teamCount, teams })
                 });
                 const data = await res.json();
                 if (data.success) {

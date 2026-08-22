@@ -34,7 +34,7 @@ class RoomManager {
         }
         return {
             currentRound: "Khởi Động",
-            currentQuestion: { active: false, points: 0, mainTeamId: null, isHopeStar: false, deductedFromMain: false, text: "", answer: "", idx: null, isHidden: false },
+            currentQuestion: { active: false, points: 0, mainTeamId: null, isHopeStar: false, deductedFromMain: false, text: "", answer: "", idx: null, isHidden: true },
             teams: [
                 { id: 1, name: "Đội 1", school: "", score: 0 },
                 { id: 2, name: "Đội 2", school: "", score: 0 },
@@ -42,11 +42,11 @@ class RoomManager {
                 { id: 4, name: "Đội 4", school: "", score: 0 }
             ],
             claimedTeams: {},
-            settings: { theme: "v3", questionsPerTeam: 3 },
+            settings: { theme: "v3", questionsPerTeam: 3, teamCount: 4, language: "vi" },
             isBuzzerLocked: true,
             buzzedTeam: null,
             buzzTimes: {},
-            turnOrder: [],
+            turnOrder: [1, 2, 3, 4],
             turnStats: {},
             isGridVisibleOnOverlay: false,
             playedQuestions: { "10": [], "20": [], "40": [] },
@@ -65,7 +65,7 @@ class RoomManager {
         return pin;
     }
 
-    createRoom({ pin, name, password, mcPassword, theme, questions }) {
+    createRoom({ pin, name, password, mcPassword, theme, questions, teamCount, teams }) {
         let cleanPin = (pin || "").toString().trim().replace(/\D/g, '');
         if (cleanPin.length > 0 && cleanPin.length <= 6) {
             cleanPin = cleanPin.padStart(6, '0');
@@ -84,6 +84,40 @@ class RoomManager {
         initialGameState.buzzedTeam = null;
         initialGameState.buzzTimes = {};
         initialGameState.claimedTeams = {};
+
+        // Xử lý danh sách thí sinh / đội thi và số lượng đội do người dùng truyền vào
+        const count = Math.max(2, Math.min(8, parseInt(teamCount, 10) || (Array.isArray(teams) && teams.length ? teams.length : 4)));
+        let cleanTeams = [];
+        if (Array.isArray(teams) && teams.length > 0) {
+            for (let i = 0; i < count; i++) {
+                const t = teams[i] || {};
+                cleanTeams.push({
+                    id: i + 1,
+                    name: (t.name && t.name.trim()) ? t.name.trim() : `Đội ${i + 1}`,
+                    school: (t.school && t.school.trim()) ? t.school.trim() : '',
+                    score: 0
+                });
+            }
+        } else {
+            for (let i = 0; i < count; i++) {
+                cleanTeams.push({
+                    id: i + 1,
+                    name: `Đội ${i + 1}`,
+                    school: '',
+                    score: 0
+                });
+            }
+        }
+
+        initialGameState.teams = cleanTeams;
+        initialGameState.turnOrder = cleanTeams.map(t => t.id);
+        initialGameState.turnStats = {};
+        initialGameState.activeTeam = cleanTeams.length > 0 ? cleanTeams[0].id : 1;
+        initialGameState.playedQuestions = { "10": [], "20": [], "40": [] };
+        initialGameState.currentQuestion = { active: false, points: 0, mainTeamId: null, isHopeStar: false, deductedFromMain: false, text: "", answer: "", idx: null, isHidden: true };
+        initialGameState.settings = initialGameState.settings || {};
+        initialGameState.settings.teamCount = count;
+        initialGameState.settings.theme = theme || "v3";
 
         const roomData = {
             pin: cleanPin,
@@ -111,7 +145,7 @@ class RoomManager {
         }
 
         this.rooms.set(cleanPin, roomData);
-        console.log(`[RoomManager] Đã khởi tạo phòng mới: ${roomData.name} | PIN: ${cleanPin}`);
+        console.log(`[RoomManager] Đã khởi tạo phòng mới: ${roomData.name} | PIN: ${cleanPin} | Đội thi: ${cleanTeams.map(t => t.name).join(', ')}`);
         return roomData;
     }
 

@@ -335,8 +335,8 @@ app.post('/api/room/delete', (req, res) => {
 
 app.post('/api/room/create', (req, res) => {
     try {
-        const { name, pin, password, mcPassword, theme, questions } = req.body || {};
-        const newRoom = roomManager.createRoom({ name, pin, password, mcPassword, theme, questions });
+        const { name, pin, password, mcPassword, theme, questions, teamCount, teams } = req.body || {};
+        const newRoom = roomManager.createRoom({ name, pin, password, mcPassword, theme, questions, teamCount, teams });
         if (newRoom.error) {
             return res.status(400).json({ success: false, message: newRoom.message });
         }

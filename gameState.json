@@ -2,37 +2,33 @@
   "settings": {
     "theme": "v3",
     "questionsPerTeam": 3,
-    "language": "vi"
+    "language": "vi",
+    "teamCount": 4
   },
   "teams": [
-    {
-      "id": 1,
-      "name": "Đức Thắng",
-      "score": 100
-    },
-    {
-      "id": 2,
-      "name": "Anh Minh",
-      "score": 120
-    },
-    {
-      "id": 3,
-      "name": "Anh Khoa",
-      "score": 150
-    },
-    {
-      "id": 4,
-      "name": "Hòa Bình",
-      "score": 110
-    }
+    { "id": 1, "name": "Đội 1", "school": "", "score": 0 },
+    { "id": 2, "name": "Đội 2", "school": "", "score": 0 },
+    { "id": 3, "name": "Đội 3", "school": "", "score": 0 },
+    { "id": 4, "name": "Đội 4", "school": "", "score": 0 }
   ],
-  "activeTeam": 2,
+  "turnOrder": [1, 2, 3, 4],
+  "turnStats": {},
+  "activeTeam": 1,
   "lockedPackage": null,
   "isBuzzerLocked": true,
   "buzzedTeam": null,
   "buzzTimes": {},
   "claimedTeams": {},
+  "playedQuestions": { "10": [], "20": [], "40": [] },
   "currentQuestion": {
-    "active": false
+    "active": false,
+    "points": 0,
+    "mainTeamId": null,
+    "isHopeStar": false,
+    "deductedFromMain": false,
+    "text": "",
+    "answer": "",
+    "idx": null,
+    "isHidden": true
   }
 }
