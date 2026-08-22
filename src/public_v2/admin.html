@@ -1581,8 +1581,24 @@
                 const db = await openVideoDB();
                 if (!db) return;
                 const tx = db.transaction(VIDEO_STORE_NAME, 'readwrite');
+                const store = tx.objectStore(VIDEO_STORE_NAME);
+                
                 const cleanKey = keyName.toLowerCase().replace(/[^a-z0-9]/g, '');
-                tx.objectStore(VIDEO_STORE_NAME).put({ key: cleanKey, rawKey: keyName, blob: fileBlob, savedAt: Date.now() });
+                const rawName = keyName.split('/').pop().split('\\').pop();
+                const prefixMatch = rawName.split('_')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+                
+                const record = {
+                    key: cleanKey,
+                    rawKey: keyName,
+                    baseName: rawName,
+                    prefix: prefixMatch,
+                    blob: fileBlob,
+                    savedAt: Date.now()
+                };
+                store.put(record);
+                if (prefixMatch && prefixMatch.length >= 2) {
+                    store.put({ ...record, key: 'prefix_' + prefixMatch });
+                }
             } catch(e) {
                 console.warn('Lỗi lưu cache video:', e);
             }
@@ -1594,10 +1610,39 @@
                 const db = await openVideoDB();
                 if (!db) return null;
                 const tx = db.transaction(VIDEO_STORE_NAME, 'readonly');
-                const cleanKey = keyName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                const store = tx.objectStore(VIDEO_STORE_NAME);
+                
+                const rawName = keyName.split('/').pop().split('\\').pop().split('?')[0];
+                const cleanKey = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                const prefixMatch = rawName.split('_')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+
                 return new Promise((resolve) => {
-                    const req = tx.objectStore(VIDEO_STORE_NAME).get(cleanKey);
-                    req.onsuccess = () => resolve(req.result ? req.result.blob : null);
+                    const req = store.get(cleanKey);
+                    req.onsuccess = () => {
+                        if (req.result && req.result.blob) return resolve(req.result.blob);
+                        
+                        if (prefixMatch && prefixMatch.length >= 2) {
+                            const pReq = store.get('prefix_' + prefixMatch);
+                            pReq.onsuccess = () => {
+                                if (pReq.result && pReq.result.blob) return resolve(pReq.result.blob);
+                                
+                                const allReq = store.getAll();
+                                allReq.onsuccess = () => {
+                                    const all = allReq.result || [];
+                                    const found = all.find(item => 
+                                        (item.rawKey && item.rawKey.includes(rawName)) ||
+                                        (item.baseName && item.baseName.includes(prefixMatch)) ||
+                                        (item.key && item.key.includes(cleanKey))
+                                    );
+                                    resolve(found ? found.blob : null);
+                                };
+                                allReq.onerror = () => resolve(null);
+                            };
+                            pReq.onerror = () => resolve(null);
+                        } else {
+                            resolve(null);
+                        }
+                    };
                     req.onerror = () => resolve(null);
                 });
             } catch(e) {

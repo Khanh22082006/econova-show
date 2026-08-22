@@ -661,24 +661,53 @@
         async function getVideoBlobUrl(url, rawUrl) {
             try {
                 const targetStr = url || rawUrl || '';
-                const baseName = targetStr.split('/').pop().split('\\').pop().split('?')[0];
-                if (baseName && window.indexedDB) {
-                    const blob = await new Promise((resolve) => {
-                        const req = indexedDB.open('EconovaVideoCache_v1', 1);
-                        req.onsuccess = () => {
-                            const db = req.result;
-                            if (!db.objectStoreNames.contains('videos')) return resolve(null);
-                            const tx = db.transaction('videos', 'readonly');
-                            const store = tx.objectStore('videos');
-                            const getReq = store.get(baseName);
-                            getReq.onsuccess = () => resolve(getReq.result ? getReq.result.blob : null);
-                            getReq.onerror = () => resolve(null);
+                const rawName = targetStr.split('/').pop().split('\\').pop().split('?')[0];
+                if (!rawName || !window.indexedDB) return null;
+                
+                const cleanKey = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                const prefixMatch = rawName.split('_')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+
+                const blob = await new Promise((resolve) => {
+                    const req = indexedDB.open('EconovaVideoCache_v1', 1);
+                    req.onsuccess = () => {
+                        const db = req.result;
+                        if (!db.objectStoreNames.contains('videos')) return resolve(null);
+                        const tx = db.transaction('videos', 'readonly');
+                        const store = tx.objectStore('videos');
+                        
+                        const getReq = store.get(cleanKey);
+                        getReq.onsuccess = () => {
+                            if (getReq.result && getReq.result.blob) return resolve(getReq.result.blob);
+                            
+                            if (prefixMatch && prefixMatch.length >= 2) {
+                                const pReq = store.get('prefix_' + prefixMatch);
+                                pReq.onsuccess = () => {
+                                    if (pReq.result && pReq.result.blob) return resolve(pReq.result.blob);
+                                    
+                                    const allReq = store.getAll();
+                                    allReq.onsuccess = () => {
+                                        const all = allReq.result || [];
+                                        const found = all.find(item => 
+                                            (item.rawKey && item.rawKey.includes(rawName)) ||
+                                            (item.baseName && item.baseName.includes(prefixMatch)) ||
+                                            (item.key && item.key.includes(cleanKey))
+                                        );
+                                        resolve(found ? found.blob : null);
+                                    };
+                                    allReq.onerror = () => resolve(null);
+                                };
+                                pReq.onerror = () => resolve(null);
+                            } else {
+                                resolve(null);
+                            }
                         };
-                        req.onerror = () => resolve(null);
-                    });
-                    if (blob) {
-                        return URL.createObjectURL(blob);
-                    }
+                        getReq.onerror = () => resolve(null);
+                    };
+                    req.onerror = () => resolve(null);
+                });
+                if (blob) {
+                    console.log('⚡ Đang phát video trực tiếp từ bộ đệm SSD/RAM cục bộ (0ms latency, không tốn băng thông)!');
+                    return URL.createObjectURL(blob);
                 }
             } catch(e) {}
             return null;
