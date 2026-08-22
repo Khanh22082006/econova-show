@@ -2560,7 +2560,7 @@ if (newCount < 2 || newCount > 6) return;
         }
         
         // Ngăn đội chính bấm chuông giành quyền trong câu hỏi của chính họ
-        if (state.currentQuestion && state.currentQuestion.active && state.currentQuestion.mainTeamId === teamId) return;
+        if (state.currentQuestion && state.currentQuestion.active && state.currentQuestion.mainTeamId != null && Number(state.currentQuestion.mainTeamId) === Number(teamId)) return;
 
         let isNewBuzz = false;
         if (state.buzzerUnlockTime && state.buzzTimes && typeof state.buzzTimes[teamId] !== 'number') {

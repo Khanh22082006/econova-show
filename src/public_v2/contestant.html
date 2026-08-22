@@ -1183,8 +1183,14 @@
                     buzzBtn.classList.remove('unlocked', 'success');
                     buzzRing.classList.remove('animating');
                     btnIcon.textContent = '🔒';
-                    statusText.textContent = typeof t === 'function' ? t('con_locked', (state.settings && state.settings.language) || currentGlobalLang) : 'CHUÔNG KHÓA';
-                    statusText.style.color = 'rgba(255,255,255,0.5)';
+                    let isMainTeam = (state.currentQuestion && state.currentQuestion.active && state.currentQuestion.mainTeamId != null && Number(state.currentQuestion.mainTeamId) === Number(myTeamId));
+                    if (isMainTeam) {
+                        statusText.textContent = typeof t === 'function' ? t('con_your_turn', (state.settings && state.settings.language) || currentGlobalLang) : 'LƯỢT CỦA BẠN';
+                        statusText.style.color = '#00d2d3';
+                    } else {
+                        statusText.textContent = typeof t === 'function' ? t('con_locked', (state.settings && state.settings.language) || currentGlobalLang) : 'CHUÔNG KHÓA';
+                        statusText.style.color = 'rgba(255,255,255,0.5)';
+                    }
                 }
             }
         }

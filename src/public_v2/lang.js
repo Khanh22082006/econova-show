@@ -246,6 +246,7 @@ const I18N = {
         "con_buzz_exclaim": "🔔 BẤM CHUÔNG!",
         "con_team_placeholder": "TEAM",
         "con_school_placeholder": "Trường",
+        "con_your_turn": "LƯỢT CỦA BẠN",
 
         // --- SCOREBOARD ---
         "sb_choose": "CHỌN ĐỘI BẢNG ĐIỂM",
@@ -501,6 +502,7 @@ const I18N = {
         "con_buzz_exclaim": "🔔 BUZZ NOW!",
         "con_team_placeholder": "TEAM",
         "con_school_placeholder": "School",
+        "con_your_turn": "YOUR TURN",
 
         // --- SCOREBOARD ---
         "sb_choose": "CHOOSE SCOREBOARD TEAM",
