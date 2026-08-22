@@ -515,7 +515,28 @@ function scanFonts() {
     return fontScanPromise;
 }
 // Start scan immediately on server boot
-scanFonts();
+const fontsDir = path.join(basePath, 'Themes', 'Fonts');
+if (!fs.existsSync(fontsDir)) {
+    try { fs.mkdirSync(fontsDir, { recursive: true }); } catch(e) {}
+}
+
+function scanCustomFontsDir() {
+    if (fs.existsSync(fontsDir)) {
+        try {
+            const files = fs.readdirSync(fontsDir);
+            files.forEach(file => {
+                const ext = path.extname(file).toLowerCase();
+                if (['.ttf', '.otf', '.woff', '.woff2'].includes(ext)) {
+                    const fontName = path.basename(file, ext);
+                    fontDictionary[fontName] = path.join(fontsDir, file);
+                }
+            });
+        } catch (e) {
+            console.error('Lỗi khi đọc thư mục Themes/Fonts:', e);
+        }
+    }
+}
+scanCustomFontsDir();
 
 app.get('/font/:name', (req, res) => {
     let name = decodeURIComponent(req.params.name);
@@ -524,6 +545,33 @@ app.get('/font/:name', (req, res) => {
         res.sendFile(fontPath);
     } else {
         res.status(404).send('Not found');
+    }
+});
+
+app.post('/api/font/upload', (req, res) => {
+    try {
+        const { fontName, fileData, ext } = req.body || {};
+        if (!fontName || !fileData) {
+            return res.status(400).json({ success: false, message: 'Thiếu dữ liệu file font!' });
+        }
+        const cleanName = fontName.trim().replace(/[\\/:*?"<>|]/g, '');
+        const cleanExt = (ext || 'ttf').toLowerCase().replace('.', '');
+        const targetFile = path.join(fontsDir, `${cleanName}.${cleanExt}`);
+        
+        const base64Data = fileData.replace(/^data:.*?;base64,/, '');
+        fs.writeFileSync(targetFile, Buffer.from(base64Data, 'base64'));
+        
+        fontDictionary[cleanName] = targetFile;
+        console.log(`[FontUpload] Đã lưu font mới: ${cleanName} tại ${targetFile}`);
+        
+        const systemFonts = Object.keys(fontDictionary);
+        const combined = Array.from(new Set([...STANDARD_FONTS, ...systemFonts])).sort((a, b) => a.localeCompare(b));
+        io.emit('systemFonts', combined);
+        
+        res.json({ success: true, fontName: cleanName, message: `Đã tải lên font "${cleanName}" thành công!` });
+    } catch (err) {
+        console.error('Lỗi khi tải font lên:', err);
+        res.status(500).json({ success: false, message: 'Lỗi máy chủ khi lưu font!' });
     }
 });
 

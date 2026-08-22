@@ -592,6 +592,23 @@
         <!-- FONTS PANEL -->
         <div class="panel" style="border-left-color: #ff9f43; margin-top: 15px;">
             <h3 style="color:#ff9f43; border-bottom: 1px solid #555; padding-bottom:5px; margin-bottom:10px;" data-i18n="adm_font_title">Tùy chỉnh Font chữ</h3>
+            
+            <!-- FONTS TOOLS (QUÉT TỪ MÁY & UPLOAD FONT) -->
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px dashed rgba(255,159,67,0.4);">
+                <button type="button" class="btn-orange" onclick="scanLocalMachineFonts()" style="padding: 6px 12px; font-size: 12.5px; width: auto; background: #e67e22; border: none; border-radius: 6px; cursor: pointer; color: #fff; font-weight: bold; display: flex; align-items: center; gap: 6px;">
+                    🔍 Quét Font Trên Máy Này (Chrome/Edge)
+                </button>
+                
+                <input type="file" id="fontUploadFileInput" accept=".ttf,.otf,.woff,.woff2" style="display:none;" onchange="handleUploadFontFile(event)">
+                <button type="button" class="btn-green" onclick="document.getElementById('fontUploadFileInput').click()" style="padding: 6px 12px; font-size: 12.5px; width: auto; background: #10ac84; border: none; border-radius: 6px; cursor: pointer; color: #fff; font-weight: bold; display: flex; align-items: center; gap: 6px;">
+                    📤 Tải Lên File Font (.ttf / .otf)
+                </button>
+
+                <button type="button" onclick="promptCustomFontName()" style="padding: 6px 12px; font-size: 12.5px; width: auto; background: #2f3542; border: 1px solid #576574; border-radius: 6px; cursor: pointer; color: #ffd700; font-weight: bold; display: flex; align-items: center; gap: 6px;">
+                    ✏️ Gõ Tên Font Thủ Công
+                </button>
+            </div>
+
             <div class="control-row">
                 <div style="flex: 1;">
                     <label style="display:flex; align-items:center; gap:10px; color:#ff9f43; margin-bottom: 10px;">
@@ -1626,6 +1643,91 @@
                     console.log('Using default font list, retry in 3s:', err.message);
                     setTimeout(() => loadFontList(settings), 3000);
                 });
+        }
+
+        // 1. Quét font có sẵn trên máy bằng Local Font Access API
+        async function scanLocalMachineFonts() {
+            if (!('queryLocalFonts' in window)) {
+                alert('Trình duyệt hiện tại chưa hỗ trợ tự động quét font qua Local Font Access API. Bạn hãy dùng Google Chrome hoặc Microsoft Edge mới nhất, hoặc ấn nút "Tải Lên File Font (.ttf / .otf)" / "Gõ Tên Font Thủ Công" nhé!');
+                return;
+            }
+            try {
+                const availableFonts = await window.queryLocalFonts();
+                if (!availableFonts || availableFonts.length === 0) {
+                    alert('Không tìm thấy font nào trên máy hoặc bạn chưa cấp quyền.');
+                    return;
+                }
+                const localNames = Array.from(new Set(availableFonts.map(f => f.family).filter(Boolean)));
+                localNames.sort((a, b) => a.localeCompare(b));
+                
+                const currentList = _fontsCache || DEFAULT_FONTS;
+                const combined = Array.from(new Set([...currentList, ...localNames])).sort((a, b) => a.localeCompare(b));
+                _fontsCache = combined;
+                populateFontSelects(combined, window.currentState && window.currentState.settings);
+                alert(`✅ Đã quét thành công ${localNames.length} font từ máy của bạn và thêm vào danh sách chọn!`);
+            } catch (err) {
+                if (err.name === 'NotAllowedError') {
+                    alert('Bạn đã từ chối quyền truy cập font từ máy.');
+                } else {
+                    alert('Lỗi khi quét font trên máy: ' + err.message);
+                }
+            }
+        }
+
+        // 2. Tải lên file font (.ttf/.otf/.woff/.woff2) lên máy chủ
+        async function handleUploadFontFile(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            
+            const rawName = file.name.replace(/\.[^/.]+$/, "");
+            const ext = file.name.split('.').pop().toLowerCase();
+            const fontName = prompt('Nhập tên hiển thị cho Font:', rawName) || rawName;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const base64Data = e.target.result;
+                try {
+                    const res = await fetch('/api/font/upload', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ fontName, fileData: base64Data, ext })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        alert(data.message || 'Tải lên font thành công!');
+                        // Nạp font vào @font-face ngay trên trang admin
+                        try {
+                            const newFontFace = new FontFace(data.fontName, `url(/font/${encodeURIComponent(data.fontName)})`);
+                            await newFontFace.load().then(f => document.fonts.add(f));
+                        } catch(e) {}
+                        loadFontList();
+                    } else {
+                        alert(data.message || 'Không thể tải lên font!');
+                    }
+                } catch (err) {
+                    alert('Lỗi kết nối khi tải lên font: ' + err.message);
+                }
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        // 3. Tự gõ tên font thủ công
+        function promptCustomFontName() {
+            const fontName = prompt('Nhập tên font bạn muốn dùng (phải được cài sẵn trên máy phát LED / OBS):', '');
+            if (!fontName || !fontName.trim()) return;
+            const clean = fontName.trim();
+            const currentList = _fontsCache || DEFAULT_FONTS;
+            const combined = Array.from(new Set([clean, ...currentList])).sort((a, b) => a.localeCompare(b));
+            _fontsCache = combined;
+            populateFontSelects(combined, window.currentState && window.currentState.settings);
+            // Tự động chọn font vừa gõ cho settingFontTeamName
+            const teamSel = document.getElementById('settingFontTeamName');
+            if (teamSel) {
+                teamSel.value = clean;
+                applySettings();
+            }
+            alert(`✅ Đã thêm font "${clean}" vào danh sách chọn!`);
         }
 
         // Initial load — triggered after socket connects and state arrives
