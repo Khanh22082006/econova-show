@@ -915,6 +915,15 @@
             }
         }
 
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.key === ' ' || e.code === 'Enter') {
+                if (window.currentState && window.currentState.isBuzzerLocked === false && !isBanned) {
+                    e.preventDefault();
+                    tryBuzz();
+                }
+            }
+        });
+
         socket.on('updateState', handleUpdateState);
         
         socket.on('teamReleased', (data) => {
@@ -1125,14 +1134,16 @@
                         buzzRing.classList.remove('active-success');
                     }
                 } 
-                // NẾU CHUÔNG ĐANG MỞ (VÀ CHƯA CÓ AI BẤM VÀ CÂU HỎI ĐANG DIỄN RA)
-                else if (state.isBuzzerLocked === false && state.currentQuestion && state.currentQuestion.active) {
-                    if (state.currentQuestion.mainTeamId === myTeamId) {
+                // NẾU CHUÔNG ĐANG MỞ (VÀ CHƯA CÓ AI BẤM)
+                else if (state.isBuzzerLocked === false) {
+                    let isMainTeam = (state.currentQuestion && state.currentQuestion.active && state.currentQuestion.mainTeamId === myTeamId);
+                    if (isMainTeam) {
                         buzzBtn.classList.add('locked');
                         buzzBtn.classList.remove('unlocked', 'success');
                         buzzRing.classList.remove('animating');
                         btnIcon.textContent = '🚫';
                         statusText.textContent = typeof t === 'function' ? t('con_no_buzz', (state.settings && state.settings.language) || currentGlobalLang) : 'BẠN LÀ ĐỘI CHÍNH';
+                        statusText.style.color = 'rgba(255,255,255,0.5)';
                     } else {
                         buzzBtn.classList.remove('locked', 'success');
                         buzzBtn.classList.add('unlocked');
@@ -1142,7 +1153,7 @@
                         statusText.style.color = '#10ac84';
                     }
                 } 
-                // NẾU CHUÔNG KHÓA HOẶC CHƯA CÓ CÂU HỎI
+                // NẾU CHUÔNG KHÓA
                 else {
                     buzzBtn.classList.add('locked');
                     buzzBtn.classList.remove('unlocked', 'success');
