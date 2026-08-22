@@ -36,7 +36,7 @@
 
         // Slave video sync
         socket.on('videoSync', (time) => {
-            if (Math.abs(mainVideo.currentTime - time) > 0.3) {
+            if (mainVideo && !mainVideo.paused && Math.abs(mainVideo.currentTime - time) > 2.5) {
                 mainVideo.currentTime = time;
             }
         });

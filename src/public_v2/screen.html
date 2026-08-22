@@ -752,10 +752,15 @@
             });
         }
 
+        let lastVideoSyncEmit = 0;
         if (mainVideo) {
             mainVideo.addEventListener('timeupdate', () => {
-                if (socket && socket.emit) {
-                    socket.emit('videoSync', mainVideo.currentTime);
+                const now = Date.now();
+                if (now - lastVideoSyncEmit >= 2000) {
+                    lastVideoSyncEmit = now;
+                    if (socket && socket.emit) {
+                        socket.emit('videoSync', mainVideo.currentTime);
+                    }
                 }
             });
             mainVideo.addEventListener('play', () => {
