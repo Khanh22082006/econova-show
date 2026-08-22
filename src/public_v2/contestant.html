@@ -565,6 +565,21 @@
 
         const mainVideoIframe = document.getElementById('mainVideoIframe');
 
+        function unmuteVideoOnInteraction() {
+            if (mainVideo && mainVideo.muted) {
+                mainVideo.muted = false;
+                const vs = document.getElementById('volumeSlider');
+                mainVideo.volume = vs ? parseFloat(vs.value) : 1.0;
+            }
+        }
+        document.addEventListener('pointerdown', unmuteVideoOnInteraction, { capture: true });
+        document.addEventListener('keydown', unmuteVideoOnInteraction, { capture: true });
+        document.addEventListener('click', unmuteVideoOnInteraction, { capture: true });
+
+        socket.on('unmuteVideo', () => {
+            unmuteVideoOnInteraction();
+        });
+
         socket.on('playVideo', (rawUrl) => {
             if (!rawUrl) return;
             const url = resolveVideoUrl(rawUrl);
@@ -599,6 +614,9 @@
                 mainVideo.style.display = 'block';
                 mainVideo.preload = 'auto';
                 mainVideo.src = url;
+                mainVideo.muted = false;
+                const vs = document.getElementById('volumeSlider');
+                mainVideo.volume = vs ? parseFloat(vs.value) : 1.0;
                 
                 mainVideo.onerror = function() {
                     console.error('Lỗi khi tải nguồn video:', url);
@@ -616,7 +634,9 @@
                 if (videoOverlay) videoOverlay.style.display = 'flex';
                 const p = mainVideo.play();
                 if (p !== undefined) {
-                    p.catch(e => {
+                    p.then(() => {
+                        mainVideo.muted = false;
+                    }).catch(e => {
                         console.warn('Auto-play blocked or failed, retrying muted:', e);
                         mainVideo.muted = true;
                         mainVideo.play().catch(() => {});

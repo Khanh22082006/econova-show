@@ -356,6 +356,7 @@
     <div id="videoOverlay">
         <video id="mainVideo" playsinline webkit-playsinline src="" style="width: 100%; height: 100%; object-fit: contain;"></video>
         <iframe id="mainVideoIframe" style="display: none; width: 90%; height: 80%; border: none; border-radius: 12px; box-shadow: 0 0 30px rgba(0,0,0,0.8);" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>
+        <button id="unmuteFloatingBtn" onclick="unmuteVideoOnInteraction()" style="display:none; position:absolute; top:25px; right:25px; z-index:10000; background:rgba(235, 77, 75, 0.95); color:#fff; border:2px solid #fff; border-radius:30px; padding:12px 24px; font-size:18px; font-weight:bold; cursor:pointer; box-shadow:0 0 25px rgba(255,0,0,0.9); letter-spacing: 0.5px;">🔊 BẤM ĐỂ BẬT TIẾNG</button>
         <div id="videoErrorNotice" style="display:none; color:#ff4757; font-size: 22px; text-align:center; padding: 25px; background: rgba(0,0,0,0.92); border: 2px solid #ff4757; border-radius: 12px; max-width: 80%; line-height: 1.5; z-index: 9999;">
             ⚠️ <b>Chưa tìm thấy file video trên máy chủ</b><br>
             <span style="color:#feca57; font-size: 16px; word-break: break-all;" id="videoErrorPath"></span><br><br>
@@ -578,14 +579,32 @@
             return '/api/video?path=' + encodeURIComponent(u);
         }
 
+        function unmuteVideoOnInteraction() {
+            if (mainVideo && mainVideo.muted) {
+                mainVideo.muted = false;
+                mainVideo.volume = 1.0;
+                const btn = document.getElementById('unmuteFloatingBtn');
+                if (btn) btn.style.display = 'none';
+            }
+        }
+        document.addEventListener('pointerdown', unmuteVideoOnInteraction, { capture: true });
+        document.addEventListener('keydown', unmuteVideoOnInteraction, { capture: true });
+        document.addEventListener('click', unmuteVideoOnInteraction, { capture: true });
+
         const videoOverlay = document.getElementById('videoOverlay');
         const mainVideo = document.getElementById('mainVideo');
         const mainVideoIframe = document.getElementById('mainVideoIframe');
+
+        socket.on('unmuteVideo', () => {
+            unmuteVideoOnInteraction();
+        });
 
         socket.on('playVideo', (rawUrl) => {
             if (!rawUrl) return;
             const url = resolveVideoUrl(rawUrl);
             const iframe = document.getElementById('mainVideoIframe');
+            const unmuteBtn = document.getElementById('unmuteFloatingBtn');
+            if (unmuteBtn) unmuteBtn.style.display = 'none';
             
             // YouTube Embed
             const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
@@ -616,6 +635,8 @@
                 mainVideo.style.display = 'block';
                 mainVideo.preload = 'auto';
                 mainVideo.src = url;
+                mainVideo.muted = false;
+                mainVideo.volume = 1.0;
                 
                 mainVideo.onerror = function() {
                     console.error('Lỗi khi tải nguồn video:', url);
@@ -633,9 +654,14 @@
                 if (videoOverlay) videoOverlay.style.display = 'flex';
                 const p = mainVideo.play();
                 if (p !== undefined) {
-                    p.catch(e => {
-                        console.warn('Auto-play blocked or failed, retrying muted:', e);
+                    p.then(() => {
+                        mainVideo.muted = false;
+                        mainVideo.volume = 1.0;
+                        if (unmuteBtn) unmuteBtn.style.display = 'none';
+                    }).catch(e => {
+                        console.warn('Auto-play blocked or failed with sound, retrying muted:', e);
                         mainVideo.muted = true;
+                        if (unmuteBtn) unmuteBtn.style.display = 'block';
                         mainVideo.play().catch(() => {});
                     });
                 }
@@ -655,6 +681,8 @@
             }
             const errNotice = document.getElementById('videoErrorNotice');
             if (errNotice) errNotice.style.display = 'none';
+            const unmuteBtn = document.getElementById('unmuteFloatingBtn');
+            if (unmuteBtn) unmuteBtn.style.display = 'none';
             if (videoOverlay) videoOverlay.style.display = 'none';
         });
 
