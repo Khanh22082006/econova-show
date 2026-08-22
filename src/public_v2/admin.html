@@ -1831,6 +1831,9 @@
                         if (adminRound1TimeSeconds > 0) {
                             adminRound1TimeSeconds--;
                             updateAdminRound1TimerDisplay();
+                            if (adminRound1TimeSeconds === 0) {
+                                socket.emit('playSound', 'buzzer_5s');
+                            }
                         } else {
                             clearInterval(adminRound1TimerInterval);
                             adminRound1TimerInterval = null;

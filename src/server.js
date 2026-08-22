@@ -1151,14 +1151,15 @@ const roomPin = (pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0'
     // Danh sách các event MC được phép gọi
     const mcAllowedEvents = [
         'correctMainTeam', 'startBuzzer', 'correctBuzzedTeam', 'wrongBuzzedTeam',
-        'startCountdown', 'playSound', 'closeQuestion'
+        'startCountdown', 'playSound', 'closeQuestion', 'timer-action', 'stop-timer',
+        'ppt-next', 'ppt-prev', 'ppt-jump', 'ppt-sync'
     ];
 
     socket.use(([event, ...args], next) => {
         const publicEvents = [
             'joinRoom', 'adminLogin', 'mcLogin', 'verifyRoomPIN', 'claimTeam', 'releaseTeam',
             'buzz', 'getSystemFonts', 'get-state', 'requestState', 'getDeviceStatus',
-            'disconnect', 'antiCheatViolation', 'secretExitRequest'
+            'ppt-sync', 'disconnect', 'antiCheatViolation', 'secretExitRequest'
         ];
         if (publicEvents.includes(event)) return next();
         if (socket.isAdmin) return next();
@@ -1920,39 +1921,45 @@ let oldQuestionsPerTeam = state.settings.questionsPerTeam || 3;
     // --- ADMIN: VÒNG 1 (TIMER CONFIG) ---
     socket.on('update-timer-config', (config) => {
         const state = getActiveState(socket);
-state.timerConfig = { ...state.timerConfig, ...config };
-        io.emit('timer-config-updated', state.timerConfig);
+        state.timerConfig = { ...state.timerConfig, ...config };
+        if (socket.currentRoomPin) {
+            io.to(socket.currentRoomPin).emit('timer-config-updated', state.timerConfig);
+        } else {
+            io.emit('timer-config-updated', state.timerConfig);
+        }
+        scheduleSaveRooms(2000);
     });
 
     socket.on('forceUpdateTurnOrder', () => {
         const state = getActiveState(socket);
-// Manually sort the turn order based on current score
         updateTurnOrder(false);
         broadcastState(socket);
     });
 
     socket.on('timer-action', (action) => {
-        const state = getActiveState(socket);
-io.emit('timer-action', action);
+        if (socket.currentRoomPin) {
+            io.to(socket.currentRoomPin).emit('timer-action', action);
+        } else {
+            io.emit('timer-action', action);
+        }
     });
 
     socket.on('change-round', (roundNum) => {
         const state = getActiveState(socket);
-state.activeRound = roundNum;
-
-        // Reset turn state when switching rounds so the turn order is properly rebuilt 
-        // based on the teams' current scores at the beginning of the new round.
+        state.activeRound = roundNum;
         state.forcedTeamId = null;
         state.turnStats = {};
         state.turnOrder = [];
         updateTurnOrder(false);
-
         broadcastState(socket);
     });
 
     socket.on('stop-timer', () => {
-        const state = getActiveState(socket);
-io.emit('timer-action', { type: 'PAUSE' });
+        if (socket.currentRoomPin) {
+            io.to(socket.currentRoomPin).emit('timer-action', { type: 'PAUSE' });
+        } else {
+            io.emit('timer-action', { type: 'PAUSE' });
+        }
     });
     // --- PPT FILE WATCHER ---
     let pptWatcher = null;
@@ -2050,21 +2057,44 @@ io.emit('timer-action', { type: 'PAUSE' });
     };
 
     socket.on('ppt-next', async () => {
+        const pin = socket.currentRoomPin;
+        if (pin) {
+            const status = roomManager.nextSlide(pin);
+            if (status) io.to(pin).emit('ppt-status', status);
+            return;
+        }
         const statusStr = await pptController.nextSlideAndGetNotes();
         broadcastPptStatus(statusStr);
     });
 
     socket.on('ppt-prev', async () => {
+        const pin = socket.currentRoomPin;
+        if (pin) {
+            const status = roomManager.prevSlide(pin);
+            if (status) io.to(pin).emit('ppt-status', status);
+            return;
+        }
         const statusStr = await pptController.prevSlideAndGetNotes();
         broadcastPptStatus(statusStr);
     });
 
     socket.on('ppt-prewarm', async () => {
+        const pin = socket.currentRoomPin;
+        if (pin) {
+            socket.emit('ppt-prewarm-done');
+            return;
+        }
         await pptController.getStatus();
         socket.emit('ppt-prewarm-done');
     });
 
     socket.on('ppt-sync', async () => {
+        const pin = socket.currentRoomPin;
+        if (pin) {
+            const status = roomManager.getSlideStatus(pin);
+            if (status) io.to(pin).emit('ppt-status', status);
+            return;
+        }
         const statusStr = await pptController.getStatus();
         broadcastPptStatus(statusStr);
         try {
@@ -2077,6 +2107,12 @@ io.emit('timer-action', { type: 'PAUSE' });
     });
 
     socket.on('ppt-jump', async (slideIndex) => {
+        const pin = socket.currentRoomPin;
+        if (pin) {
+            const status = roomManager.gotoSlide(pin, slideIndex);
+            if (status) io.to(pin).emit('ppt-status', status);
+            return;
+        }
         const statusStr = await pptController.gotoSlide(slideIndex);
         broadcastPptStatus(statusStr);
     });

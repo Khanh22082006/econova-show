@@ -3,15 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <title>MC Dashboard - Econova Show</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         let authParam = urlParams.get('auth');
+        let pinParam = urlParams.get('pin');
         if (authParam) {
             sessionStorage.setItem('mcAuth', authParam);
-            window.history.replaceState({}, document.title, window.location.pathname);
-        } else if (!sessionStorage.getItem('mcAuth')) {
+        }
+        if (pinParam) {
+            sessionStorage.setItem('currentRoomPin', pinParam);
+        }
+        if (authParam) {
+            const cleanUrl = pinParam ? (window.location.pathname + '?pin=' + encodeURIComponent(pinParam)) : window.location.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+        }
+        if (!sessionStorage.getItem('mcAuth')) {
             window.location.href = './index.html';
         }
     </script>
@@ -489,6 +499,32 @@
                     ĐANG CHỜ...
                 </div>
             </div>
+
+            <!-- Vòng 1 Timer & PPT -->
+            <div class="panel">
+                <div class="panel-title">🎙️ Vòng 1 (Pitching & Q&A)</div>
+                <div style="text-align: center; margin-bottom: 10px; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 8px;">
+                    <div id="mcRound1Timer" style="font-size: 32px; font-weight: 800; color: #f59e0b; font-family: monospace;">00:00</div>
+                </div>
+                <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+                    <button class="action-btn btn-correct" onclick="mcTimerAction('PLAY')" style="flex:1; padding: 6px 4px; font-size: 12px;">▶ CHẠY</button>
+                    <button class="action-btn btn-wrong" onclick="mcTimerAction('PAUSE')" style="flex:1; padding: 6px 4px; font-size: 12px; background: #eab308; color: #000;">⏸ DỪNG</button>
+                    <button class="action-btn btn-close-q" onclick="mcTimerAction('RESET')" style="flex:1; padding: 6px 4px; font-size: 12px;">⏹ ĐẶT LẠI</button>
+                </div>
+                
+                <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 12px; font-weight: 700; color: #818cf8;">📊 Slide PPT</span>
+                        <span id="mcPptSlideNum" style="font-size: 12px; color: #a1a1b5;">Slide 1 / 50</span>
+                    </div>
+                    <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+                        <button class="action-btn" onclick="mcPptPrev()" style="flex:1; padding: 6px; font-size: 12px; background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.4); color: #c7d2fe;">◀ Trước</button>
+                        <button class="action-btn" onclick="mcPptNext()" style="flex:1; padding: 6px; font-size: 12px; background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.4); color: #c7d2fe;">Kế tiếp ▶</button>
+                    </div>
+                    <div style="font-size: 11px; font-weight: 600; color: #a1a1b5; margin-bottom: 4px;">📝 Ghi chú (Notes):</div>
+                    <textarea id="mcPptNotes" readonly style="width: 100%; height: 75px; background: rgba(0,0,0,0.3); color: #e2e8f0; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 6px 8px; font-size: 12px; line-height: 1.4; resize: none; font-family: inherit;" placeholder="Chưa có ghi chú slide..."></textarea>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -499,30 +535,37 @@
 
         // === AUTH ===
         const mcPin = sessionStorage.getItem('mcAuth');
-        if (mcPin) {
-            socket.emit('mcLogin', mcPin, (res) => {
-                if (!res.success) {
-                    alert('Sai mã PIN quản trị! Đang chuyển về trang đăng nhập...');
+        const roomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
+        
+        let isMcLoggingIn = false;
+        function doMcLogin() {
+            if (isMcLoggingIn) return;
+            isMcLoggingIn = true;
+            const mcPayload = roomPin ? { pin: roomPin, password: mcPin } : mcPin;
+            socket.emit('mcLogin', mcPayload, (res) => {
+                isMcLoggingIn = false;
+                if (!res || !res.success) {
+                    const msg = (res && res.message) ? res.message : 'Sai mã PIN MC! Đang chuyển về trang chủ...';
+                    alert(msg);
                     sessionStorage.removeItem('mcAuth');
                     window.location.href = './index.html';
                 }
             });
         }
 
+        if (mcPin) {
+            if (socket.connected) {
+                doMcLogin();
+            }
+            socket.on('connect', doMcLogin);
+        } else {
+            window.location.href = './index.html';
+        }
+
         // === CONNECTION STATUS ===
         socket.on('connect', () => {
             document.getElementById('connDot').classList.add('online');
             document.getElementById('connText').innerText = 'Đã kết nối';
-            // Auto re-authenticate on socket reconnect if PIN is available in sessionStorage
-            const mcPin = sessionStorage.getItem('mcAuth');
-            if (mcPin) {
-                socket.emit('mcLogin', mcPin, (res) => {
-                    if (!res.success) {
-                        sessionStorage.removeItem('mcAuth');
-                        window.location.href = './index.html';
-                    }
-                });
-            }
         });
         socket.on('disconnect', () => {
             document.getElementById('connDot').classList.remove('online');
@@ -536,6 +579,64 @@
         function wrongBuzzedTeam() { socket.emit('wrongBuzzedTeam'); }
         function closeQuestion() { socket.emit('closeQuestion'); }
         function startCountdown(secs) { socket.emit('startCountdown', secs); }
+
+        // === VÒNG 1 TIMER & PPT FUNCTIONS ===
+        let mcRound1TimeSeconds = 0;
+        let mcRound1TimerInterval = null;
+
+        function updateMcRound1TimerDisplay() {
+            let m = Math.floor(mcRound1TimeSeconds / 60);
+            let s = mcRound1TimeSeconds % 60;
+            const el = document.getElementById('mcRound1Timer');
+            if (el) {
+                el.innerText = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+                el.style.color = mcRound1TimeSeconds <= 10 && mcRound1TimeSeconds > 0 ? '#ef4444' : '#f59e0b';
+            }
+        }
+
+        socket.on('timer-action', (action) => {
+            if (action.type === 'SET_TIME') {
+                mcRound1TimeSeconds = action.seconds;
+                updateMcRound1TimerDisplay();
+            } else if (action.type === 'PLAY') {
+                if (!mcRound1TimerInterval) {
+                    mcRound1TimerInterval = setInterval(() => {
+                        if (mcRound1TimeSeconds > 0) {
+                            mcRound1TimeSeconds--;
+                            updateMcRound1TimerDisplay();
+                        } else {
+                            clearInterval(mcRound1TimerInterval);
+                            mcRound1TimerInterval = null;
+                        }
+                    }, 1000);
+                }
+            } else if (action.type === 'PAUSE') {
+                if (mcRound1TimerInterval) {
+                    clearInterval(mcRound1TimerInterval);
+                    mcRound1TimerInterval = null;
+                }
+            } else if (action.type === 'RESET') {
+                if (mcRound1TimerInterval) {
+                    clearInterval(mcRound1TimerInterval);
+                    mcRound1TimerInterval = null;
+                }
+            }
+        });
+
+        function mcTimerAction(type) {
+            socket.emit('timer-action', { type: type });
+        }
+
+        function mcPptPrev() { socket.emit('ppt-prev'); }
+        function mcPptNext() { socket.emit('ppt-next'); }
+
+        socket.on('ppt-status', (status) => {
+            if (!status) return;
+            const curEl = document.getElementById('mcPptSlideNum');
+            const notesEl = document.getElementById('mcPptNotes');
+            if (curEl) curEl.innerText = `Slide ${status.currentSlide || 1} / ${status.totalSlides || 50}`;
+            if (notesEl) notesEl.value = status.notes || "Không có ghi chú cho slide này.";
+        });
 
         // === STATE UPDATE ===
         socket.on('updateState', (state) => {

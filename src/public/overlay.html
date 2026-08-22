@@ -448,7 +448,82 @@
         }
         socket.on('playSound', (soundId) => { playSound(soundId); });
 
-        // VIDEO
+        // --- ROUND 1 TIMER (OVERLAY) ---
+        var round1TimerInterval = null;
+        var round1TimeSeconds = 0;
+
+        function updateRound1TimerDisplay() {
+            var m = Math.floor(round1TimeSeconds / 60);
+            var s = round1TimeSeconds % 60;
+            var el = document.getElementById('round1-timer-text');
+            if (el) el.innerText = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+        }
+
+        socket.on('timer-config-updated', (config) => {
+            var container = document.getElementById('round1-timer-container');
+            var text = document.getElementById('round1-timer-text');
+            if (!container || !text) return;
+            
+            container.style.top = 'auto';
+            container.style.bottom = 'auto';
+            container.style.left = 'auto';
+            container.style.right = 'auto';
+            container.style.transform = 'none';
+
+            var margin = '50px';
+            switch (config.position) {
+                case 'top-left': container.style.top = margin; container.style.left = margin; break;
+                case 'top-center': container.style.top = margin; container.style.left = '50%'; container.style.transform = 'translateX(-50%)'; break;
+                case 'top-right': container.style.top = margin; container.style.right = margin; break;
+                case 'bottom-left': container.style.bottom = margin; container.style.left = margin; break;
+                case 'bottom-center': container.style.bottom = margin; container.style.left = '50%'; container.style.transform = 'translateX(-50%)'; break;
+                case 'bottom-right': container.style.bottom = margin; container.style.right = margin; break;
+            }
+
+            text.style.fontSize = config.fontSize + 'px';
+            text.style.color = config.fontColor;
+            text.style.webkitTextStroke = `${config.strokeWidth}px ${config.strokeColor}`;
+            text.style.fontFamily = config.fontFamily;
+            text.style.fontWeight = config.isBold ? 'bold' : 'normal';
+            text.style.fontStyle = config.isItalic ? 'italic' : 'normal';
+            text.style.textDecoration = config.isUnderline ? 'underline' : 'none';
+        });
+
+        socket.on('timer-action', (action) => {
+            var container = document.getElementById('round1-timer-container');
+            if (action.type === 'SET_TIME') {
+                round1TimeSeconds = action.seconds;
+                updateRound1TimerDisplay();
+                if (container) container.style.display = 'block';
+            } else if (action.type === 'PLAY') {
+                if (container) container.style.display = 'block';
+                if (!round1TimerInterval) {
+                    round1TimerInterval = setInterval(() => {
+                        if (round1TimeSeconds > 0) {
+                            round1TimeSeconds--;
+                            updateRound1TimerDisplay();
+                            if (round1TimeSeconds === 0) {
+                                playSound('buzzer_5s');
+                            }
+                        } else {
+                            clearInterval(round1TimerInterval);
+                            round1TimerInterval = null;
+                        }
+                    }, 1000);
+                }
+            } else if (action.type === 'PAUSE') {
+                if (round1TimerInterval) {
+                    clearInterval(round1TimerInterval);
+                    round1TimerInterval = null;
+                }
+            } else if (action.type === 'RESET') {
+                if (round1TimerInterval) {
+                    clearInterval(round1TimerInterval);
+                    round1TimerInterval = null;
+                }
+                if (container) container.style.display = 'none';
+            }
+        });
         const videoOverlay = document.getElementById('videoOverlay');
         const mainVideo = document.getElementById('mainVideo');
         socket.on('playVideo', (url) => {

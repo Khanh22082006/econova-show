@@ -1808,14 +1808,17 @@
             if (action.type === 'SET_TIME') {
                 round1TimeSeconds = action.seconds;
                 updateRound1TimerDisplay();
-                container.style.display = 'block';
+                if (container) container.style.display = 'block';
             } else if (action.type === 'PLAY') {
-                container.style.display = 'block';
+                if (container) container.style.display = 'block';
                 if (!round1TimerInterval) {
                     round1TimerInterval = setInterval(() => {
                         if (round1TimeSeconds > 0) {
                             round1TimeSeconds--;
                             updateRound1TimerDisplay();
+                            if (round1TimeSeconds === 0) {
+                                playSound('buzzer_5s');
+                            }
                         } else {
                             clearInterval(round1TimerInterval);
                             round1TimerInterval = null;
@@ -1832,9 +1835,9 @@
                     clearInterval(round1TimerInterval);
                     round1TimerInterval = null;
                 }
-                container.style.display = 'none';
-        }
-    });
+                if (container) container.style.display = 'none';
+            }
+        });
 </script>
 
 <script id="v3-script">
