@@ -1447,7 +1447,7 @@
                         defaultPkgContainer.innerHTML = questions3.map((question, index) => {
                             var pointValue = question ? (question.points !== undefined ? question.points : (question.point !== undefined ? question.point : (question.score !== undefined ? question.score : question.value))) : undefined;
                             var label = pointValue !== undefined && pointValue !== null ? pointValue : (index + 1);
-                            var isActive = q && q.active && state.lockedPackage && (state.lockedPackage.currentIndex === index);
+                            var isActive = q && q.active && !q.isHidden && state.lockedPackage && (state.lockedPackage.currentIndex === index);
                             var bg = isActive ? 'linear-gradient(180deg, #ff9900, #ff5500)' : 'linear-gradient(180deg, #111, #333)';
                             var border = isActive ? '2px solid #fff' : '2px solid #555';
                             var color = isActive ? '#fff' : '#aaa';

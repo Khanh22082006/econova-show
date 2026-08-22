@@ -1515,12 +1515,13 @@ try {
                 isHidden: true
             };
             
-            state.isGridVisibleOnOverlay = false;
             broadcastState(socket);
             playSoundInRoom(socket, 'question_open');
-            
-            broadcastState(socket);
-            io.emit('packageLocked', state.lockedPackage);
+            if (socket.currentRoomPin) {
+                io.to(socket.currentRoomPin).emit('packageLocked', state.lockedPackage);
+            } else {
+                io.emit('packageLocked', state.lockedPackage);
+            }
         } catch(err) {
             console.error("Lỗi khi lockPackage:", err);
         }
