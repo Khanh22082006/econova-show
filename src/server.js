@@ -1037,9 +1037,8 @@ io.on('connection', (socket) => {
             let stateToSend = (socket.isAdmin || socket.isMC) ? room.gameState : safeState;
             
             if (typeof callback === 'function') {
-                callback({ success: true, room: { pin: room.pin, name: room.name, theme: room.theme }, gameState: safeState });
+                callback({ success: true, room: { pin: room.pin, name: room.name, theme: room.theme }, gameState: stateToSend });
             }
-            socket.emit('updateState', stateToSend);
             socket.emit('ppt-status', roomManager.getSlideStatus(roomPin));
         } else {
             if (typeof callback === 'function') {
@@ -1066,20 +1065,6 @@ const roomPin = (pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0'
         socket.emit('deviceStatusUpdate', getRoomClientsList(pin));
     });
 
-    socket.on('releaseTeam', (teamId) => {
-        if (!socket.isAdmin) return;
-        teamId = parseInt(teamId);
-        if (gameState.claimedTeams && gameState.claimedTeams[teamId]) {
-            const socketId = gameState.claimedTeams[teamId].socketId;
-            delete gameState.claimedTeams[teamId];
-            if (socketId) {
-                io.to(socketId).emit('teamReleased', { teamId });
-            }
-            io.emit('updateState', gameState);
-            broadcastDeviceStatus(socket.currentRoomPin);
-            console.log(`[DeviceManager] Admin đã giải phóng máy cho Đội ${teamId}`);
-        }
-    });
 
     socket.on('deleteRoom', (pin, callback) => {
         if (!socket.isAdmin) {
