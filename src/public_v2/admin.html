@@ -1557,7 +1557,7 @@
         function playVideo() {
             let url = currentVideoUrl || (currentState && currentState.currentQuestion && currentState.currentQuestion.vid) || "";
             if (!url) {
-                alert('Câu hỏi này chưa có video! Vui lòng bấm [📤 Tải video mới (.mp4)] hoặc [🔗 Đổi link Video] để thêm video.');
+                document.getElementById('videoUploadInput').click();
                 return;
             }
             
@@ -1566,10 +1566,8 @@
             const isLocalDiskPath = (/^[a-zA-Z]:[\\\/]/.test(url) || url.includes('\\')) && !url.startsWith('/videos/');
             
             if (isCloudWeb && isLocalDiskPath) {
-                const conf = confirm(`⚠️ File video "${url}" là đường dẫn trên máy tính cá nhân.\n\nTrên bản Web đám mây, server không thể tự đọc ổ đĩa C:\\ trên máy bạn nếu chưa tải lên.\n\n👉 Bấm OK để chọn file từ máy tính và tải lên máy chủ ngay bây giờ (chỉ mất vài giây)!`);
-                if (conf) {
-                    document.getElementById('videoUploadInput').click();
-                }
+                // Lập tức mở file picker tải video lên không cần chờ xác nhận
+                document.getElementById('videoUploadInput').click();
                 return;
             }
             
@@ -1604,7 +1602,8 @@
                             currentVideoUrl = data.url;
                             if (vText) vText.innerText = data.url;
                             socket.emit('updateCurrentQuestionVideo', { vid: data.url });
-                            alert('✅ Đã tải lên và gắn video thành công!');
+                            // Tải xong video lên thì lập tức hiện và chạy video ngay cho tất cả màn hình!
+                            socket.emit('playVideo', data.url);
                         } else {
                             alert(data.message || 'Lỗi khi tải video');
                         }
