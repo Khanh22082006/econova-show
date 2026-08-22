@@ -63,9 +63,9 @@
         }
 
         html, body {
-            width: 1920px !important; height: 1080px !important;
-            min-width: 1920px !important; min-height: 1080px !important;
-            max-width: 1920px !important; max-height: 1080px !important;
+            width: 100vw !important; height: 100vh !important;
+            min-width: 0 !important; min-height: 0 !important;
+            max-width: 100vw !important; max-height: 100vh !important;
             margin: 0 !important; padding: 0 !important; overflow: hidden !important;
             font-family: 'SF Pro Display Bold', 'Segoe UI', sans-serif; font-family: var(--font-general);
             background: var(--bg-primary); color: #fff;
@@ -81,7 +81,8 @@
         }
 
         #main-container {
-            width: 1920px; height: 1080px; position: absolute; top: 50%; left: 50%; margin-top: -540px; margin-left: -960px;
+            width: 1920px; height: 1080px; position: absolute; top: 50%; left: 50%; margin: 0 !important;
+            transform: translate(-50%, -50%) scale(1);
             display: flex; flex-direction: column; transform-origin: center center;
         }
         
@@ -170,6 +171,7 @@
         /* --- THEME 2: ASCEND 2026 (MỚI) --- */
         body.ascend_2026 { background: url('/Themes/Background/B1.png') center/cover no-repeat !important; background-color: #040f21 !important; }
         body.ascend_2026 .default-only { display: none !important; }
+        body.v3 { background: url('/Olympia_22_background-_1_.png') center/cover no-repeat !important; background-color: #030a1c !important; }
         body.v3 .default-only { display: none !important; }
         body.v3 .ascend-only { display: none !important; }
         
@@ -1682,16 +1684,24 @@
             var scaleY = window.innerHeight / baseH;
             var responsiveScale = Math.min(scaleX, scaleY);
             var manualScale = (window.currentState && window.currentState.settings && window.currentState.settings.scale) ? window.currentState.settings.scale / 100 : 1;
-            var scale = Math.max(0.2, Math.min(2.5, responsiveScale * manualScale));
+            var scale = Math.max(0.1, Math.min(2.5, responsiveScale * manualScale));
 
             var mainContainer = document.getElementById('main-container');
             if (mainContainer) {
-                mainContainer.style.transform = `scale(${scale})`;
+                mainContainer.style.position = 'absolute';
+                mainContainer.style.top = '50%';
+                mainContainer.style.left = '50%';
+                mainContainer.style.margin = '0';
+                mainContainer.style.transform = `translate(-50%, -50%) scale(${scale})`;
                 mainContainer.style.transformOrigin = 'center center';
             }
 
             var v3w = document.getElementById('v3-wrapper');
             if (v3w) {
+                v3w.style.position = 'absolute';
+                v3w.style.top = '50%';
+                v3w.style.left = '50%';
+                v3w.style.margin = '0';
                 v3w.style.transform = `translate(-50%, -50%) scale(${scale})`;
                 v3w.style.transformOrigin = 'center center';
             }

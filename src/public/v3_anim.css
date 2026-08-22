@@ -1063,7 +1063,10 @@ body.v3 .screen-mode .v3-grid-col.mode1-grid .q-cell {
 body.v3.main-screen #v3-wrapper {
     bottom: auto !important;
     top: 50% !important;
-    transform: translate(-50%, -50%);
+    left: 50% !important;
+    margin: 0 !important;
+    transform: translate(-50%, -50%) scale(var(--v3-scale, 1)) !important;
+    transform-origin: center center !important;
 }
 
 /* A4: Hide cross-theme ghosts permanently via CSS — bao phủ cả hai IDs */
