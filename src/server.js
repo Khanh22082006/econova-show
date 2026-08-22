@@ -1815,7 +1815,7 @@ try {
             };
             
             broadcastState(socket);
-            playSoundInRoom(socket, 'choose_package');
+            playSoundInRoom(socket, 'open_question');
             if (socket.currentRoomPin) {
                 io.to(socket.currentRoomPin).emit('packageLocked', state.lockedPackage);
             } else {
@@ -1862,7 +1862,6 @@ try {
                     }
                 }
                 broadcastState(socket);
-                playSoundInRoom(socket, 'question_open');
                 return;
             }
 
@@ -1897,7 +1896,6 @@ try {
                 state.isGridVisibleOnOverlay = false;
                 resetBuzzerState(typeof state !== 'undefined' ? state : gameState);
                 broadcastState(socket);
-                playSoundInRoom(socket, 'question_open');
             } else {
                 // End of package
                 state.lockedPackage = null;
