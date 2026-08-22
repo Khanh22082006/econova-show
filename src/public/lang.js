@@ -241,7 +241,7 @@ const I18N = {
         "con_pts_10": "10 ĐIỂM",
         "con_pts_20": "20 ĐIỂM",
         "con_pts_40": "40 ĐIỂM",
-        "con_claimed": " (Đã chọn)",
+        "con_claimed": " (Đã có người chọn)",
         "con_session_ended": "Phiên thi đấu đã kết thúc hoặc Mã PIN đã thay đổi. Vui lòng đóng ứng dụng và mở lại!",
         "con_team_count_changed": "Ban tổ chức đã thay đổi số lượng đội thi. Vui lòng chọn lại đội!",
         "con_buzz_open": "🚨 CHUÔNG ĐANG MỞ (5S)!",

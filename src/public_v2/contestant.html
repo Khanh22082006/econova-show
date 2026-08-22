@@ -274,10 +274,10 @@
     <div id="selectScreen">
         <h1 data-i18n="con_choose">CHỌN ĐỘI CỦA BẠN</h1>
         <div id="teamBtns">
-            <button class="team-btn" data-t="1" onclick="chooseTeam(1)"><span>Đội 1</span><span class="school"></span></button>
-            <button class="team-btn" data-t="2" onclick="chooseTeam(2)"><span>Đội 2</span><span class="school"></span></button>
-            <button class="team-btn" data-t="3" onclick="chooseTeam(3)"><span>Đội 3</span><span class="school"></span></button>
-            <button class="team-btn" data-t="4" onclick="chooseTeam(4)"><span>Đội 4</span><span class="school"></span></button>
+            <div class="skeleton-card" style="height: 64px; border-radius: 12px; background: rgba(255,255,255,0.06); animation: pulse 1.5s infinite; border: 1px solid rgba(255,255,255,0.1);"></div>
+            <div class="skeleton-card" style="height: 64px; border-radius: 12px; background: rgba(255,255,255,0.06); animation: pulse 1.5s infinite; border: 1px solid rgba(255,255,255,0.1);"></div>
+            <div class="skeleton-card" style="height: 64px; border-radius: 12px; background: rgba(255,255,255,0.06); animation: pulse 1.5s infinite; border: 1px solid rgba(255,255,255,0.1);"></div>
+            <div class="skeleton-card" style="height: 64px; border-radius: 12px; background: rgba(255,255,255,0.06); animation: pulse 1.5s infinite; border: 1px solid rgba(255,255,255,0.1);"></div>
         </div>
     </div>
 
@@ -859,15 +859,7 @@
                 let claimedText = isClaimed ? ' ' + (typeof t === 'function' ? t('con_claimed', lang) : '(Đã có người chọn)') : '';
                 let targetName = (tObj.name || ('Đội ' + tObj.id)) + claimedText;
                 let targetSchool = tObj.school || '';
-
-                let nameSpan = btn.querySelector('span:first-child');
-                let schoolSpan = btn.querySelector('span.school');
-                if (!nameSpan || !schoolSpan) {
-                    btn.innerHTML = `<span>${targetName}</span><span class="school">${targetSchool}</span>`;
-                } else {
-                    if (nameSpan.textContent !== targetName) nameSpan.textContent = targetName;
-                    if (schoolSpan.textContent !== targetSchool) schoolSpan.textContent = targetSchool;
-                }
+                btn.innerHTML = `<span>${targetName}</span><span class="school">${targetSchool}</span>`;
             });
         }
 
