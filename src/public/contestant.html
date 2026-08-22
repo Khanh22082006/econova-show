@@ -918,6 +918,10 @@
             if (myTeamId !== null && !isBanned) {
                 const token = window.currentState ? window.currentState.buzzToken : null;
                 socket.emit('buzz', { teamId: myTeamId, token: token, clientId: myClientId, pin: roomPin });
+                if (buzzBtn && !buzzBtn.classList.contains('locked')) {
+                    btnIcon.innerHTML = `<span style="font-size: 38px; display:block; margin-bottom: 2px;">⚡</span><span style="font-size: 15px; font-weight: 700; display:block;">ĐÃ BẤM CHUÔNG!</span>`;
+                    if (statusText) statusText.textContent = '⚡ ĐANG GỬI TÍN HIỆU...';
+                }
             }
         }
 
@@ -928,6 +932,118 @@
                     tryBuzz();
                 }
             }
+        });
+
+        function renderBuzzerUI() {
+            if (!isSelected || myTeamId === null) return;
+            const state = window.currentState || {};
+            const buzzerContainer = document.getElementById('buzzerContainer');
+            const buzzBtn = document.getElementById('buzzBtn');
+            const buzzRing = document.getElementById('buzzRing');
+            const btnIcon = document.getElementById('btnIcon');
+            const statusText = document.getElementById('statusText');
+            if (!buzzBtn || !btnIcon || !statusText || !buzzerContainer) return;
+
+            buzzerContainer.style.display = 'flex';
+            statusText.style.display = 'block';
+
+            // 1. NẾU ĐÃ CÓ ĐỘI BẤM CHUÔNG
+            if (state.buzzedTeam != null) {
+                buzzBtn.classList.remove('unlocked');
+                buzzRing.classList.remove('animating');
+                if (Number(state.buzzedTeam) === Number(myTeamId)) {
+                    let bTimeNum = state.buzzTimes ? state.buzzTimes[myTeamId] : undefined;
+                    let myTime = typeof bTimeNum === 'number' ? (bTimeNum / 1000).toFixed(3) + 's' : '✅';
+                    buzzBtn.classList.add('success');
+                    buzzBtn.classList.remove('locked');
+                    btnIcon.innerHTML = `<span style="font-size: 38px; display:block; margin-bottom: 2px;">⏱️ ${myTime}</span><span style="font-size: 15px; font-weight: 700; display:block;">BẠN ĐÃ GIÀNH QUYỀN!</span>`;
+                    statusText.textContent = typeof t === 'function' ? t('con_you', (state.settings && state.settings.language) || currentGlobalLang) : '🏆 BẠN ĐÃ BẤM CHUÔNG!';
+                    statusText.style.color = '#2ed573';
+                    statusText.style.borderColor = '#2ed573';
+                    buzzRing.classList.add('active-success');
+                } else {
+                    buzzBtn.classList.add('locked');
+                    buzzBtn.classList.remove('success');
+                    btnIcon.innerHTML = `<span style="font-size: 42px; display:block; margin-bottom: 2px;">🔒</span><span style="font-size: 15px; font-weight: 700; display:block;">ĐỘI KHÁC ĐÃ BẤM</span>`;
+                    statusText.textContent = typeof t === 'function' ? t('con_other', (state.settings && state.settings.language) || currentGlobalLang) : '🔒 ĐỘI KHÁC ĐÃ BẤM CHUÔNG';
+                    statusText.style.color = 'rgba(255,255,255,0.7)';
+                    statusText.style.borderColor = 'rgba(255,255,255,0.18)';
+                    buzzRing.classList.remove('active-success');
+                }
+            }
+            // 2. NẾU CHUÔNG ĐANG MỞ (VÀ CHƯA CÓ AI BẤM)
+            else if (state.isBuzzerLocked === false) {
+                let isMainTeam = (state.currentQuestion && state.currentQuestion.active && state.currentQuestion.mainTeamId != null && Number(state.currentQuestion.mainTeamId) === Number(myTeamId));
+                if (isMainTeam) {
+                    buzzBtn.classList.add('locked');
+                    buzzBtn.classList.remove('unlocked', 'success');
+                    buzzRing.classList.remove('animating');
+                    btnIcon.innerHTML = `<span style="font-size: 42px; display:block; margin-bottom: 2px;">🚫</span><span style="font-size: 15px; font-weight: 700; display:block;">ĐỘI CHÍNH</span>`;
+                    statusText.textContent = typeof t === 'function' ? t('con_no_buzz', (state.settings && state.settings.language) || currentGlobalLang) : '🚫 BẠN LÀ ĐỘI CHÍNH (CHUÔNG ĐANG MỞ CHO CÁC ĐỘI KHÁC)';
+                    statusText.style.color = '#ff6b81';
+                    statusText.style.borderColor = '#ff6b81';
+                } else {
+                    buzzBtn.classList.remove('locked', 'success');
+                    buzzBtn.classList.add('unlocked');
+                    buzzRing.classList.add('animating');
+                    btnIcon.innerHTML = `<span style="font-size: 46px; display:block; margin-bottom: 2px;">🔔</span><span style="font-size: 18px; font-weight: 800; display:block; letter-spacing: 1px;">BẤM CHUÔNG!</span>`;
+                    statusText.textContent = typeof t === 'function' ? t('con_buzz_open', (state.settings && state.settings.language) || currentGlobalLang) : '🚨 CHUÔNG ĐANG MỞ (5S)!';
+                    statusText.style.color = '#2ed573';
+                    statusText.style.borderColor = '#2ed573';
+                }
+            }
+            // 3. NẾU CHUÔNG KHÓA
+            else {
+                buzzBtn.classList.add('locked');
+                buzzBtn.classList.remove('unlocked', 'success');
+                buzzRing.classList.remove('animating');
+                let isMainTeam = (state.currentQuestion && state.currentQuestion.active && state.currentQuestion.mainTeamId != null && Number(state.currentQuestion.mainTeamId) === Number(myTeamId));
+                if (isMainTeam) {
+                    btnIcon.innerHTML = `<span style="font-size: 42px; display:block; margin-bottom: 2px;">🎯</span><span style="font-size: 15px; font-weight: 700; display:block;">LƯỢT CỦA BẠN</span>`;
+                    statusText.textContent = typeof t === 'function' ? t('con_your_turn', (state.settings && state.settings.language) || currentGlobalLang) : '🎯 LƯỢT CỦA BẠN';
+                    statusText.style.color = '#00d2d3';
+                    statusText.style.borderColor = '#00d2d3';
+                } else {
+                    btnIcon.innerHTML = `<span style="font-size: 42px; display:block; margin-bottom: 2px;">🔒</span><span style="font-size: 15px; font-weight: 700; display:block;">CHUÔNG KHÓA</span>`;
+                    let isQuestionActive = state.currentQuestion && state.currentQuestion.active;
+                    if (isQuestionActive) {
+                        statusText.textContent = '🔒 ĐỘI CHÍNH ĐANG TRẢ LỜI...';
+                        statusText.style.color = '#feca57';
+                        statusText.style.borderColor = '#feca57';
+                    } else {
+                        statusText.textContent = typeof t === 'function' ? t('con_wait_admin', (state.settings && state.settings.language) || currentGlobalLang) : '⏳ ĐANG CHỜ CÂU HỎI...';
+                        statusText.style.color = 'rgba(255,255,255,0.7)';
+                        statusText.style.borderColor = 'rgba(255,255,255,0.18)';
+                    }
+                }
+            }
+        }
+
+        socket.on('openBuzzer', (data) => {
+            if (!window.currentState) window.currentState = {};
+            window.currentState.isBuzzerLocked = false;
+            window.currentState.buzzedTeam = null;
+            if (data && data.buzzToken) window.currentState.buzzToken = data.buzzToken;
+            if (data && data.mainTeamId !== undefined) {
+                if (!window.currentState.currentQuestion) window.currentState.currentQuestion = { active: false };
+                window.currentState.currentQuestion.mainTeamId = data.mainTeamId;
+            }
+            renderBuzzerUI();
+        });
+
+        socket.on('buzzed', (data) => {
+            if (!window.currentState) window.currentState = {};
+            window.currentState.buzzedTeam = data ? data.buzzedTeam : null;
+            window.currentState.isBuzzerLocked = true;
+            if (data && data.buzzTimes) window.currentState.buzzTimes = data.buzzTimes;
+            renderBuzzerUI();
+        });
+
+        socket.on('lockBuzzer', () => {
+            if (window.currentState) {
+                window.currentState.isBuzzerLocked = true;
+            }
+            renderBuzzerUI();
         });
 
         socket.on('updateState', handleUpdateState);
@@ -1121,81 +1237,7 @@
                 window.lastActiveState = q.active;
                 window.currentState = state;
 
-                // NẾU ĐÃ CÓ ĐỘI BẤM CHUÔNG
-                if (state.buzzedTeam != null) {
-                    buzzBtn.classList.remove('unlocked');
-                    buzzRing.classList.remove('animating');
-                    buzzerContainer.style.display = 'flex';
-                    statusText.style.display = 'block';
-                    
-                    if (Number(state.buzzedTeam) === Number(myTeamId)) {
-                        let bTimeNum = state.buzzTimes ? state.buzzTimes[myTeamId] : undefined;
-                        let myTime = typeof bTimeNum === 'number' ? (bTimeNum / 1000).toFixed(3) + 's' : '✅';
-                        buzzBtn.classList.add('success');
-                        buzzBtn.classList.remove('locked');
-                        btnIcon.innerHTML = `<span style="font-size: 38px; display:block; margin-bottom: 2px;">⏱️ ${myTime}</span><span style="font-size: 15px; font-weight: 700; display:block;">BẠN ĐÃ GIÀNH QUYỀN!</span>`;
-                        statusText.textContent = typeof t === 'function' ? t('con_you', (state.settings && state.settings.language) || currentGlobalLang) : '🏆 BẠN ĐÃ BẤM CHUÔNG!';
-                        statusText.style.color = '#2ed573';
-                        statusText.style.borderColor = '#2ed573';
-                        buzzRing.classList.add('active-success');
-                    } else {
-                        buzzBtn.classList.add('locked');
-                        buzzBtn.classList.remove('success');
-                        btnIcon.innerHTML = `<span style="font-size: 42px; display:block; margin-bottom: 2px;">🔒</span><span style="font-size: 15px; font-weight: 700; display:block;">ĐỘI KHÁC ĐÃ BẤM</span>`;
-                        statusText.textContent = typeof t === 'function' ? t('con_other', (state.settings && state.settings.language) || currentGlobalLang) : '🔒 ĐỘI KHÁC ĐÃ BẤM CHUÔNG';
-                        statusText.style.color = 'rgba(255,255,255,0.7)';
-                        statusText.style.borderColor = 'rgba(255,255,255,0.18)';
-                        buzzRing.classList.remove('active-success');
-                    }
-                } 
-                // NẾU CHUÔNG ĐANG MỞ (VÀ CHƯA CÓ AI BẤM)
-                else if (state.isBuzzerLocked === false) {
-                    buzzerContainer.style.display = 'flex';
-                    statusText.style.display = 'block';
-                    let isMainTeam = (state.currentQuestion && state.currentQuestion.active && state.currentQuestion.mainTeamId != null && Number(state.currentQuestion.mainTeamId) === Number(myTeamId));
-                    if (isMainTeam) {
-                        buzzBtn.classList.add('locked');
-                        buzzBtn.classList.remove('unlocked', 'success');
-                        buzzRing.classList.remove('animating');
-                        btnIcon.innerHTML = `<span style="font-size: 42px; display:block; margin-bottom: 2px;">🚫</span><span style="font-size: 15px; font-weight: 700; display:block;">ĐỘI CHÍNH</span>`;
-                        statusText.textContent = typeof t === 'function' ? t('con_no_buzz', (state.settings && state.settings.language) || currentGlobalLang) : '🚫 BẠN LÀ ĐỘI CHÍNH (CHUÔNG ĐANG MỞ CHO CÁC ĐỘI KHÁC)';
-                        statusText.style.color = '#ff6b81';
-                        statusText.style.borderColor = '#ff6b81';
-                    } else {
-                        buzzBtn.classList.remove('locked', 'success');
-                        buzzBtn.classList.add('unlocked');
-                        buzzRing.classList.add('animating');
-                        btnIcon.innerHTML = `<span style="font-size: 46px; display:block; margin-bottom: 2px;">🔔</span><span style="font-size: 18px; font-weight: 800; display:block; letter-spacing: 1px;">BẤM CHUÔNG!</span>`;
-                        statusText.textContent = typeof t === 'function' ? t('con_buzz_open', (state.settings && state.settings.language) || currentGlobalLang) : '🚨 CHUÔNG ĐANG MỞ (5S)!';
-                        statusText.style.color = '#2ed573';
-                        statusText.style.borderColor = '#2ed573';
-                    }
-                } 
-                // NẾU CHUÔNG KHÓA
-                else {
-                    buzzBtn.classList.add('locked');
-                    buzzBtn.classList.remove('unlocked', 'success');
-                    buzzRing.classList.remove('animating');
-                    let isMainTeam = (state.currentQuestion && state.currentQuestion.active && state.currentQuestion.mainTeamId != null && Number(state.currentQuestion.mainTeamId) === Number(myTeamId));
-                    if (isMainTeam) {
-                        btnIcon.innerHTML = `<span style="font-size: 42px; display:block; margin-bottom: 2px;">🎯</span><span style="font-size: 15px; font-weight: 700; display:block;">LƯỢT CỦA BẠN</span>`;
-                        statusText.textContent = typeof t === 'function' ? t('con_your_turn', (state.settings && state.settings.language) || currentGlobalLang) : '🎯 LƯỢT CỦA BẠN';
-                        statusText.style.color = '#00d2d3';
-                        statusText.style.borderColor = '#00d2d3';
-                    } else {
-                        btnIcon.innerHTML = `<span style="font-size: 42px; display:block; margin-bottom: 2px;">🔒</span><span style="font-size: 15px; font-weight: 700; display:block;">CHUÔNG KHÓA</span>`;
-                        let isQuestionActive = state.currentQuestion && state.currentQuestion.active;
-                        if (isQuestionActive) {
-                            statusText.textContent = '🔒 ĐỘI CHÍNH ĐANG TRẢ LỜI...';
-                            statusText.style.color = '#feca57';
-                            statusText.style.borderColor = '#feca57';
-                        } else {
-                            statusText.textContent = typeof t === 'function' ? t('con_wait_admin', (state.settings && state.settings.language) || currentGlobalLang) : '⏳ ĐANG CHỜ CÂU HỎI...';
-                            statusText.style.color = 'rgba(255,255,255,0.7)';
-                            statusText.style.borderColor = 'rgba(255,255,255,0.18)';
-                        }
-                    }
-                }
+                renderBuzzerUI();
             }
         }
     </script>

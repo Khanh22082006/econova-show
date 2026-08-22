@@ -1246,13 +1246,23 @@ function broadcastState(socket, customEvent = 'updateState', customData = null) 
     
     if (pin) {
         scheduleSaveRooms(2000);
+        const targetSockets = new Set();
         const socketsInRoom = io.sockets.adapter.rooms.get(pin);
         if (socketsInRoom) {
-            socketsInRoom.forEach(sid => {
-                const s = io.sockets.sockets.get(sid);
-                if (s) emitToSocketFiltered(s, customEvent, targetState);
-            });
+            socketsInRoom.forEach(sid => targetSockets.add(sid));
         }
+        io.sockets.sockets.forEach(s => {
+            if (s.currentRoomPin === pin) {
+                if (!s.rooms.has(pin)) {
+                    try { s.join(pin); } catch(e) {}
+                }
+                targetSockets.add(s.id);
+            }
+        });
+        targetSockets.forEach(sid => {
+            const s = io.sockets.sockets.get(sid);
+            if (s) emitToSocketFiltered(s, customEvent, targetState);
+        });
         broadcastDeviceStatus(pin);
     } else {
         io.sockets.sockets.forEach(s => {
@@ -1995,6 +2005,23 @@ state.activeBankSlot = slotId;
         state.buzzerUnlockTime = Date.now();
         state.buzzToken = require('crypto').randomUUID();
         state.buzzTimes = {};
+
+        const buzzerPayload = {
+            duration: duration,
+            buzzToken: state.buzzToken,
+            mainTeamId: (state.currentQuestion && state.currentQuestion.mainTeamId) || null,
+            unlockTime: state.buzzerUnlockTime,
+            pin: roomPin
+        };
+        if (roomPin) {
+            io.to(roomPin).emit('openBuzzer', buzzerPayload);
+            io.sockets.sockets.forEach(s => {
+                if (s.currentRoomPin === roomPin) s.emit('openBuzzer', buzzerPayload);
+            });
+        } else {
+            io.emit('openBuzzer', buzzerPayload);
+        }
+
         broadcastState(socket);
         playSoundInRoom(socket, 'buzzer_5s', roomPin);
 
@@ -2010,6 +2037,15 @@ state.activeBankSlot = slotId;
         setRoomBuzzerTimeout(roomPin, setTimeout(() => {
             if (!state.isBuzzerLocked && state.buzzedTeam === null) {
                 state.isBuzzerLocked = true;
+                const lockPayload = { pin: roomPin };
+                if (roomPin) {
+                    io.to(roomPin).emit('lockBuzzer', lockPayload);
+                    io.sockets.sockets.forEach(s => {
+                        if (s.currentRoomPin === roomPin) s.emit('lockBuzzer', lockPayload);
+                    });
+                } else {
+                    io.emit('lockBuzzer', lockPayload);
+                }
                 broadcastState(socket);
             }
         }, duration * 1000));
@@ -2668,11 +2704,37 @@ if (newCount < 2 || newCount > 6) return;
                     if (state.pendingBuzzerTeam === teamId) {
                         state.buzzedTeam = teamId;
                         state.pendingBuzzerTeam = null;
+                        const buzzedPayload = {
+                            buzzedTeam: teamId,
+                            buzzTimes: state.buzzTimes,
+                            pin: roomPin
+                        };
+                        if (roomPin) {
+                            io.to(roomPin).emit('buzzed', buzzedPayload);
+                            io.sockets.sockets.forEach(s => {
+                                if (s.currentRoomPin === roomPin) s.emit('buzzed', buzzedPayload);
+                            });
+                        } else {
+                            io.emit('buzzed', buzzedPayload);
+                        }
                         broadcastState(socket);
                     }
                 }, delay));
             } else {
                 state.buzzedTeam = teamId;
+                const buzzedPayload = {
+                    buzzedTeam: teamId,
+                    buzzTimes: state.buzzTimes,
+                    pin: roomPin
+                };
+                if (roomPin) {
+                    io.to(roomPin).emit('buzzed', buzzedPayload);
+                    io.sockets.sockets.forEach(s => {
+                        if (s.currentRoomPin === roomPin) s.emit('buzzed', buzzedPayload);
+                    });
+                } else {
+                    io.emit('buzzed', buzzedPayload);
+                }
                 broadcastState(socket);
             }
         } else if (isNewBuzz) {
