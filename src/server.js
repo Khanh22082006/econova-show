@@ -1565,8 +1565,15 @@ if (data.cancel) {
         pkg.currentIndex++;
 
         if (pkg.currentIndex < pkg.questions.length) {
-            let qData = pkg.questions[pkg.currentIndex];
-            
+            let qText = data.text || "";
+            let qAns = data.answer || "";
+            let qVid = data.vid || "";
+            if (!qText && state.questionBank && state.questionBank[qData.points] && state.questionBank[qData.points][qData.idx]) {
+                qText = state.questionBank[qData.points][qData.idx].q || "";
+                qAns = state.questionBank[qData.points][qData.idx].a || "";
+                qVid = state.questionBank[qData.points][qData.idx].vid || "";
+            }
+
             state.currentQuestion = {
                 active: true,
                 resolved: false,
@@ -1574,9 +1581,9 @@ if (data.cancel) {
                 mainTeamId: pkg.mainTeamId || 1,
                 isHopeStar: false,
                 deductedFromMain: false,
-                text: data.text || "",
-                answer: data.answer || "",
-                vid: data.vid || "",
+                text: qText,
+                answer: qAns,
+                vid: qVid,
                 idx: qData.idx,
                 isHidden: false,
                 mode: pkg.mode

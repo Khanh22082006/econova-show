@@ -22,8 +22,7 @@ body.v3 .v3-new-root {
 body.v3 .screen-mode.v3-new-root {
     width: 1600px; /* Tăng độ rộng cho screen mode */
 }
-/* Ẩn khi không animate — nhưng KHÔNG ẩn khi đang chạy shutter (v3-shutter-open/close) */
-body.v3 .v3-new-root:not(.run-anim):not(.v3-shutter-open):not(.v3-shutter-close) { display: none; }
+/* .v3-new-root display is managed dynamically by JS and theme classes */
 
 /* --- ARROWS ABSOLUTE POSITIONING (Corrected) --- */
 body.v3 .arrow-navy, body.v3 .arrow-cyan { position: absolute; left: 50%; transform-origin: center; }
@@ -120,10 +119,7 @@ body.v3 .run-anim .center-content-wrapper {
 }
 
 body.v3 .center-box { background: #05164d; clip-path: polygon(var(--offset-qbox) 0, calc(100% - var(--offset-qbox)) 0, 100% 50%, calc(100% - var(--offset-qbox)) 100%, var(--offset-qbox) 100%, 0 50%); }
-/* Chỉ ẩn center-box khi dùng run-anim (fly-in animation cũ) */
-body.v3 .v3-new-root:not(.v3-shutter-open):not(.v3-shutter-close):not(.run-anim) .center-box {
-    opacity: 0;
-}
+
 @keyframes center-expand-full {
     0%, 44.9% { width: 90px; opacity: 0; }
     45%       { width: 90px; opacity: 1; animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
@@ -482,8 +478,7 @@ body.v3 .overlay-mode .v3-grid-col .q-cell {
     font-size: 22px !important;
 }
 
-/* --- REMOVE OLD CONFLICTING RULES --- */
-body.v3 .v3-new-root .grid-container { display: none !important; }
+
 
 /* --- ECONOVA MODE SPECIFIC LAYOUT --- */
 body.v3 .v3-new-root .question-box.econova-mode {

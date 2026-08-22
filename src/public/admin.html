@@ -1135,9 +1135,9 @@
                         ${mode == 1 ? `
                             <button class="btn-blue" style="flex: 1;" id="btnOpenQ" onclick="setQuestion()" data-i18n="adm_open_q">🚀 MỞ CÂU HỎI</button>
                         ` : `
-                            <button class="btn-primary" style="flex: 1; background: #9b59b6;" onclick="nextQuestionInPackage()">🚀 CHUYỂN CÂU</button>
+                            <button class="btn-primary" style="flex: 1.5; background: ${currentState && currentState.lockedPackage ? '#2ecc71' : '#9b59b6'}; font-weight: bold;" onclick="nextQuestionInPackage()">🚀 ${currentState && currentState.lockedPackage ? ('MỞ CÂU TIẾP THEO (' + (currentState.lockedPackage.currentIndex + 2) + '/' + currentState.lockedPackage.questions.length + ')') : 'CHUYỂN CÂU'}</button>
                             <button class="btn-danger" style="flex: 1; background: #e74c3c; color: white; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer;" onclick="cancelLockedPackage()">HUỶ GÓI</button>
-                            <button class="btn-orange" style="flex: 1; background: #e67e22;" onclick="lockPackage()">CHỐT GÓI CÂU HỎI</button>
+                            <button class="btn-orange" style="flex: 1.2; background: ${currentState && currentState.lockedPackage ? '#7f8c8d' : '#e67e22'}; font-weight: bold;" onclick="${currentState && currentState.lockedPackage ? '' : 'lockPackage()'}" ${currentState && currentState.lockedPackage ? 'disabled' : ''}>${currentState && currentState.lockedPackage ? '🔒 ĐÃ CHỐT GÓI' : 'CHỐT GÓI CÂU HỎI'}</button>
                         `}
                     </div>
                 `;
