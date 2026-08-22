@@ -573,12 +573,15 @@
         });
 
         // === ACTION FUNCTIONS ===
-        function correctMainTeam() { socket.emit('correctMainTeam'); }
-        function startBuzzer() { socket.emit('startBuzzer'); }
-        function correctBuzzedTeam() { socket.emit('correctBuzzedTeam'); }
-        function wrongBuzzedTeam() { socket.emit('wrongBuzzedTeam'); }
-        function closeQuestion() { socket.emit('closeQuestion'); }
-        function startCountdown(secs) { socket.emit('startCountdown', secs); }
+        function getMcRoomPin() {
+            return new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
+        }
+        function correctMainTeam() { socket.emit('correctMainTeam', { pin: getMcRoomPin() }); }
+        function startBuzzer(duration) { socket.emit('startBuzzer', { duration: duration, pin: getMcRoomPin() }); }
+        function correctBuzzedTeam() { socket.emit('correctBuzzedTeam', { pin: getMcRoomPin() }); }
+        function wrongBuzzedTeam() { socket.emit('wrongBuzzedTeam', { pin: getMcRoomPin() }); }
+        function closeQuestion() { socket.emit('closeQuestion', { pin: getMcRoomPin() }); }
+        function startCountdown(secs) { socket.emit('startCountdown', { seconds: secs, pin: getMcRoomPin() }); }
 
         // === VÒNG 1 TIMER & PPT FUNCTIONS ===
         let mcRound1TimeSeconds = 0;

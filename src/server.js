@@ -1241,8 +1241,8 @@ function emitToSocketFiltered(targetSocket, event, data) {
 }
 
 function broadcastState(socket, customEvent = 'updateState', customData = null) {
-    const pin = (socket && socket.currentRoomPin) ? socket.currentRoomPin : null;
     const targetState = customData || getActiveState(socket);
+    const pin = (socket && socket.currentRoomPin) || (targetState && targetState.roomPIN) || null;
     
     if (pin) {
         scheduleSaveRooms(2000);
@@ -1262,9 +1262,10 @@ function broadcastState(socket, customEvent = 'updateState', customData = null) 
 }
 
 
-function playSoundInRoom(socket, sound) {
-    if (socket && socket.currentRoomPin) {
-        io.to(socket.currentRoomPin).emit('playSound', sound);
+function playSoundInRoom(socket, sound, explicitPin = null) {
+    const pin = explicitPin || (socket && socket.currentRoomPin) || null;
+    if (pin) {
+        io.to(pin).emit('playSound', sound);
     } else {
         io.emit('playSound', sound);
     }
@@ -1814,7 +1815,7 @@ try {
             };
             
             broadcastState(socket);
-            playSoundInRoom(socket, 'question_open');
+            playSoundInRoom(socket, 'choose_package');
             if (socket.currentRoomPin) {
                 io.to(socket.currentRoomPin).emit('packageLocked', state.lockedPackage);
             } else {
@@ -1861,6 +1862,7 @@ try {
                     }
                 }
                 broadcastState(socket);
+                playSoundInRoom(socket, 'question_open');
                 return;
             }
 
@@ -1895,6 +1897,7 @@ try {
                 state.isGridVisibleOnOverlay = false;
                 resetBuzzerState(typeof state !== 'undefined' ? state : gameState);
                 broadcastState(socket);
+                playSoundInRoom(socket, 'question_open');
             } else {
                 // End of package
                 state.lockedPackage = null;
@@ -1957,13 +1960,18 @@ state.activeBankSlot = slotId;
         } else {
             customDuration = data;
         }
-        if (pin && !socket.currentRoomPin) {
-            const roomPin = pin.toString().trim().replace(/\D/g, '').padStart(6, '0');
-            socket.currentRoomPin = roomPin;
-            socket.join(roomPin);
+        if (pin) {
+            const normalizedPin = pin.toString().trim().replace(/\D/g, '').padStart(6, '0');
+            if (normalizedPin && normalizedPin !== '000000') {
+                socket.currentRoomPin = normalizedPin;
+                socket.join(normalizedPin);
+            }
         }
         const state = getActiveState(socket);
         if (!state) return;
+        const roomPin = socket.currentRoomPin || (state && state.roomPIN) || null;
+        if (roomPin && !state.roomPIN) state.roomPIN = roomPin;
+
         if (!state.currentQuestion) {
             state.currentQuestion = { active: false, points: 10, mainTeamId: null, isHopeStar: false };
         }
@@ -1990,18 +1998,17 @@ state.activeBankSlot = slotId;
         state.buzzToken = require('crypto').randomUUID();
         state.buzzTimes = {};
         broadcastState(socket);
-        playSoundInRoom(socket, 'buzzer_5s');
+        playSoundInRoom(socket, 'buzzer_5s', roomPin);
 
         let hideBar = (state.settings && state.settings.disableBuzzerTimerBar) || false;
         if (!hideBar) {
-            if (socket.currentRoomPin) {
-                io.to(socket.currentRoomPin).emit('startCountdown', duration);
+            if (roomPin) {
+                io.to(roomPin).emit('startCountdown', duration);
             } else {
                 io.emit('startCountdown', duration);
             }
         }
 
-        const roomPin = socket.currentRoomPin || (state && state.roomPIN) || null;
         setRoomBuzzerTimeout(roomPin, setTimeout(() => {
             if (!state.isBuzzerLocked && state.buzzedTeam === null) {
                 state.isBuzzerLocked = true;
