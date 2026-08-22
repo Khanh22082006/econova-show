@@ -180,28 +180,28 @@
         }
 
         .buzz-btn {
-            width: 250px; height: 250px; border-radius: 50%; border: none;
-            background: var(--buzz-inactive); color: #fff; font-size: 32px; font-weight: 700;
+            width: clamp(200px, 26vw, 260px); height: clamp(200px, 26vw, 260px); border-radius: 50%; border: none;
+            background: #3a3a50; color: #fff; font-size: 28px; font-weight: 700;
             text-transform: uppercase; font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif);
             box-shadow: 0 12px 0 #1a1a2e, inset 0 6px 18px rgba(255,255,255,0.1);
-            transition: all 0.1s; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: all 0.15s ease; display: flex; flex-direction: column; align-items: center; justify-content: center;
             z-index: 2; position: relative;
         }
         
-        .buzz-btn:active:not(.locked) { transform: translateY(10px); box-shadow: 0 0 0 #1a1a2e, inset 0 5px 15px rgba(0,0,0,0.3); }
+        .buzz-btn:active:not(.locked) { transform: translateY(8px); box-shadow: 0 4px 0 #1a1a2e, inset 0 5px 15px rgba(0,0,0,0.3); }
         .buzz-btn.unlocked {
-            background: radial-gradient(circle at 30% 30%, #ff6b81, var(--buzz-active));
-            box-shadow: 0 10px 0 #c0392b, 0 15px 40px rgba(255,71,87,0.5);
-            cursor: pointer; animation: pulse 2s infinite;
+            background: radial-gradient(circle at 30% 30%, #ff6b81, #ee5253) !important;
+            box-shadow: 0 12px 0 #c0392b, 0 0 50px rgba(238,82,83,0.8) !important;
+            cursor: pointer; animation: pulse 0.8s infinite alternate !important;
         }
-        @keyframes pulse { 0% { filter: brightness(1); } 50% { filter: brightness(1.2); } 100% { filter: brightness(1); } }
+        @keyframes pulse { 0% { filter: brightness(1); transform: scale(1); } 100% { filter: brightness(1.2); transform: scale(1.05); } }
         
-        .buzz-btn.locked { background: var(--buzz-inactive); cursor: not-allowed; opacity: 0.8; }
+        .buzz-btn.locked { background: #3a3a50 !important; cursor: not-allowed; opacity: 0.85; box-shadow: 0 8px 0 #1a1a2e !important; }
         
         .buzz-btn.success {
-            background: radial-gradient(circle at 30% 30%, #2ed573, #10ac84);
-            box-shadow: 0 10px 0 #058564, 0 15px 40px rgba(16,172,132,0.5);
-            animation: none;
+            background: radial-gradient(circle at 30% 30%, #2ed573, #10ac84) !important;
+            box-shadow: 0 12px 0 #058564, 0 0 50px rgba(16,172,132,0.8) !important;
+            animation: none !important;
         }
 
         #antiCheatOverlay {
@@ -239,31 +239,6 @@
         }
         #qText {
             font-size: 60px; font-weight: 700; color: #fff; text-shadow: 0 2px 5px rgba(0,0,0,0.8); word-break: break-word; line-height: 1.4; text-align: left;
-        }
-        
-        #buzzerContainer {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            flex: 1; width: 100%;
-        }
-        .buzzer-wrapper {
-            position: relative;
-            width: 25vh; height: 25vh; min-width: 150px; min-height: 150px; max-width: 250px; max-height: 250px;
-            display: flex; justify-content: center; align-items: center;
-            border-radius: 50%; background: radial-gradient(circle, rgba(16,211,159,0.2) 0%, rgba(0,0,0,0) 70%);
-        }
-        .buzz-btn {
-            width: 80%; height: 80%; border-radius: 50%; border: none; cursor: pointer;
-            font-size: clamp(16px, 4vh, 32px); font-weight: bold; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 10px 25px rgba(0,0,0,0.5), inset 0 5px 15px rgba(255,255,255,0.3);
-            text-transform: uppercase; letter-spacing: 2px;
-        }
-        
-        /* Removed old shrink overrides since buzzer is now explicitly positioned and sized */
-        
-        .status-text {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            font-size: 26px; font-weight: bold; color: #10d39f; text-shadow: 0 0 10px rgba(16,211,159,0.8);
-            white-space: nowrap; text-transform: uppercase; transition: all 0.3s ease; width: 100%; text-align: center; z-index: 101; pointer-events: none;
         }
         
         body { user-select: none; -webkit-user-select: none; }
@@ -898,16 +873,31 @@
             if (!isSelected) return;
             timerContainer.style.display = 'block';
             let startTime = Date.now();
-            let duration = seconds * 1000;
+            let duration = (typeof seconds === 'number' && seconds > 0) ? seconds * 1000 : 5000;
             
             clearInterval(timerInterval);
             timerInterval = setInterval(() => {
                 let elapsed = Date.now() - startTime;
+                let remaining = Math.max(0, (duration - elapsed) / 1000);
                 let percent = (elapsed / duration) * 100;
+                
+                // Nếu chuông đang mở và là đội được bấm -> cập nhật số giây còn lại trực tiếp lên statusText!
+                if (window.currentState && window.currentState.isBuzzerLocked === false && window.currentState.buzzedTeam === null) {
+                    let isMainTeam = (window.currentState.currentQuestion && window.currentState.currentQuestion.active && window.currentState.currentQuestion.mainTeamId != null && Number(window.currentState.currentQuestion.mainTeamId) === Number(myTeamId));
+                    if (!isMainTeam && statusText) {
+                        statusText.textContent = `🚨 CHUÔNG ĐANG MỞ: ${remaining.toFixed(1)}S (BẤM NGAY)!`;
+                        statusText.style.color = '#2ed573';
+                        statusText.style.borderColor = '#2ed573';
+                    }
+                }
+
                 if (percent >= 100) {
                     percent = 100;
                     clearInterval(timerInterval);
-                    setTimeout(() => { timerContainer.style.display = 'none'; timerBar.style.width = '0%'; }, 500);
+                    setTimeout(() => { 
+                        timerContainer.style.display = 'none'; 
+                        timerBar.style.width = '0%'; 
+                    }, 500);
                 }
                 timerBar.style.width = percent + '%';
             }, 50);
