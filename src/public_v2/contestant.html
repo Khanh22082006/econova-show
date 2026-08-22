@@ -396,6 +396,8 @@
         let savedTeam = sessionStorage.getItem('claimedTeamId_' + roomPin);
         let myTeamId = (savedTeam && !isNaN(parseInt(savedTeam))) ? parseInt(savedTeam) : null;
         let isSelected = false; // Luôn chờ xác thực từ Server trước khi tự động khóa vào đội
+        let isRoomJoined = false; // Track WebSocket joinRoom completion
+        let pendingClaimTeamId = null; // Queue claimTeam if fired before joinRoom completes
         let currentTeamCount = null;
 
         // FAILSAFE: If skeleton still showing after 10s, retry fetch up to 3 times
@@ -446,6 +448,7 @@
         armSkeletonTimeout();
 
                 socket.on('connect', () => {
+            isRoomJoined = false; // Reset on each connect
             socket.emit('joinRoom', roomPin, (res) => {
                 if (!res || !res.success) {
                     // Give the server a chance to restore from cloud, retry once after 3s
@@ -461,12 +464,13 @@
                         });
                     }, 3000);
                 } else {
+                    isRoomJoined = true; // Socket is now properly in the room
                     if (res.gameState) {
                         // Nếu trước đó tab này từng chọn đội, kiểm tra xem đội đó có thuộc về client này không
                         if (myTeamId !== null && res.gameState.claimedTeams && res.gameState.claimedTeams[myTeamId]) {
                             if (res.gameState.claimedTeams[myTeamId].clientId === myClientId) {
                                 isSelected = true;
-                                socket.emit('claimTeam', { teamId: myTeamId, clientId: myClientId });
+                                socket.emit('claimTeam', { teamId: myTeamId, clientId: myClientId, pin: roomPin });
                             } else {
                                 // Đội đã bị người khác chọn ở thiết bị khác
                                 myTeamId = null;
@@ -476,9 +480,16 @@
                         } else if (myTeamId !== null) {
                             // Chưa ai chọn đội này -> reconnect nhận lại
                             isSelected = true;
-                            socket.emit('claimTeam', { teamId: myTeamId, clientId: myClientId });
+                            socket.emit('claimTeam', { teamId: myTeamId, clientId: myClientId, pin: roomPin });
                         }
                         handleUpdateState(res.gameState);
+                        // Process any queued claimTeam (fired before joinRoom completed)
+                        if (pendingClaimTeamId !== null) {
+                            const pid = pendingClaimTeamId;
+                            pendingClaimTeamId = null;
+                            console.log('[JoinRoom] Processing queued claimTeam for team', pid);
+                            setTimeout(() => chooseTeam(pid), 100);
+                        }
                     }
                 }
             });
@@ -753,17 +764,18 @@
 
                 function chooseTeam(id) {
             const targetId = parseInt(id);
-            socket.emit('claimTeam', { teamId: targetId, clientId: myClientId }, (res) => {
-                if (res && !res.success) {
-                    alert(res.message || 'Đội này đã có thí sinh khác chọn! Vui lòng chọn đội khác.');
-                    isSelected = false;
-                    myTeamId = null;
-                    sessionStorage.removeItem('claimedTeamId_' + roomPin);
-                    selectScreen.style.display = 'flex';
-                    buzzScreen.style.display = 'none';
-                    return;
-                }
-            });
+            
+            // If socket hasn't joined room yet (race condition with HTTP prefetch), queue and wait
+            if (!isRoomJoined) {
+                console.log('[ChooseTeam] Socket not yet joined room, queueing team', targetId);
+                pendingClaimTeamId = targetId;
+                // Show a brief "đang kết nối..." feedback on the button
+                const btn = document.querySelector('[data-team-id="' + targetId + '"]');
+                if (btn) btn.textContent = '⏳ Đang kết nối...';
+                return;
+            }
+            
+            // Optimistically switch to buzz screen
             myTeamId = targetId;
             isSelected = true;
             sessionStorage.setItem('claimedTeamId_' + roomPin, targetId.toString());
@@ -778,6 +790,19 @@
             if (statusText) statusText.innerText = typeof t === 'function' ? t('con_wait_admin', currentGlobalLang) : '⏳ ĐANG CHỜ CÂU HỎI...';
             if (btnIcon) btnIcon.innerText = "⏳";
             if (buzzBtn) buzzBtn.classList.add('locked');
+            
+            // Send claimTeam with pin as fallback for any remaining race conditions
+            socket.emit('claimTeam', { teamId: targetId, clientId: myClientId, pin: roomPin }, (res) => {
+                if (res && !res.success) {
+                    alert(res.message || 'Đội này đã có thí sinh khác chọn! Vui lòng chọn đội khác.');
+                    isSelected = false;
+                    myTeamId = null;
+                    sessionStorage.removeItem('claimedTeamId_' + roomPin);
+                    if (sScreen) sScreen.style.display = 'flex';
+                    if (bScreen) bScreen.style.display = 'none';
+                    if (window.currentState) renderSelect(window.currentState.teams, window.currentState.claimedTeams);
+                }
+            });
         }
 
         socket.on('claimError', (data) => {

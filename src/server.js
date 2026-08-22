@@ -1079,11 +1079,10 @@ const roomPin = (pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0'
         const result = roomManager.verifyAdmin(pin, pass);
         if (result.success) {
             socket.isAdmin = true;
-                socket.currentRoomPin = cleanPin;
-                socket.join(result.room.pin);
+            socket.join(result.room.pin);
             socket.currentRoomPin = result.room.pin;
             if (result.room.connectedClients) result.room.connectedClients.add(socket.id);
-            socket.emit('updateState', result.room.gameState || gameState);
+            emitToSocketFiltered(socket, 'updateState', result.room.gameState || gameState);
             socket.emit('ppt-status', roomManager.getSlideStatus(result.room.pin));
         }
         if (typeof callback === 'function') callback(result);
@@ -1115,11 +1114,10 @@ const roomPin = (pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0'
         const result = roomManager.verifyMC(pin, pass);
         if (result.success) {
             socket.isMC = true;
-                socket.currentRoomPin = cleanPin;
-                socket.join(result.room.pin);
+            socket.join(result.room.pin);
             socket.currentRoomPin = result.room.pin;
             if (result.room.connectedClients) result.room.connectedClients.add(socket.id);
-            socket.emit('updateState', result.room.gameState || gameState);
+            emitToSocketFiltered(socket, 'updateState', result.room.gameState || gameState);
             socket.emit('ppt-status', roomManager.getSlideStatus(result.room.pin));
         }
         if (typeof callback === 'function') callback(result);
@@ -1170,14 +1168,27 @@ const roomPin = (pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0'
 
     // --- THÍ SINH: Chọn đội ---
     socket.on('claimTeam', (data, callback) => {
-        const pin = socket.currentRoomPin;
+        // Accept pin from payload as fallback (race condition: HTTP prefetch faster than WebSocket joinRoom)
+        let pin = socket.currentRoomPin;
+        if (!pin && data && data.pin) {
+            const fallbackPin = (data.pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0');
+            const fallbackRoom = roomManager.getRoom(fallbackPin);
+            if (fallbackRoom) {
+                // Auto-join the socket to this room
+                socket.join(fallbackPin);
+                socket.currentRoomPin = fallbackPin;
+                if (fallbackRoom.connectedClients) fallbackRoom.connectedClients.add(socket.id);
+                pin = fallbackPin;
+                console.log('[ClaimTeam] Auto-joined socket', socket.id, 'to room', pin, '(race condition recovery)');
+            }
+        }
         if (!pin) {
-            if (typeof callback === 'function') callback({ success: false, message: 'Chưa vào phòng!' });
+            if (typeof callback === 'function') callback({ success: false, message: 'Chưa vào phòng! Vui lòng tải lại trang.' });
             return;
         }
         const room = roomManager.getRoom(pin);
         if (!room) {
-            if (typeof callback === 'function') callback({ success: false, message: 'Phòng không tồn tại!' });
+            if (typeof callback === 'function') callback({ success: false, message: 'Phòng không tồn tại! Vui lòng tải lại trang.' });
             return;
         }
         const state = room.gameState;
@@ -1273,7 +1284,16 @@ if (!state.isRoomOpen) {
     // --- ADMIN: Đặt tên đội & trường ---
     socket.on('setTeamNames', (data) => {
         const state = getActiveState(socket);
-data.forEach((item, idx) => {
+        // Initialize teams array if missing
+        if (!state.teams || !Array.isArray(state.teams)) {
+            state.teams = [
+                { id: 1, name: 'Đội 1', school: '', score: 0 },
+                { id: 2, name: 'Đội 2', school: '', score: 0 },
+                { id: 3, name: 'Đội 3', school: '', score: 0 },
+                { id: 4, name: 'Đội 4', school: '', score: 0 }
+            ];
+        }
+        data.forEach((item, idx) => {
             if (state.teams[idx]) {
                 if (item.name && item.name.trim()) state.teams[idx].name = item.name.trim();
                 if (item.school !== undefined) state.teams[idx].school = item.school.trim();
