@@ -780,18 +780,18 @@ function closeCurrentQuestion() {
 }
         gameState.currentQuestion = null;
 
-function updateTeamScore(teamId, points, reason = "Chỉnh sửa thủ công") {
-    let team = gameState.teams.find(t => t.id === teamId);
+function updateTeamScore(teamId, points, reason = "Chỉnh sửa thủ công", targetState = null) {
+    let state = targetState || gameState;
+    let team = state.teams ? state.teams.find(t => t.id === teamId) : null;
     if (team) {
         team.score += points;
         if (team.score < 0) team.score = 0;
         
-        if (!gameState.scoreLog) gameState.scoreLog = [];
-        gameState.scoreLog.unshift({ id: require('crypto').randomUUID(), time: Date.now(), teamId: teamId, delta: points, reason: reason });
-        if (gameState.scoreLog.length > 50) gameState.scoreLog.pop();
+        if (!state.scoreLog) state.scoreLog = [];
+        state.scoreLog.unshift({ id: require('crypto').randomUUID(), time: Date.now(), teamId: teamId, delta: points, reason: reason });
+        if (state.scoreLog.length > 50) state.scoreLog.pop();
 
         updateTurnOrder(state);
-        io.emit('updateState', gameState);
     }
 }
 
@@ -1665,9 +1665,13 @@ let q = state.currentQuestion;
         broadcastState(socket);
         playSoundInRoom(socket, 'buzzer_5s');
 
-        let hideBar = state.settings.disableBuzzerTimerBar || false;
+        let hideBar = (state.settings && state.settings.disableBuzzerTimerBar) || false;
         if (!hideBar) {
-            io.emit('startCountdown', 5);
+            if (socket.currentRoomPin) {
+                io.to(socket.currentRoomPin).emit('startCountdown', 5);
+            } else {
+                io.emit('startCountdown', 5);
+            }
         }
 
         if (state.buzzerTimeout) clearTimeout(state.buzzerTimeout);
@@ -1724,7 +1728,7 @@ let q = state.currentQuestion;
         let buzzedId = state.buzzedTeam;
 
         if (buzzedId && !q.resolved) {
-            updateTeamScore(buzzedId, -(q.points / 2));
+            updateTeamScore(buzzedId, -(q.points / 2), "Bấm chuông trả lời SAI", state);
         }
 
         q.resolved = true;
@@ -1818,7 +1822,7 @@ let team = state.teams.find(t => t.id === data.id);
     // Cập nhật cài đặt chung avatar cho tất cả các đội
     socket.on('updateAllAvatarSettings', (data) => {
         const state = getActiveState(socket);
-state.teams.forEach(t => {
+        state.teams.forEach(t => {
             if (data.avatarSize !== undefined) t.avatarSize = data.avatarSize;
             if (data.avatarOverlap !== undefined) t.avatarOverlap = data.avatarOverlap;
             if (data.avatarOffsetX !== undefined) t.avatarOffsetX = data.avatarOffsetX;
@@ -1828,22 +1832,23 @@ state.teams.forEach(t => {
 
     socket.on('updateScore', (data) => {
         const state = getActiveState(socket);
-updateTeamScore(data.teamId, data.points);
+        updateTeamScore(data.teamId, data.points, "Chỉnh sửa thủ công", state);
+        broadcastState(socket);
     });
 
     // --- ADMIN: Kết thúc phần chơi của đội hiện tại ---
     socket.on('finishTurn', () => {
         const state = getActiveState(socket);
-let teamId = null;
+        let teamId = null;
         if (state.turnOrder && state.turnOrder.length > 0) {
             teamId = state.turnOrder.shift(); // Gỡ đội hiện tại ra khỏi lượt
-        } else if (state.currentQuestion.mainTeamId) {
+        } else if (state.currentQuestion && state.currentQuestion.mainTeamId) {
             teamId = state.currentQuestion.mainTeamId;
         }
 
         if (teamId && state.forcedTeamId === teamId) state.forcedTeamId = null;
 
-        if (state.currentQuestion.active) {
+        if (state.currentQuestion && state.currentQuestion.active) {
             state.currentQuestion.active = false;
             state.currentQuestion.mainTeamId = null;
             state.currentQuestion.isHopeStar = false;
@@ -1851,7 +1856,7 @@ let teamId = null;
             state.isBuzzerLocked = true;
             clearBuzzerTimeout(typeof state !== 'undefined' ? state : gameState);
         }
-        state.currentQuestion = null;
+        state.currentQuestion = { active: false };
 
         state.lockedPackage = null;
         state.pendingPackage = null;
@@ -1869,7 +1874,7 @@ if (state.turnOrder && state.turnOrder.includes(teamId)) {
             if (state.forcedTeamId === teamId) state.forcedTeamId = null;
             state.turnOrder = state.turnOrder.filter(id => id !== teamId);
             
-            if (state.currentQuestion.active && state.currentQuestion.mainTeamId === teamId) {
+            if (state.currentQuestion && state.currentQuestion.active && state.currentQuestion.mainTeamId === teamId) {
                 state.currentQuestion.active = false;
                 state.currentQuestion.mainTeamId = null;
                 state.currentQuestion.isHopeStar = false;
@@ -1877,7 +1882,7 @@ if (state.turnOrder && state.turnOrder.includes(teamId)) {
                 state.isBuzzerLocked = true;
                 clearBuzzerTimeout(typeof state !== 'undefined' ? state : gameState);
             }
-        state.currentQuestion = null;
+            state.currentQuestion = { active: false };
             
             state.lockedPackage = null;
             state.pendingPackage = null;
@@ -2221,8 +2226,11 @@ if (newCount < 2 || newCount > 6) return;
 
     // --- ADMIN: Bắt đầu đếm ngược ---
     socket.on('startCountdown', (seconds) => {
-        const state = getActiveState(socket);
-io.emit('startCountdown', seconds);
+        if (socket.currentRoomPin) {
+            io.to(socket.currentRoomPin).emit('startCountdown', seconds);
+        } else {
+            io.emit('startCountdown', seconds);
+        }
         playSoundInRoom(socket, seconds === 10 ? 'countdown_10s' : 'countdown_15s');
     });
 
