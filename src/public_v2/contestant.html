@@ -1134,11 +1134,13 @@
                 window.currentState = state;
 
                 // NẾU ĐÃ CÓ ĐỘI BẤM CHUÔNG
-                if (state.buzzedTeam) {
+                if (state.buzzedTeam != null) {
                     buzzBtn.classList.remove('unlocked');
                     buzzRing.classList.remove('animating');
+                    buzzerContainer.style.display = 'flex';
+                    statusText.style.display = 'block';
                     
-                    if (state.buzzedTeam === myTeamId) {
+                    if (Number(state.buzzedTeam) === Number(myTeamId)) {
                         let bTimeNum = state.buzzTimes ? state.buzzTimes[myTeamId] : undefined;
                         let myTime = typeof bTimeNum === 'number' ? (bTimeNum / 1000).toFixed(3) + 's' : '✅';
                         buzzBtn.classList.add('success');
@@ -1156,7 +1158,9 @@
                 } 
                 // NẾU CHUÔNG ĐANG MỞ (VÀ CHƯA CÓ AI BẤM)
                 else if (state.isBuzzerLocked === false) {
-                    let isMainTeam = (state.currentQuestion && state.currentQuestion.active && state.currentQuestion.mainTeamId === myTeamId);
+                    buzzerContainer.style.display = 'flex';
+                    statusText.style.display = 'block';
+                    let isMainTeam = (state.currentQuestion && state.currentQuestion.active && state.currentQuestion.mainTeamId != null && Number(state.currentQuestion.mainTeamId) === Number(myTeamId));
                     if (isMainTeam) {
                         buzzBtn.classList.add('locked');
                         buzzBtn.classList.remove('unlocked', 'success');
@@ -1169,7 +1173,7 @@
                         buzzBtn.classList.add('unlocked');
                         buzzRing.classList.add('animating');
                         btnIcon.textContent = typeof t === 'function' ? t('con_buzz_exclaim', (state.settings && state.settings.language) || currentGlobalLang) : '🔔 BẤM CHUÔNG!';
-                        statusText.textContent = typeof t === 'function' ? t('con_buzz_open', (state.settings && state.settings.language) || currentGlobalLang) : 'CHUÔNG ĐANG MỞ!';
+                        statusText.textContent = typeof t === 'function' ? t('con_buzz_open', (state.settings && state.settings.language) || currentGlobalLang) : 'CHUÔNG ĐANG MỞ (5S)!';
                         statusText.style.color = '#10ac84';
                     }
                 } 
