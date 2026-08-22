@@ -1486,6 +1486,7 @@ const roomPin = (pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0'
         // Đăng ký đội cho socket này
         state.claimedTeams[teamId] = { socketId: socket.id, clientId: clientId, teamId: teamId };
         socket.teamId = teamId;
+        socket.clientId = clientId;
 
         if (typeof callback === 'function') callback({ success: true, teamId: teamId });
         broadcastState(socket);
@@ -1906,8 +1907,8 @@ state.activeBankSlot = slotId;
         playSoundInRoom(socket, 'correct');
     });
 
-    // --- ADMIN: Đội chính SAI -> Mở chuông 5s ---
-    socket.on('startBuzzer', () => {
+    // --- ADMIN: Đội chính SAI / Mở chuông giành quyền ---
+    socket.on('startBuzzer', (customDuration) => {
         const state = getActiveState(socket);
         if (!state) return;
         if (!state.currentQuestion) {
@@ -1928,6 +1929,8 @@ state.activeBankSlot = slotId;
             q.deductedFromMain = true;
         }
 
+        const duration = (typeof customDuration === 'number' && customDuration > 0) ? customDuration : ((state.settings && state.settings.buzzerDuration) ? state.settings.buzzerDuration : 5);
+
         state.buzzedTeam = null;
         state.isBuzzerLocked = false;
         state.buzzerUnlockTime = Date.now();
@@ -1939,9 +1942,9 @@ state.activeBankSlot = slotId;
         let hideBar = (state.settings && state.settings.disableBuzzerTimerBar) || false;
         if (!hideBar) {
             if (socket.currentRoomPin) {
-                io.to(socket.currentRoomPin).emit('startCountdown', 5);
+                io.to(socket.currentRoomPin).emit('startCountdown', duration);
             } else {
-                io.emit('startCountdown', 5);
+                io.emit('startCountdown', duration);
             }
         }
 
@@ -1951,7 +1954,7 @@ state.activeBankSlot = slotId;
                 state.isBuzzerLocked = true;
                 broadcastState(socket);
             }
-        }, 5000);
+        }, duration * 1000);
     });
 
     // --- ADMIN: Đội giành quyền ĐÚNG ---

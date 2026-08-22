@@ -347,10 +347,11 @@
 
                     <div style="margin-top: 15px; border-top: 1px solid #576574; padding-top: 15px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
                         <strong style="color:#0abde3; white-space: nowrap;" data-i18n="adm_timer">⏱ Đếm ngược:</strong>
-                        <div style="display: flex; gap: 10px; align-items: center;">
+                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                             <div id="adminQuestionTimerOverlay" style="font-size: 18px; font-weight: bold; color: #ff4757; display: none; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 8px;">00:00</div>
                             <button class="btn-blue" onclick="startCountdown(15)" data-i18n="adm_cd_15">15S</button>
                             <button class="btn-orange" onclick="startCountdown(10)" data-i18n="adm_cd_10">10S</button>
+                            <button class="btn-purple" onclick="startBuzzer(10)" style="background: #8e44ad; color: #fff; font-weight: bold; padding: 6px 12px; font-size: 13px; border-radius: 6px; border: none; cursor: pointer;">🔔 MỞ CHUÔNG 10S</button>
                         </div>
                     </div>
                     <button id="btnCloseQuestionBtn" class="btn-secondary" style="margin-top: 10px; width: 100%; border: 1px solid #576574; background: #2f3542;" onclick="closeQuestion()" data-i18n="adm_back">🔙 ĐÓNG CÂU HỎI & TRỞ VỀ BẢNG CHỌN</button>
