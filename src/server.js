@@ -1155,7 +1155,11 @@ const roomPin = (pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0'
     ];
 
     socket.use(([event, ...args], next) => {
-        const publicEvents = ['adminLogin', 'mcLogin', 'verifyRoomPIN', 'claimTeam', 'buzz', 'getSystemFonts', 'disconnect', 'antiCheatViolation', 'secretExitRequest'];
+        const publicEvents = [
+            'joinRoom', 'adminLogin', 'mcLogin', 'verifyRoomPIN', 'claimTeam', 'releaseTeam',
+            'buzz', 'getSystemFonts', 'get-state', 'requestState', 'getDeviceStatus',
+            'disconnect', 'antiCheatViolation', 'secretExitRequest'
+        ];
         if (publicEvents.includes(event)) return next();
         if (socket.isAdmin) return next();
         if (socket.isMC && mcAllowedEvents.includes(event)) return next();
