@@ -286,10 +286,10 @@
     <div id="selectScreen">
         <h1 data-i18n="con_choose">CHỌN ĐỘI CỦA BẠN</h1>
         <div id="teamBtns">
-            <div class="skeleton-card"><div class="skeleton-bar-title"></div><div class="skeleton-bar-sub"></div></div>
-            <div class="skeleton-card"><div class="skeleton-bar-title"></div><div class="skeleton-bar-sub"></div></div>
-            <div class="skeleton-card"><div class="skeleton-bar-title"></div><div class="skeleton-bar-sub"></div></div>
-            <div class="skeleton-card"><div class="skeleton-bar-title"></div><div class="skeleton-bar-sub"></div></div>
+            <button class="team-btn" data-t="1" onclick="chooseTeam(1)"><span>Đội 1</span><span class="school"></span></button>
+            <button class="team-btn" data-t="2" onclick="chooseTeam(2)"><span>Đội 2</span><span class="school"></span></button>
+            <button class="team-btn" data-t="3" onclick="chooseTeam(3)"><span>Đội 3</span><span class="school"></span></button>
+            <button class="team-btn" data-t="4" onclick="chooseTeam(4)"><span>Đội 4</span><span class="school"></span></button>
         </div>
     </div>
 
@@ -787,6 +787,10 @@
                     if (mySchool) mySchool.textContent = me.school || '';
                     if (myScore) myScore.textContent = (me.score !== undefined) ? me.score : 0;
                 }
+            } else {
+                if (myName) myName.textContent = 'Đội ' + targetId;
+                if (mySchool) mySchool.textContent = '';
+                if (myScore) myScore.textContent = 0;
             }
 
             // Gửi claimTeam tới server với pin

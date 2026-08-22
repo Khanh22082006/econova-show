@@ -1779,6 +1779,7 @@
                 var qObj = state.currentQuestion || {};
                 
                 var withinLockDelay = Boolean(window.clientLockDelay);
+                var showGrid = Boolean(state.isGridVisibleOnOverlay || withinLockDelay);
                 
                 var showQuestion = Boolean((qObj && qObj.active && !withinLockDelay) || window.forceQuestionState);
                 var displayState = showQuestion ? 2 : (showGrid ? 1 : 0);
