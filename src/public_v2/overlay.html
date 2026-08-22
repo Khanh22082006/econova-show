@@ -1,13 +1,10 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
+
     <script>
     window.onerror = function(message, source, lineno, colno, error) {
-        if (message === 'Script error.' && (!source || source === '')) {
-            console.warn('Ignored generic CORS Script error.');
-            return false;
-        }
-        var errBox = document.getElementById('debug-error-box');
+        let errBox = document.getElementById('debug-error-box');
         if (!errBox) {
             errBox = document.createElement('div');
             errBox.id = 'debug-error-box';
@@ -21,10 +18,7 @@
             errBox.style.fontSize = '20px';
             errBox.style.maxWidth = '80%';
             errBox.style.wordWrap = 'break-word';
-            const mountTarget = document.body || document.documentElement;
-            if (mountTarget) {
-                mountTarget.appendChild(errBox);
-            }
+            document.body.appendChild(errBox);
         }
         errBox.innerHTML += `<b>ERROR:</b> ${message} at ${source}:${lineno}:${colno}<br>`;
     };
@@ -32,26 +26,311 @@
         window.onerror(event.reason, 'Promise', 0, 0, event.reason);
     });
     </script>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="scr_title">Econova Show - Màn Hình Chính</title>
     <script src="/lang.js"></script>
     <script>
-        var urlParams = new URLSearchParams(window.location.search);
-        var authParam = urlParams.get('auth');
+        const urlParams = new URLSearchParams(window.location.search);
+        let authParam = urlParams.get('auth');
+        let pinParam = urlParams.get('pin');
         if (authParam) {
             sessionStorage.setItem('adminAuth', authParam);
             window.history.replaceState({}, document.title, window.location.pathname);
-        } else if (!sessionStorage.getItem('adminAuth') && urlParams.get('pass') !== 'obs_screen') {
-            const l = localStorage.getItem('econova_lang') || 'vi';
-            const message = (typeof I18N !== 'undefined' && I18N[l] && I18N[l].con_access_denied) ? I18N[l].con_access_denied : 'Access denied';
-            document.write('<h1 style="color:white;text-align:center;margin-top:20%;font-family: \'SF Pro Display Bold\', \'SF Pro Text\', -apple-system, BlinkMacSystemFont, sans-serif">' + message + '</h1>');
+        } else if (!sessionStorage.getItem('adminAuth') && urlParams.get('pass') !== 'obs_overlay' && !pinParam) {
+            document.write('<div style="background:#0a0a1a;color:white;text-align:center;padding:40px;font-family:sans-serif;"><h1>💡 THÔNG BÁO VỀ OVERLAY LIVESTREAM</h1><p style="color:#a4b0be;max-width:600px;margin:15px auto;line-height:1.6;">Màn hình Overlay này có nền trong suốt 100% (Alpha Channel) chuyên dụng để nhúng làm <b>Browser Source</b> trong phần mềm phát sóng <b>OBS Studio, vMix, Prism Live</b>.<br>Trình duyệt web thông thường luôn hiển thị nền mặc định thay vì trong suốt.</p><a href="./index.html" style="display:inline-block;padding:10px 20px;background:#00d2d3;color:#000;text-decoration:none;border-radius:10px;font-weight:bold;">← Quay Về Cổng Thi Đấu</a></div>');
             window.stop();
         }
     </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=Orbitron:wght@400;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="/socket.io/socket.io.js"></script>
-    
-    <!-- Dynamic theme link -->
-    <link id="econova-theme-styles" rel="stylesheet" href="/public_v2/Themes/default.css">
-    
-    <script src="/public_v2/core-logic.js"></script>
+    <style>
+        /* KHÓA VIEWPORT BẢO VỆ CHUNG CHO MỌI THEME TRÊN OBS */
+        html, body {
+            width: 1920px !important; height: 1080px !important;
+            min-width: 1920px !important; min-height: 1080px !important;
+            max-width: 1920px !important; max-height: 1080px !important;
+            margin: 0 !important; padding: 0 !important;
+            overflow: hidden !important; background: transparent !important;
+            box-sizing: border-box !important;
+        }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --bg-primary: #030a1c; --bg-secondary: #0a1936; --accent: #00d2d3;
+            --team1: #10ac84; --team2: #f39c12; --team3: #6c5ce7; --team4: #e17055;
+        }
+
+        /* BẢO TOÀN CSS CŨ CỦA ASCEND VÀ DEFAULT */
+        .graphics-wrapper { position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%); width: max-content; height: 200px; display: none; z-index: 50; }
+        .qGridContainer:not(#qGridContainerV3) { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; grid-template-rows: repeat(3, 1fr) !important; }
+        #main-container { width: 100%; height: 100%; transform-origin: bottom center; position: relative; display: flex; flex-direction: column; justify-content: flex-end; transition: transform 0.3s ease; padding-bottom: 100px; }
+        body.default { background: transparent !important; }
+        body.default .bg-grid { display: none !important; }
+        @keyframes grid-drift { 0% { transform: translate(0, 0); } 100% { transform: translate(50px, 50px); } }
+        @keyframes pulse { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.05); filter: brightness(1.2); } 100% { transform: scale(1); filter: brightness(1); } }
+        @keyframes blink-star { 0% { opacity: 0.5; } 50% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0.5; } }
+        @keyframes score-bounce-up { 0% { transform: translateY(0); color: inherit; } 50% { transform: translateY(-10px) scale(1.2); color: #10ac84; text-shadow: 0 0 20px #10ac84; } 100% { transform: translateY(0); color: inherit; } }
+        @keyframes score-bounce-down { 0% { transform: translateY(0); color: inherit; } 50% { transform: translateY(10px) scale(0.9); color: #ff4757; text-shadow: 0 0 20px #ff4757; } 100% { transform: translateY(0); color: inherit; } }
+        #timerContainerDefault { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 0 0 20px 20px; margin-top: 0; overflow: visible; display: none; margin-left: auto; margin-right: auto; }
+        #timerBarDefault { height: 100%; width: 100%; background: linear-gradient(90deg, #00d2d3, #0984e3); transition: width 0.05s linear; border-radius: 0 0 0 20px; }
+        .timer-circle { width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 0 8px #00d2d3; position: absolute; top: 50%; left: 0%; transform: translate(-50%, -50%); transition: left 0.05s linear; z-index: 2; }
+        @keyframes pulse-timer-circle {
+            0% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 8px #fff, 0 0 8px #00d2d3; }
+            100% { transform: translate(-50%, -50%) scale(1.4); box-shadow: 0 0 16px #fff, 0 0 16px #00d2d3; }
+        }
+        .timer-circle.active-pulse {
+            animation: pulse-timer-circle 0.6s infinite alternate !important;
+        }
+        body.default .ascend-only { display: none !important; }
+        body.default .ascend-frame { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; } 
+        body.default .header { text-align: center; padding: 10px 0 10px; z-index: 10; position: relative; }
+        body.default .round-title { font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif); font-size: 40px; font-weight: 900; letter-spacing: 6px; text-transform: uppercase; background: linear-gradient(90deg, #00d2d3, #ffffff, #00d2d3); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 0 20px rgba(0, 210, 211, 0.3); }
+        body.default #timerContainer { width: 80%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-bottom: 20px; overflow: hidden; display: none; box-shadow: 0 0 15px rgba(0, 210, 211, 0.2); }
+        body.default #timerBar { height: 100%; width: 100%; background: #00d2d3; box-shadow: 0 0 10px #00d2d3; transition: width 0.1s linear; }
+        body.default .scoreboard-area { padding: 10px 30px; z-index: 10; display: flex; flex-direction: row; justify-content: space-around; align-items: center; background: rgba(10, 25, 54, 0.85); border: 2px solid rgba(0, 210, 211, 0.3); border-radius: 16px; backdrop-filter: blur(10px); width: 90%; max-width: 1400px; margin: 0 auto; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        body.default .scoreboard-area[style*="display: flex"],
+        body.default .scoreboard-area[style*="display:flex"] {
+            animation: scoreboard-slide-up-oly 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+        @keyframes scoreboard-slide-up-oly {
+            from {
+                transform: translateY(150px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        body.default .team-card { flex: 1; min-width: 0; overflow: hidden; display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 5px 25px; border-right: 1.5px solid rgba(255, 255, 255, 0.15); background: transparent; transition: all 0.3s; position: relative; }
+        body.default .team-card:last-child { border-right: none; }
+        body.default .team-card.is-main { background: rgba(0, 210, 211, 0.2); box-shadow: inset 0 0 15px rgba(0, 210, 211, 0.4); }
+        body.default .team-card.buzzed { background: rgba(0, 255, 170, 0.8) !important; animation: highlight-buzz-full 0.4s infinite alternate !important; }
+        body.default .team-card::after { display: none; }
+        @keyframes highlight-buzz-full {
+            from { background: rgba(0, 255, 170, 0.4); box-shadow: inset 0 0 15px rgba(0, 255, 170, 0.6); }
+            to { background: rgba(0, 255, 170, 0.95); box-shadow: inset 0 0 35px rgba(255, 255, 255, 1), 0 0 25px rgba(0, 255, 170, 0.8); }
+        }
+        body.default .team-name { font-size: 24px; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; color: #fff !important; }
+        body.default .team-school { display: none !important; }
+        body.default .team-score { font-family: var(--font-score, 'Orbitron', sans-serif); font-size: 46px; font-weight: 900; color: #fff; }
+        body.ascend_2026 { background: transparent !important; }
+        body.ascend_2026 .default-only { display: none !important; }
+        body.ascend_2026 #main-container { padding-bottom: 115px !important; }
+        body.ascend_2026 .ascend-frame { width: 90%; max-width: 1600px; height: auto; min-height: 120px; margin: 0 auto 0 auto; border: 2px solid rgba(84, 160, 255, 0.8); border-radius: 12px; background: rgba(4, 15, 33, 0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); position: relative; display: flex; flex-direction: column; box-shadow: 0 0 40px rgba(84, 160, 255, 0.4), inset 0 0 30px rgba(84, 160, 255, 0.2); }
+        body.ascend_2026 .ascend-top-bar { display: flex; min-height: 55px; height: auto; border-bottom: 1px solid rgba(84, 160, 255, 0.5); border-radius: 12px 12px 0 0; align-items: stretch; overflow: hidden; }
+        body.ascend_2026 .ascend-pts-box { flex: 0 0 auto; width: auto; min-width: 120px; background: transparent; display: flex; flex-direction: row; align-items: stretch; border-right: 2px solid rgba(84, 160, 255, 0.8); border-radius: 12px 0 0 0; overflow: hidden; padding: 0; margin: 0; }
+        body.ascend_2026 .ascend-pts-box .ascend-pts-chip { height: 100%; display: flex; align-items: center; justify-content: center; box-sizing: border-box; font-size: 24px; font-weight: bold; border-right: 1px solid rgba(84, 160, 255, 0.4); text-align: center; min-width: 40px; }
+        body.ascend_2026 .ascend-pts-box .ascend-pts-chip:last-child { border-right: none; }
+        body.ascend_2026 .ascend-scoreboard { flex: 1 1 auto; min-width: 0; height: 100%; display: flex; flex-direction: row; flex-wrap: nowrap; align-items: stretch; justify-content: space-between; }
+        body.ascend_2026 .team-card { flex: 1; min-width: 0; height: 100%; min-height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 10px; border-right: 1px solid rgba(84, 160, 255, 0.3); background: transparent; transition: all 0.3s; position: relative; box-sizing: border-box; }
+        body.ascend_2026 .team-card:last-child { border-right: none; }
+        body.ascend_2026 .team-school { display: none; }
+        body.ascend_2026 .team-name { font-size: 26px; font-weight: 700; color: #fff; margin:0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); white-space: nowrap; flex: 1; min-width: 0; display: flex; align-items: center; overflow: hidden; line-height: 1.5; margin-top: 3px; }
+        body.ascend_2026 .name-inner { display: inline-block; white-space: nowrap; transform-origin: left center; }
+        body.ascend_2026 .team-score { font-family: var(--font-score, 'Orbitron', sans-serif); font-size: 32px; font-weight: 900; color: #fff; text-shadow: 0 0 15px rgba(255,255,255,0.5); }
+        body.ascend_2026 .team-card.is-main { background: rgba(255, 255, 255, 0.85); box-shadow: inset 0 0 30px rgba(255,255,255,1), 0 0 20px rgba(255,255,255,0.8); }
+        body.ascend_2026 .team-card.is-main .team-name, body.ascend_2026 .team-card.is-main .team-score { color: #012a5e; text-shadow: none; font-weight: 900; }
+        body.ascend_2026 .team-card.buzzed { background: rgba(0, 255, 170, 0.8) !important; animation: highlight-buzz-ascend-full 0.4s infinite alternate !important; }
+        body.ascend_2026 .team-card.buzzed .team-name, body.ascend_2026 .team-card.buzzed .team-score { color: #fff; text-shadow: 0 0 10px #000; }
+        @keyframes highlight-buzz-ascend-full {
+            from { background: rgba(0, 255, 170, 0.4); box-shadow: inset 0 0 20px rgba(0,255,170,0.6); }
+            to { background: rgba(0, 255, 170, 0.95); box-shadow: inset 0 0 40px rgba(255,255,255,1), 0 0 30px rgba(0,255,170,0.8); }
+        }
+        body.ascend_2026 #timerContainerAscend { position: absolute; bottom: 0; left: 0; width: 100%; height: 12px; background: rgba(255,255,255,0.1); border-radius: 0 0 15px 15px; display: none; overflow: visible; z-index: 50; }
+        body.ascend_2026 #timerBarAscend { height: 100%; width: 0%; background: #00d2d3; box-shadow: 0 0 15px #00d2d3, 0 0 30px #00d2d3; transition: width 0.05s linear; position: relative; border-radius: 0 0 0 15px; }
+        body.ascend_2026 #timerBarAscend::after { content: ''; position: absolute; right: -4px; top: -4px; width: 20px; height: 20px; background: #fff; border-radius: 50%; box-shadow: 0 0 10px #fff; animation: pulse-timer 0.6s infinite alternate; }
+        @keyframes pulse-timer { 0% { transform: scale(1); box-shadow: 0 0 10px #fff, 0 0 10px #00d2d3; } 100% { transform: scale(1.6); box-shadow: 0 0 20px #fff, 0 0 20px #00d2d3; } }
+        @keyframes pulse-timer-v3 {
+            0% { transform: scale(1); box-shadow: 0 0 5px rgba(255,0,0,0.8); }
+            100% { transform: scale(1.4); box-shadow: 0 0 15px rgba(255,0,0,1); }
+        }
+        .question-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding: 20px 60px; z-index: 10; position: relative; width: 100%; margin-bottom: 2vh; }
+        body.ascend_2026 .question-area { padding: 5px 10px; justify-content: flex-start; margin-bottom: 0; }
+        .grid-container { width: 100%; max-width: 1600px; display: flex; flex-direction: row; gap: 30px; align-items: flex-start; justify-content: center; transform-origin: bottom center; margin-bottom: 20px; animation: slideUpFade 0.5s ease-out; }
+        @keyframes slideUpFade { from { opacity: 0; transform: scale(0.8) translateY(50px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .grid-col { flex: 1; max-width: 350px; background: rgba(10, 25, 54, 0.8); border: 1px solid rgba(0, 210, 211, 0.3); border-radius: 20px; padding: 20px 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
+        body.ascend_2026 .grid-col { background: transparent; border: none; box-shadow: none; padding: 20px 15px; border-radius: 20px; }
+        body.ascend_2026 #qGrid { background: rgba(4, 15, 33, 0.98) !important; backdrop-filter: blur(15px) !important; -webkit-backdrop-filter: blur(15px) !important; border-radius: 20px !important; border: 2px solid rgba(255, 255, 255, 0.15) !important; padding: 30px !important; box-shadow: 0 0 30px rgba(0, 0, 0, 0.5) !important; width: fit-content !important; margin: auto !important; bottom: 60px !important; animation: flip3D 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important; transform-origin: center center !important; }
+        @keyframes flip3D { 0% { transform: perspective(1200px) rotateX(-90deg); opacity: 0; } 100% { transform: perspective(1200px) rotateX(0deg); opacity: 1; } }
+        .hope-star-badge.active { display: block; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        #packagePointsContainer { display: none; flex-wrap: wrap; justify-content: flex-start; gap: 10px; margin: 0; width: 100%; max-width: 1500px; }
+        .package-pts-box { background: #576574; border: 2px solid rgba(255, 255, 255, 0.2); color: #fff; padding: 5px 15px; border-radius: 6px; font-size: 20px; font-weight: bold; opacity: 0.8; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); transition: all 0.3s ease; white-space: nowrap; }
+        .package-pts-box.active-pts { opacity: 1; border-color: #fff; }
+        @keyframes glowing10 { 0% { box-shadow: 0 0 10px #10ac84; } 50% { box-shadow: 0 0 25px #10ac84; } 100% { box-shadow: 0 0 10px #10ac84; } }
+        @keyframes glowing20 { 0% { box-shadow: 0 0 10px #f39c12; } 50% { box-shadow: 0 0 25px #f39c12; } 100% { box-shadow: 0 0 10px #f39c12; } }
+        @keyframes glowing40 { 0% { box-shadow: 0 0 10px #ff4757; } 50% { box-shadow: 0 0 25px #ff4757; } 100% { box-shadow: 0 0 10px #ff4757; } }
+        .grid-header { font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif); font-size: 36px; font-weight: 900; text-align: center; margin-right: 0; margin-bottom: 0; padding-bottom: 15px; text-transform: uppercase; text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 4px 10px rgba(0,0,0,0.8); width: 100%; flex-shrink: 0; border-bottom: 1px solid rgba(0, 210, 211, 0.3); }
+        .grid-cells { display: flex; flex-direction: row; width: 100%; justify-content: center; align-items: flex-start; margin-top: 15px; gap: 10px; flex-wrap: wrap; }
+        .grid-cells.mode1-grid { flex-wrap: wrap; justify-content: center; }
+        .grid-cells.mode1-grid .q-cell { width: auto; min-width: 45px; padding: 0 5px; flex: 0 0 auto; height: 45px; font-size: 20px; }
+        .grid-cells:not(.mode1-grid) .q-cell { flex: 1 1 calc(33.333% - 10px); min-width: 60px; max-width: 90px; height: 50px; font-size: 24px; padding: 0; }
+        .q-cell { background: rgba(0,0,0,0.4); border: 2px solid rgba(255,255,255,0.4); border-radius: 12px; width: 100%; max-width: 250px; height: 60px; display: flex; align-items: center; justify-content: center; font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif); font-size: 30px; font-weight: 700; transition: all 0.3s; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+        .q-cell.inactive-tab { color: transparent; background: transparent; border-color: rgba(0, 210, 211, 0.3); box-shadow: none; }
+        .q-cell.active-tab { background: rgba(255,255,255,0.9); color: #000; border-color: #fff; text-shadow: none; }
+        body.ascend_2026 .q-cell { border-color: rgba(84, 160, 255, 0.8); }
+        body.ascend_2026 .q-cell.inactive-tab { background: transparent; border-color: rgba(84, 160, 255, 0.3); }
+        body.ascend_2026 .q-cell.active-tab { background: rgba(255,255,255,0.9); color: #000; border-color: #fff; text-shadow: none; }
+        .q-cell.played { background: #555555 !important; color: #888888 !important; border-color: #666666 !important; text-decoration: line-through; box-shadow: inset 0 0 10px rgba(0,0,0,0.8) !important; }
+        .q-cell.selected-anim { animation: cell-blink 0.3s infinite alternate !important; background: #fff !important; color: #000 !important; transform: scale(1.1) !important; border-color: #00d2d3 !important; box-shadow: 0 0 20px #00d2d3 !important; }
+        @keyframes cell-blink { 0% { transform: scale(1); filter: brightness(1); } 100% { transform: scale(1.15); filter: brightness(1.3); } }
+        .question-box { background: rgba(10, 25, 54, 0.95); backdrop-filter: blur(10px); border: 2px solid rgba(84, 160, 255, 0.8); border-radius: 15px; width: 100%; max-width: 1500px; padding: 25px 40px; min-height: 180px; box-shadow: 0 15px 35px rgba(0,0,0,0.8), inset 0 0 20px rgba(84, 160, 255, 0.2); position: relative; display: none; flex-direction: column; align-items: flex-start; justify-content: flex-start; animation: popIn 0.5s ease-out; margin-top: 40px; }
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.8); } 70% { opacity: 1; transform: scale(1.02); } 100% { opacity: 1; transform: scale(1); } }
+        body.ascend_2026 .question-box { background: transparent; border: none; box-shadow: none; backdrop-filter: none; border-radius: 0; flex: none; width: 100%; max-width: none; height: 160px; min-height: 160px; padding: 5px 0px; justify-content: flex-start; margin-top: 0; align-items: flex-start; text-align: left; }
+        .question-box::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, transparent, var(--accent), transparent); }
+        body.ascend_2026 .question-box::before { display: none; }
+        .q-meta { position: absolute; top: -38px; left: -2px; font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif); font-size: 24px; font-weight: 700; background: #fff; color: #012a5e; padding: 5px 25px; border-radius: 10px 10px 0 0; border: 2px solid rgba(84, 160, 255, 0.8); border-bottom: none; letter-spacing: 2px; text-transform: uppercase; box-shadow: 0 -5px 15px rgba(0,0,0,0.3); }
+        .compact-scoreboard { position: absolute; top: -45px; right: -2px; display: flex; gap: 10px; justify-content: flex-end; align-items: stretch; width: auto; max-width: 80%; }
+        .compact-team { background: rgba(10, 25, 54, 0.95); backdrop-filter: blur(10px); border: 2px solid rgba(84, 160, 255, 0.5); border-radius: 10px 10px 0 0; border-bottom: none; padding: 5px 15px; display: flex; gap: 10px; align-items: center; color: white; font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif); box-shadow: 0 -5px 15px rgba(0,0,0,0.5); flex: 0 1 auto; justify-content: space-between; }
+        .compact-team-name { font-family: var(--font-team-name, 'SF Pro Display Bold', sans-serif); font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; max-width: 150px; display: flex; align-items: center; }
+        .compact-team-name .name-inner { display: inline-block; white-space: nowrap; transform-origin: left center; }
+        .compact-team-score { font-size: 22px; font-weight: 900; color: #00d2d3; }
+        .compact-team.active-team { border-color: #fff; box-shadow: 0 0 20px rgba(255,255,255,0.8), inset 0 0 10px rgba(255,255,255,0.5); background: rgba(255,255,255,0.3); }
+        .compact-team.buzzed-team { border-color: #00ffaa; box-shadow: 0 0 25px rgba(0,255,170,1), inset 0 0 15px rgba(0,255,170,0.8); background: rgba(0,255,170,0.4); animation: highlight-buzz 0.4s infinite alternate; }
+        body.ascend_2026 .compact-scoreboard { display: none !important; }
+        body.ascend_2026 .q-team-tab { display: none !important; }
+        .q-team-score { color: #00d2d3; font-weight: 900; }
+        body.ascend_2026 .q-meta { display: none !important; }
+        .hope-star-badge { position: absolute; top: -110px; right: -120px; width: 350px; height: 350px; background: url('/Star_1.gif') no-repeat center center; background-size: contain; z-index: 20; animation: star-pulse 2s infinite; }
+        @keyframes star-pulse { 0%, 100% { transform: scale(1) rotate(0deg); } 50% { transform: scale(1.1) rotate(15deg); } }
+        .question-text { font-size: 32px; font-weight: 700; line-height: 1.3; text-align: left; width: 100%; margin-top: 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); color: #ffffff !important; z-index: 9999; display: block; position: relative; }
+        #videoOverlay { display: none !important; }
+        #mainVideo { width: 100%; height: 100%; object-fit: contain; }
+        @keyframes expandIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .expand-in { animation: expandIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes slideUpIn { 0% { transform: translateY(100px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+        .slide-up-in { animation: slideUpIn 0.6s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; }
+        body { user-select: none; -webkit-user-select: none; font-family: 'SF Pro Display Bold', 'Segoe UI', sans-serif; font-family: var(--font-general); }
+        input, textarea { user-select: text; -webkit-user-select: text; }
+        body.ascend_2026 #v3AnimContainer .q-scoreboard { display: none !important; }
+        body.v3 .ascend-only { display: none !important; }
+
+        /* ========================================================================= */
+        /* CSS FIX CHUẨN XÁC CHO GIAO DIỆN V3 (KẾ THỪA ẢNH 3 - CÁCH LY HOÀN TOÀN)  */
+        /* ========================================================================= */
+        /* Ẩn giao diện cũ KHÔNG DÙNG JS, CHỈ KHI BODY CLASS LÀ V3 */
+        
+        
+
+        /* Hộp câu hỏi chia Flexbox Ngang chuẩn xác */
+        .v3-new-root .center-content-wrapper.question-box {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: stretch !important;
+            padding: 0 !important; /* FIX: Ép viền bằng 0 */
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            height: 100%;
+            width: 100%;
+        }
+
+        /* NỘI DUNG TRÁI */
+        .v3-new-root .q-left-column.content-left {
+            flex: 1 !important;
+            position: relative !important;
+            background: rgba(10, 25, 54, 0.95);
+            border: 2px solid rgba(84, 160, 255, 0.8);
+            border-right: none;
+            border-radius: 15px 0 0 15px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* FIX THANH THỜI GIAN: Nằm bên trong khối trái, neo chặt dưới đáy */
+        .v3-new-root .time-bar-wrapper {
+            position: absolute !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 6px !important;
+            background: rgba(255, 255, 255, 0.1);
+            z-index: 20;
+        }
+
+        /* NỘI DUNG PHẢI */
+        .v3-new-root .q-right-column.content-right {
+            width: 320px !important;
+            flex-shrink: 0 !important;
+            position: relative !important;
+            background: rgba(10, 25, 54, 0.98);
+            border: 2px solid rgba(84, 160, 255, 0.8);
+            border-left: none;
+            border-radius: 0 15px 15px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding-left: 30px !important; /* Khoảng lùi cho vạch trắng */
+        }
+
+        }
+
+        /* --- SYNCED V3 DECORATIVE & CELL STYLES FROM SCREEN --- */
+        .v3-new-root .anim-element { transform-origin: 800px 240px !important; transform-box: view-box !important; }
+        .v3-new-root .shape-container { position: absolute; }
+        .v3-new-root .shape-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .v3-new-root .cyan-color { background: #00cfff; }
+        .v3-new-root .navy-color { background: #0a1936; }
+        .v3-new-root .grid-bg { fill: url(#v3-bg-grad); }
+        .v3-new-root .svg-strokes { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
+        .v3-new-root .v3-cell { position: absolute; display: flex; align-items: center; justify-content: center; color: #fff; cursor: pointer; transition: 0.2s; }
+        .v3-new-root .v3-cell.played { background: #374151 !important; opacity: 0.4 !important; }
+        .v3-new-root .v3-cell.active-tab, .v3-new-root .v3-cell.v3-selected { background: linear-gradient(135deg, #cc0000 0%, #880000 100%) !important; box-shadow: 0 0 15px rgba(255,0,0,0.6); }
+        .v3-new-root .o-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .v3-new-root .ov-left-content { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; display: flex; flex-direction: column; overflow: visible !important; }
+        
+        #v3MasterContainer, .anim-question-group, .ov-left-content, .ov-question-wrapper, #qTextV3 {
+            overflow: visible !important;
+        }
+        .v3-new-root .ov-top-bar { position: absolute; top: 0; display: flex; z-index: 10; padding-top: 5px; }
+        .v3-new-root .player-poly { flex: 1; min-width: 0; overflow: hidden; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; color: #a0aec0; border-left: 1px solid rgba(255,255,255,0.1); border-right: 1px solid rgba(255,255,255,0.1); box-sizing: border-box; }
+        .v3-new-root .player-poly.t-active { background: linear-gradient(135deg, #00cfff, #0055ff); color: #fff; box-shadow: inset 0 0 10px rgba(0,255,255,0.5); }
+        .v3-new-root .player-poly.t-buzzed { background: linear-gradient(135deg, #ff3838 0%, #b30000 100%) !important; color: #fff !important; box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.4), 0 0 25px rgba(255, 0, 0, 0.8) !important; z-index: 12; animation: buzz-flash-v3 0.3s infinite alternate; }
+        @keyframes buzz-flash-v3 {
+            from { box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.4), 0 0 15px rgba(255, 0, 0, 0.6) !important; }
+            to { box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.6), 0 0 35px rgba(255, 0, 0, 1.0) !important; background: linear-gradient(135deg, #ff5c5c 0%, #d60000 100%) !important; }
+        }
+        .v3-new-root .ov-question-wrapper { position: absolute; display: flex; align-items: flex-start; justify-content: flex-start; box-sizing: border-box; padding-top: 15px; }
+        .v3-new-root .ov-question { color: white; font-weight: 700; text-align: left; line-height: 1.4; text-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .v3-new-root .ov-score-panel { position: absolute; right: auto; top: 0; height: 100%; display: flex; flex-direction: column; }
+        .v3-new-root .ov-score-main { height: 85%; display: flex; align-items: center; justify-content: center; font-weight: 800; color: white; text-shadow: 0 4px 15px rgba(0,0,0,0.6); }
+        .v3-new-root .ov-score-pack { height: 15%; display: flex; position: absolute; bottom: 0; left: 0; padding: 0; margin: 0; }
+        .v3-new-root .pack-poly { flex: 1; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; color: #a0aec0; transition: 0.2s; }
+        .v3-new-root .pack-poly.active { background: linear-gradient(135deg, #cc0000, #880000); color: #fff; }
+        .v3-new-root .o-separator { position: absolute; width: 8px; margin-left: -1px; background: #fff; border-radius: 4px; bottom: 0; transform-origin: bottom left; z-index: 25; box-shadow: 0 0 10px rgba(0,255,255,0.5); }
+        .v3-new-root .layer-1 { opacity: 0.3; transition-delay: 0.25s; }
+        .v3-new-root .layer-2 { opacity: 0.65; transition-delay: 0.125s; }
+        .v3-new-root .layer-3 { opacity: 1; transition-delay: 0s; }
+        .v3-new-root .anim-element { transition: clip-path 0.6s cubic-bezier(0.25, 1, 0.5, 1), d 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.6s cubic-bezier(0.25, 1, 0.5, 1), transform 0.6s cubic-bezier(0.25, 1, 0.5, 1); }
+        .v3-new-root.is-anim .shape-layer.anim-element, .v3-new-root.is-anim path.anim-element { opacity: 0; transform: scale(1); transform-origin: center; }
+        .v3-new-root .layer-3.anim-element, .v3-new-root path.s-g-aln.anim-element, .v3-new-root path.s-g-arn.anim-element { transition-delay: 0s; }
+        .v3-new-root .layer-2.anim-element { transition-delay: 0.125s; }
+        .v3-new-root .layer-1.anim-element, .v3-new-root path.s-g-alc.anim-element, .v3-new-root path.s-g-arc.anim-element { transition-delay: 0.25s; }
+        .v3-new-root .anim-grid-group, .v3-new-root .anim-question-group { transition: clip-path 0.6s cubic-bezier(0.25, 1, 0.5, 1) 0s, opacity 0.4s ease-in-out; }
+        .v3-new-root.is-closing .layer-1.anim-element, .v3-new-root.is-closing path.s-g-alc.anim-element, .v3-new-root.is-closing path.s-g-arc.anim-element { transition-delay: 0s; }
+        .v3-new-root.is-closing .layer-2.anim-element { transition-delay: 0.125s; }
+        .v3-new-root.is-closing .layer-3.anim-element, .v3-new-root.is-closing path.s-g-aln.anim-element, .v3-new-root.is-closing path.s-g-arn.anim-element { transition-delay: 0.25s; }
+        .v3-new-root.is-closing .anim-grid-group, .v3-new-root.is-closing .anim-question-group { transition: clip-path 0.6s cubic-bezier(0.25, 1, 0.5, 1) 0.25s, opacity 0.4s ease-in-out; }
+        .v3-new-root .mini-grid-container { display: grid !important; transform: none !important; }
+        .v3-new-root .mini-grid-screen { width: 184px; height: 138px; }
+        .v3-new-root .mini-grid-overlay { width: 276px; height: 80px; }
+        .v3-new-root .mini-cell { display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 4px; font-weight: bold; color: #fff; box-sizing: border-box; }
+        .v3-new-root .mini-cell-screen { width: 42px; height: 42px; margin: 2px; font-size: 18px; }
+        .v3-new-root .mini-cell-overlay { width: 42px; height: 34px; margin: 2px; font-size: 16px; }
+        .v3-new-root .mini-cell.played { opacity: 0.4; background: #374151; pointer-events: none; }
+        .v3-new-root .mini-cell.active-red { background: linear-gradient(135deg, #cc0000 0%, #880000 100%) !important; border-color: #ffcccc; box-shadow: 0 0 10px rgba(255,0,0,0.8); z-index: 10; }
+        .v3-new-root .v3-q-order-badge { position: absolute; transform: translate(-50%, -50%); left: 50%; z-index: 20; padding: 4px 10px; border-radius: 6px; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 3px 8px rgba(0,0,0,0.3); border: 1.5px solid; pointer-events: none; white-space: nowrap; }
+    </style>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/theme_ascend_2026.css">
+    <link rel="stylesheet" href="v3_anim.css?v=5">
 </head>
 <body class="default">
     <div id="audioUnlockOverlay" onclick="unlockAudio()">
@@ -81,20 +360,28 @@
                     <div class="q-meta" id="qPoints">- <span data-i18n="scr_pts">ĐIỂM</span></div>
                     <div class="compact-scoreboard default-only" id="compactScoreboard"></div>
                     <div id="hopeStarBadge" class="hope-star-badge" style="display: none;"></div>
-                    <div class="question-text" id="qText" data-i18n="scr_wait">Đang chờ câu hỏi...</div>
-                </div>
-
-                <div id="timerContainerDefault" class="default-only" style="margin-top: 20px;">
-                    <div id="timerBarDefault"></div>
+                    <div class="question-text" id="qText" style="color: #fff !important; z-index: 9999; display: block;">&nbsp;</div>
+                    
+                    <!-- Thanh thời gian cổ điển nằm trên đáy hộp câu hỏi -->
+                    <div id="timerContainerDefault" class="default-only" style="position: absolute; bottom: 0; left: 0; right: 0; margin-top: 0; display: none; z-index: 100;">
+                        <div style="width: 100%; height: 100%; position: relative;">
+                            <div id="timerBarDefault" style="position: absolute; left: 0; top: 0; height: 100%;"></div>
+                            <div id="timerIndicatorDefault" class="timer-circle" style="width: 16px; height: 16px; border-radius: 50%; background: #fff; position: absolute; top: 50%; left: 0%; transform: translate(-50%, -50%); transition: left 0.05s linear; z-index: 2;"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div id="timerContainerAscend" class="ascend-only">
-                <div id="timerBarAscend"></div>
+            <!-- Thanh thời gian Ascend nằm trực tiếp trên đáy của ascend-frame -->
+            <div id="timerContainerAscend" class="ascend-only" style="position: absolute; bottom: 0; left: 0; right: 0; height: 12px; display: none; z-index: 100;">
+                <div style="width: 100%; height: 100%; position: relative;">
+                    <div id="timerBarAscend" style="position: absolute; left: 0; top: 0; height: 100%;"></div>
+                    <div id="timerIndicatorAscend" class="timer-circle" style="width: 16px; height: 16px; border-radius: 50%; background: #fff; position: absolute; top: 50%; left: 0%; transform: translate(-50%, -50%); transition: left 0.05s linear; z-index: 2;"></div>
+                </div>
             </div>
         </div>
 
-        <div class="scoreboard-area default-only" id="defaultScoreboard" style="display: none !important;"></div>
+        <div class="scoreboard-area default-only" id="defaultScoreboard" style="display: none;"></div>
 
         <div class="grid-container" id="qGrid" style="display: none; position: absolute; bottom: 120px; left: 0; right: 0; margin: auto; z-index: 50;">
             <div class="grid-col"><div class="grid-header" id="gh10" style="color: #10ac84">10&nbsp;<span data-i18n="scr_pts">ĐIỂM</span></div><div class="grid-cells" id="grid10"></div></div>
@@ -117,60 +404,2205 @@
     <audio id="snd_on_stage" src="/sounds/on_stage.mp3" preload="auto"></audio>
     <audio id="snd_choose_package" src="/sounds/choose_package.mp3" preload="auto"></audio>
 
-    <div id="v3-wrapper-overlay" style="display: none; position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%); width: 1600px; height: 420px; z-index: 5000;">
-        <div id="v3MasterContainer" class="v3-new-root overlay-mode" style="display: none;">
-            <!-- Shared Arrows -->
-            <!-- Left Arrows -->
-            <div class="v3-arrow-group ghost-l1 left-dir"><div class="arrow-navy"><svg preserveAspectRatio="none"><path d="M 0,0 L 44,0 L 44,200 L 0,200 Z" fill="#0a1936" /></svg></div><div class="arrow-cyan"><svg preserveAspectRatio="none"><path d="M 0,0 L 33,0 L 33,150 L 0,150 Z" fill="#00cfff" /></svg></div></div>
-            <div class="v3-arrow-group ghost-l2 left-dir"><div class="arrow-navy"><svg preserveAspectRatio="none"><path d="M 0,0 L 44,0 L 44,200 L 0,200 Z" fill="#0a1936" /></svg></div><div class="arrow-cyan"><svg preserveAspectRatio="none"><path d="M 0,0 L 33,0 L 33,150 L 0,150 Z" fill="#00cfff" /></svg></div></div>
-            <div class="v3-arrow-group l3 left-dir"><div class="arrow-navy"><svg preserveAspectRatio="none"><path d="M 0,0 L 44,0 L 44,200 L 0,200 Z" fill="#0a1936" /></svg></div><div class="arrow-cyan"><svg preserveAspectRatio="none"><path d="M 0,0 L 33,0 L 33,150 L 0,150 Z" fill="#00cfff" /></svg></div></div>
+    <script>
+        const socket = io();
+        socket.on('connect', () => {
+            const roomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
+            if (roomPin) socket.emit('joinRoom', roomPin, (res) => { if (res && res.gameState) { if (typeof handleUpdateState === 'function') handleUpdateState(res.gameState); } });
+        });
+        var currentTheme = 'v3';
+        function autoResizeText() {
+            if (typeof currentTheme === 'undefined') return;
+            if (currentTheme === 'v3') return;
+            var el = document.getElementById('qText');
+            if (!el) return;
+            var maxH = 140;
+            var startSize = 32;
+            el.style.fontSize = startSize + 'px';
+            var currentSize = startSize;
+            while (el.scrollHeight > maxH && currentSize > 18) {
+                currentSize--;
+                el.style.fontSize = currentSize + 'px';
+            }
+        }
+        let audioContextUnlocked = true;
+        document.addEventListener('DOMContentLoaded', () => {
+            const overlay = document.getElementById('audioUnlockOverlay');
+            if (overlay) overlay.style.display = 'none';
+        });
 
-            <div style="position:relative; width:100%; height:100%; flex:1; display:flex; align-items:center; justify-content:center;">
-                <!-- Question Box Layer -->
-                <div class="center-box" id="qBoxV3" style="position:absolute; width:100%; height:100%; display:none; flex-direction:row; background:linear-gradient(180deg, #001122, #003355); padding:0; box-sizing:border-box; overflow:hidden;">
-                    <!-- Left Side: Teams -->
-                    <div id="v3TeamArea" style="width:25%; height:100%; display:flex; flex-direction:column; justify-content:center; gap:20px; padding-left:40px; padding-right:20px; z-index:2;">
-                    </div>
+        function unlockAudio() {
+            document.getElementById('audioUnlockOverlay').style.display = 'none';
+            if (audioContextUnlocked) return;
+            audioContextUnlocked = true;
+            let testAudio = new Audio(); testAudio.play().catch(e => {});
+        }
+
+        document.addEventListener('click', unlockAudio, { once: true });
+        document.addEventListener('keydown', unlockAudio, { once: true });
+
+        function playSound(soundId) {
+            if (!audioContextUnlocked) return;
+            const el = document.getElementById('snd_' + soundId);
+            if (el) { el.currentTime = 0; el.play().catch(e => {}); }
+        }
+        socket.on('playSound', (soundId) => { playSound(soundId); });
+
+        // VIDEO
+        const videoOverlay = document.getElementById('videoOverlay');
+        const mainVideo = document.getElementById('mainVideo');
+        socket.on('playVideo', (url) => {
+            if (url) {
+                videoOverlay.style.display = 'flex';
+                if (url.includes(':\\') || url.startsWith('C:') || url.startsWith('D:')) {
+                    mainVideo.src = '/api/video?path=' + encodeURIComponent(url);
+                } else {
+                    mainVideo.src = url;
+                }
+                mainVideo.play().catch(e => {});
+            }
+        });
+        socket.on('closeVideo', () => {
+            mainVideo.pause(); mainVideo.src = ""; videoOverlay.style.display = 'none';
+        });
+
+        socket.on('videoSync', (time) => {
+            if (Math.abs(mainVideo.currentTime - time) > 0.3) {
+                mainVideo.currentTime = time;
+            }
+        });
+
+        socket.on('videoPlayState', (state) => {
+            if (state === 'play') {
+                mainVideo.play().catch(e => {});
+            } else if (state === 'pause') {
+                mainVideo.pause();
+            }
+        });
+
+        // COUNTDOWN
+        let timerInterval = null;
+        currentTheme = 'v3';
+
+        function getTimerEls() {
+            if (currentTheme === 'ascend_2026') {
+                return { c: document.getElementById('timerContainerAscend'), b: document.getElementById('timerBarAscend') };
+            } else if (currentTheme === 'v3') {
+                return { c: document.getElementById('timerContainerV3'), b: document.getElementById('timerBarV3') };
+            } else {
+                return { c: document.getElementById('timerContainerDefault'), b: document.getElementById('timerBarDefault') };
+            }
+        }
+
+        function stopCountdown() {
+            let elsDefault = { c: document.getElementById('timerContainerDefault'), b: document.getElementById('timerBarDefault') };
+            let elsAscend = { c: document.getElementById('timerContainerAscend'), b: document.getElementById('timerBarAscend') };
+            let elsV3 = { c: document.getElementById('timerContainerV3'), b: document.getElementById('timerBarV3') };
+            clearInterval(timerInterval);
+            if (elsDefault.c && currentTheme !== 'default') elsDefault.c.style.display = 'none';
+            if (elsAscend.c && currentTheme !== 'ascend_2026') elsAscend.c.style.display = 'none';
+            if (elsV3.c && currentTheme !== 'v3') elsV3.c.style.display = 'none';
+            if (elsV3.b) {
+                elsV3.b.style.transition = 'none';
+                elsV3.b.style.width = '0%';
+                var handle = elsV3.b.querySelector('#timerHandleV3');
+                if (handle) handle.style.display = 'none';
+            }
+            // Remove pulsing animation when stopped
+            let activeCircle = elsDefault.c ? elsDefault.c.querySelector('.timer-circle') : null;
+            if (activeCircle) activeCircle.classList.remove('active-pulse');
+            let activeCircleAsc = elsAscend.c ? elsAscend.c.querySelector('.timer-circle') : null;
+            if (activeCircleAsc) activeCircleAsc.classList.remove('active-pulse');
+        }
+
+        socket.on('startCountdown', (seconds) => {
+            let els = getTimerEls();
+            els.c.style.display = (els.c.id === 'timerContainerDefault' || els.c.id === 'timerContainerV3') ? 'flex' : 'block';
+            if (els.b) {
+                els.b.style.transition = 'none';
+                els.b.style.width = '0%';
+                els.b.offsetHeight; // trigger reflow
+                els.b.style.transition = 'width 0.05s linear';
+                var handle = els.b.querySelector('#timerHandleV3');
+                if (handle) {
+                    handle.style.display = 'none';
+                    handle.style.animation = 'pulse-timer-v3 0.6s infinite alternate';
+                    handle.style.animationPlayState = 'running';
+                }
+            }
+            let ind = els.c ? els.c.querySelector('.timer-circle') : null;
+            if (ind) {
+                ind.style.transition = 'none';
+                ind.style.left = '0%';
+                ind.offsetHeight; // trigger reflow
+                ind.style.transition = 'left 0.05s linear';
+                ind.classList.add('active-pulse');
+            }
+            let startTime = Date.now();
+            let duration = seconds * 1000;
+            
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                let elapsed = Date.now() - startTime;
+                let percent = (elapsed / duration) * 100;
+                if (percent >= 100) {
+                    percent = 100;
+                    clearInterval(timerInterval);
+                    if (els.b) {
+                        var handle = els.b.querySelector('#timerHandleV3');
+                        if (handle) handle.style.animationPlayState = 'paused';
+                    }
+                    let indEnd = els.c ? els.c.querySelector('.timer-circle') : null;
+                    if (indEnd) indEnd.classList.remove('active-pulse');
+                }
+                els.b.style.width = percent + '%';
+                if (els.b) {
+                    var handle = els.b.querySelector('#timerHandleV3');
+                    if (handle) handle.style.display = (percent <= 0) ? 'none' : 'block';
+                }
+                let ind = els.c.querySelector('.timer-circle');
+                if (ind) ind.style.left = percent + '%';
+            }, 50);
+        });
+
+        var lastQuestionId = null;
+        var lastBuzzedTeam = null;
+
+        // STATE UPDATE (DÀNH CHO CỔ ĐIỂN VÀ ASCEND)
+        socket.on('updateState', (state) => {
+            window.currentState = state;
+            
+            var qId = (state.currentQuestion && state.currentQuestion.active) ? (state.currentQuestion.id || state.currentQuestion._id || state.currentQuestion.questionId || state.currentQuestion.idx) : null;
+            var buzzed = state.buzzedTeam;
+            var questionChanged = (qId !== lastQuestionId);
+            var buzzerTurnedOff = (lastBuzzedTeam && !buzzed);
+            if (questionChanged || buzzerTurnedOff) {
+                stopCountdown();
+            }
+            lastQuestionId = qId;
+            lastBuzzedTeam = buzzed;
+            if (state.settings) {
+                currentTheme = state.settings.theme || 'default';
+                document.body.className = currentTheme;
+                if (typeof window.autoScale === 'function') {
+                    window.autoScale();
+                }
+
+                var s = state.settings;
+                var globalEnabled = s.globalFontEnabled || false;
+                var fGlobal = s.fontGlobal || 'SF Pro Display Bold';
+                var fGeneral = s.fontGeneral || 'SF Pro Display Bold';
+                var fQuestion = s.fontQuestion || 'SF Pro Display Bold';
+                var fTeam = s.fontTeamName || 'SF Pro Display Bold';
+                var fScore = s.fontScore || 'Orbitron';
+                
+                var styleEl = document.getElementById('dynamic-font-styles-global');
+                if (!styleEl) {
+                    styleEl = document.createElement('style');
+                    styleEl.id = 'dynamic-font-styles-global';
+                    document.head.appendChild(styleEl);
+                }
+                
+                var rules = '';
+                if (globalEnabled) {
+                    rules += `@font-face { font-family: 'CustomFontGlobal'; src: url('/font/${encodeURIComponent(fGlobal)}'); }\n`;
+                    rules += `:root { 
+                        --font-general: 'CustomFontGlobal', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-team-name: 'CustomFontGlobal', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-score: 'CustomFontGlobal', 'Orbitron', sans-serif;
+                        --font-question: 'CustomFontGlobal', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                    }`;
+                } else {
+                    rules += `@font-face { font-family: 'CustomFontGeneral'; src: url('/font/${encodeURIComponent(fGeneral)}'); }\n`;
+                    rules += `@font-face { font-family: 'CustomFontQuestion'; src: url('/font/${encodeURIComponent(fQuestion)}'); }\n`;
+                    rules += `@font-face { font-family: 'CustomFontTeamName'; src: url('/font/${encodeURIComponent(fTeam)}'); }\n`;
+                    rules += `@font-face { font-family: 'CustomFontScore'; src: url('/font/${encodeURIComponent(fScore)}'); }\n`;
                     
-                    <!-- Divider -->
-                    <div style="position:absolute; left:25%; top:-10%; width:6px; height:120%; background:#00cfff; transform:skewX(-20deg); z-index:5;"></div>
+                    rules += `:root { 
+                        --font-general: 'CustomFontGeneral', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-team-name: 'CustomFontTeamName', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-score: 'CustomFontScore', 'Orbitron', sans-serif;
+                        --font-question: 'CustomFontQuestion', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                    }`;
+                }
+                
+                if (styleEl.innerHTML !== rules) {
+                    styleEl.innerHTML = rules;
+                }
+            }
 
-                    <!-- Right Side: Question & Points -->
-                    <div style="flex:1; display:flex; flex-direction:column; padding-left:50px; z-index:2; height:100%; position:relative;">
-                        <div id="qTextV3" style="flex:1; display:flex; justify-content:flex-start; align-items:flex-start; font-size:48px; font-weight:bold; color:white; text-align:left; padding-top:40px; padding-right:20px; line-height:1.4;"></div>
+            const v3Wrapper = document.getElementById(typeof isScreen !== 'undefined' && isScreen ? 'v3-wrapper' : 'v3-wrapper-overlay');
+            const v3Master = document.getElementById('v3MasterContainer');
+            const qArea = document.getElementById('qArea');
+            const qGrid = document.getElementById('qGrid');
+            const ascendFrame = document.getElementById('ascendFrame');
+            const defaultScoreboard = document.getElementById('defaultScoreboard');
+
+            if (currentTheme === 'v3') {
+                if (qArea) qArea.style.display = 'none';
+                if (qGrid) qGrid.style.display = 'none';
+                if (ascendFrame) ascendFrame.style.display = 'none';
+                if (defaultScoreboard) defaultScoreboard.style.display = 'none';
+
+                if (v3Wrapper) {
+                    v3Wrapper.style.display = 'block';
+                    v3Wrapper.style.visibility = 'visible';
+                    v3Wrapper.style.opacity = '1';
+                }
+                if (v3Master) v3Master.style.display = 'block';
+                if (typeof renderV3 === 'function') renderV3(state);
+                return;
+            } else {
+                if (v3Wrapper) v3Wrapper.style.display = 'none';
+                if (v3Master) v3Master.style.display = 'none';
+            }
+
+            if (!state.teams) return;
+
+            // Xử lý Scoreboard Cổ điển/Ascend
+            let html = '';
+            state.teams.forEach(team => {
+                let isMain = false;
+                if (state.currentQuestion && state.currentQuestion.active) {
+                    isMain = (state.currentQuestion.mainTeamId === team.id);
+                } else {
+                    isMain = (state.turnOrder && state.turnOrder.length > 0 && state.turnOrder[0] === team.id);
+                }
+                
+                let isBuzzed = state.buzzedTeam === team.id;
+                let classes = 'team-card';
+                if (isMain) classes += ' is-main';
+                if (isBuzzed) classes += ' buzzed';
+                
+                html += `
+                    <div class="${classes}" data-team="${team.id}">
+                        <div class="team-name" style="display:flex; align-items:center; justify-content:flex-start; overflow:hidden;"><span class="name-inner" style="display:inline-block; transform-origin:left center; white-space:nowrap;">${team.name}</span></div>
+                        <div class="team-school" style="display:flex; align-items:center; justify-content:center; overflow:hidden;"><span class="school-inner" style="display:inline-block; transform-origin:center center; white-space:nowrap;">${team.school || '&nbsp;'}</span></div>
+                        <div class="team-score">${team.score}</div>
+                    </div>
+                `;
+            });
+            const defScore = document.getElementById('defaultScoreboard');
+            const ascScore = document.getElementById('ascendScoreboard');
+            if(defScore) defScore.innerHTML = html;
+            if(ascScore) ascScore.innerHTML = html;
+
+            
+
+            const mode = state.lockedPackage ? state.lockedPackage.mode : (state.settings ? state.settings.questionSelectionMode : 1);
+            var questionsArray = null;
+            if (state.lockedPackage) {
+                questionsArray = state.lockedPackage.questions || state.lockedPackage.package || [];
+            } else if (state.pendingPackage) {
+                if (mode === 1) {
+                    questionsArray = Array.isArray(state.pendingPackage) 
+                        ? state.pendingPackage.map(pts => ({ points: pts, played: false }))
+                        : state.pendingPackage;
+                } else {
+                    questionsArray = state.pendingPackage.questions || state.pendingPackage.package || [];
+                }
+            }
+
+            if (mode !== 1 && currentTheme === 'ascend_2026') {
+                // Hide standard 3 columns
+                document.querySelectorAll('#qGrid .grid-col').forEach(col => {
+                    col.style.setProperty('display', 'none', 'important');
+                });
+                
+                var ascendClusters = document.getElementById('qGridAscendClusters');
+                if (!ascendClusters) {
+                    ascendClusters = document.createElement('div');
+                    ascendClusters.id = 'qGridAscendClusters';
+                    ascendClusters.style.width = '100%';
+                    ascendClusters.style.display = 'flex';
+                    ascendClusters.style.flexDirection = 'row';
+                    ascendClusters.style.justifyContent = 'center';
+                    document.getElementById('qGrid').appendChild(ascendClusters);
+                }
+                
+                var pkg = state.lockedPackage || state.pendingPackage || {};
+                var rawQuestions = questionsArray || [];
+                var qPerTeam = (state.settings && state.settings.questionsPerTeam) || 3;
+                if (rawQuestions.length > qPerTeam) {
+                    qPerTeam = rawQuestions.length;
+                }
+                
+                ascendClusters.style.flexWrap = qPerTeam >= 10 ? 'wrap' : 'nowrap';
+                ascendClusters.style.gap = '25px';
+                ascendClusters.style.rowGap = '15px';
+                
+                var clustersHtml = '';
+                var useTwoRows = (qPerTeam >= 10);
+                var R1 = Math.floor(qPerTeam / 2);
+                var R2 = qPerTeam - R1;
+
+                for (var i = 0; i < qPerTeam; i++) {
+                    var qData = rawQuestions[i];
+                    var ptsVal = qData ? (qData.points !== undefined ? qData.points : (qData.value !== undefined ? qData.value : (qData.score !== undefined ? qData.score : 10))) : 10;
+                    
+                    var isCurrent = false;
+                    if (qData && state.lockedPackage && pkg.currentIndex === i) {
+                        if (state.currentQuestion && state.currentQuestion.active && !state.currentQuestion.isHidden) {
+                            isCurrent = true;
+                        }
+                    }
+                    
+                    // Top row horizontal points boxes: 10, 20, 40
+                    var ptsBoxes = [10, 20, 40].map(p => {
+                        var isTarget = (ptsVal === p);
+                        var pColor = p === 10 ? '#00d2d3' : (p === 20 ? '#f39c12' : '#e17055');
+                        if (qData && isTarget) {
+                            if (isCurrent) {
+                                return `<div style="flex: 1; text-align: center; height: 54px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 24px; font-weight: 900; box-sizing: border-box; background: #ffffff !important; color: #000000 !important; border: 2.5px solid #ffffff !important; box-shadow: 0 0 15px rgba(255, 255, 255, 0.8) !important;">${p}</div>`;
+                            } else {
+                                return `<div style="flex: 1; text-align: center; height: 54px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 24px; font-weight: 900; box-sizing: border-box; background: ${pColor} !important; color: #000000 !important; border: 2.5px solid #ffffff !important; box-shadow: 0 0 15px ${pColor} !important;">${p}</div>`;
+                            }
+                        } else {
+                            return `<div style="flex: 1; text-align: center; height: 54px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 24px; font-weight: 900; box-sizing: border-box; border: 1.5px solid rgba(255, 255, 255, 0.05) !important; color: rgba(255, 255, 255, 0.15) !important; background: rgba(0, 0, 0, 0.5) !important;">${p}</div>`;
+                        }
+                    }).join('');
+                    
+                    var labelText = `Câu ${i + 1}`;
+                    if (qData && mode === 2) {
+                        var databaseIdx = qData.idx !== undefined ? qData.idx : -1;
+                        if (databaseIdx !== -1) {
+                            labelText = `Câu ${i + 1}: ${databaseIdx + 1}`;
+                        }
+                    }
+                    
+                    var bottomBorder = isCurrent ? '2px solid rgba(0, 210, 211, 0.8)' : '1.5px solid rgba(255, 255, 255, 0.15)';
+                    var bottomShadow = isCurrent ? '0 0 12px rgba(0, 210, 211, 0.4)' : 'none';
+                    
+                    var itemFlex = 'flex: 1 1 0%; min-width: 0;';
+                    if (useTwoRows) {
+                        var itemsThisRow = (i < R1) ? R1 : R2;
+                        var flexBasis = `calc((100% - ${(itemsThisRow - 1) * 25}px) / ${itemsThisRow})`;
+                        itemFlex = `flex: 0 0 ${flexBasis}; max-width: ${flexBasis}; min-width: 0;`;
+                    }
+
+                    clustersHtml += `
+                        <div style="${itemFlex} display: flex; flex-direction: column; align-items: center; gap: 14px; background: rgba(10, 25, 54, 0.4) !important; border: 1.5px solid rgba(0, 210, 211, 0.2) !important; border-radius: 20px; padding: 16px; box-sizing: border-box;">
+                            <div style="display: flex; flex-direction: row; width: 100%; gap: 12px; justify-content: center;">
+                                ${ptsBoxes}
+                            </div>
+                            <div style="width: 100%; height: 54px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 24px; font-weight: 900; border: ${bottomBorder} !important; background: rgba(0, 0, 0, 0.5) !important; color: #ffffff !important; box-shadow: ${bottomShadow} !important;">
+                                ${labelText}
+                            </div>
+                        </div>
+                    `;
+                }
+                ascendClusters.innerHTML = clustersHtml;
+            } else {
+                // Show standard 3 columns
+                document.querySelectorAll('#qGrid .grid-col').forEach(col => {
+                    col.style.removeProperty('display');
+                });
+                var ascendClusters = document.getElementById('qGridAscendClusters');
+                if (ascendClusters) {
+                    ascendClusters.remove();
+                }
+
+                var ptsList = [10, 20, 40];
+                ptsList.forEach(pts => {
+                    var container = document.getElementById('grid' + pts);
+                    if (container) {
+                        container.innerHTML = '';
                         
-                        <div style="height:80px; display:flex; flex-direction:row; gap:10px; margin-bottom:20px; align-items:flex-end; width:100%;">
-                            <div id="v3PointsArea" style="display:flex; flex-direction:row; gap:10px; flex:1;"></div>
-                            <div id="qBoxClockV3" style="font-size:80px; color:#ffcc00; font-weight:bold; font-family:monospace; padding-right:40px;"></div>
+                        if (mode === 1) {
+                            container.classList.add('mode1-grid');
+                            container.style.display = ''; 
+                            container.style.flexWrap = 'wrap';
+                            container.style.justifyContent = 'center';
+                            var count = (state.questionCount && state.questionCount[pts] !== undefined) ? state.questionCount[pts] : 12;
+                            var rows = count > 18 ? 3 : (count > 6 ? 2 : 1);
+                            
+                            for (var i = 0; i < count; i++) {
+                                var isPlayed = false;
+                                if (state.playedQuestions && state.playedQuestions[pts] && state.playedQuestions[pts].includes(i)) {
+                                    isPlayed = true;
+                                }
+                                
+                                var itemsThisRow = count;
+                                if (rows === 2) {
+                                    var itemsR1 = Math.floor(count / 2);
+                                    var itemsR2 = count - itemsR1;
+                                    itemsThisRow = (i < itemsR1) ? itemsR1 : itemsR2;
+                                } else if (rows === 3) {
+                                    var base = Math.floor(count / 3);
+                                    var extra = count % 3;
+                                    var itemsR1 = base + (extra > 0 ? 1 : 0);
+                                    var itemsR2 = base + (extra > 1 ? 1 : 0);
+                                    if (i < itemsR1) itemsThisRow = itemsR1;
+                                    else if (i < itemsR1 + itemsR2) itemsThisRow = itemsR2;
+                                    else itemsThisRow = count - itemsR1 - itemsR2;
+                                }
+                                
+                                var flexBasis = `calc((100% - ${(itemsThisRow - 1) * 10}px) / ${itemsThisRow})`;
+                                container.innerHTML += `<div class="q-cell active-tab ${isPlayed ? 'played' : ''}" style="flex: 0 0 ${flexBasis}; width: ${flexBasis}; max-width: ${flexBasis}; min-width: 0; padding: 0; box-sizing: border-box; animation-delay: ${i * 0.05}s;">${i + 1}</div>`;
+                            }
+                        } else {
+                            container.classList.remove('mode1-grid');
+                            
+                            if (currentTheme === 'default') {
+                                container.style.display = 'flex';
+                                container.style.flexDirection = 'row';
+                                container.style.flexWrap = 'nowrap';
+                                container.style.gap = '4px';
+                                container.style.width = '100%';
+                                container.style.justifyContent = 'center';
+                            }
+
+                            var pkg = state.lockedPackage || state.pendingPackage;
+                            var rawQuestions = questionsArray || [];
+                            var qPerTeam = (state.settings && state.settings.questionsPerTeam) || 3;
+                            if (rawQuestions.length > qPerTeam) {
+                                qPerTeam = rawQuestions.length;
+                            }
+                            
+                            var cellsHtml = '';
+                            for (var i = 0; i < qPerTeam; i++) {
+                                var qData = rawQuestions[i];
+                                var ptsVal = qData ? (qData.points !== undefined ? qData.points : (qData.value !== undefined ? qData.value : (qData.score !== undefined ? qData.score : 10))) : 10;
+                                var isThisPts = (ptsVal === pts);
+
+                                var isPlayed = false;
+                                var isCurrent = false;
+                                var isChosen = false;
+
+                                if (qData) {
+                                    isChosen = (qData.idx !== undefined && qData.idx !== -1);
+                                    if (state.lockedPackage) {
+                                        if (pkg.currentIndex > i) {
+                                            isPlayed = true;
+                                        } else if (pkg.currentIndex === i) {
+                                            if (state.currentQuestion && state.currentQuestion.resolved) {
+                                                isPlayed = true;
+                                            } else if (state.currentQuestion && state.currentQuestion.active && !state.currentQuestion.isHidden) {
+                                                isCurrent = true;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                var isActive = false;
+                                if (state.lockedPackage && state.currentQuestion && !state.currentQuestion.isHidden) {
+                                    isActive = isPlayed || isCurrent;
+                                } else {
+                                    isActive = isChosen;
+                                }
+
+                                var cellHeight = (currentTheme === 'default' && window.location.pathname.includes('overlay')) ? '50px' : '70px';
+
+                                if (qData && isThisPts) {
+                                    var cellClass = "inactive-tab";
+                                    var chosenIdx = qData.idx !== undefined ? qData.idx : -1;
+                                    
+                                    if (isPlayed) {
+                                        cellClass = "played";
+                                    } else if (isCurrent) {
+                                        cellClass = "active-tab";
+                                    } else if (isChosen) {
+                                        cellClass = state.lockedPackage ? "inactive-tab" : "active-tab";
+                                    }
+
+                                    if (currentTheme === 'v3') {
+                                        var isSelected = isPlayed || isCurrent || isChosen;
+                                        var content = `<span>${pts}</span>`;
+                                        if (isSelected && pkg.mode === 2) {
+                                            var N = chosenIdx + 1;
+                                            content += `<div class="v3-cell-index-badge">${N}</div>`;
+                                        }
+                                        var v3Class = isSelected ? `${cellClass} v3-selected` : cellClass;
+                                        cellsHtml += `<div class="q-cell ${v3Class}" data-idx="${chosenIdx}">${content}</div>`;
+                                    } else {
+                                        if (isActive) {
+                                            var disp = mode === 2 ? (chosenIdx + 1) : "";
+                                            cellsHtml += `<div class="q-cell active-tab" style="flex: 1 1 0%; min-width: 0; box-sizing: border-box; text-align: center; height: ${cellHeight}; display: flex; align-items: center; justify-content: center; border-radius: 12px; background: #ffffff !important; color: #000000 !important; border: 2.5px solid #ffffff !important; box-shadow: 0 0 15px rgba(255,255,255,0.8) !important; font-weight: bold; padding: 0;">${disp}</div>`;
+                                        } else {
+                                            cellsHtml += `<div class="q-cell" style="flex: 1 1 0%; min-width: 0; box-sizing: border-box; text-align: center; height: ${cellHeight}; display: flex; align-items: center; justify-content: center; border-radius: 12px; border: 1px solid rgba(255,255,255,0.3) !important; background: rgba(0,0,0,0.2) !important; color: transparent !important; padding: 0; pointer-events: none;"></div>`;
+                                        }
+                                    }
+                                } else {
+                                    if (currentTheme === 'v3') {
+                                        // V3 omits
+                                    } else {
+                                        cellsHtml += `<div class="q-cell" style="flex: 1 1 0%; min-width: 0; box-sizing: border-box; text-align: center; height: ${cellHeight}; display: flex; align-items: center; justify-content: center; border-radius: 12px; border: 1px solid rgba(255,255,255,0.3) !important; background: rgba(0,0,0,0.2) !important; color: transparent !important; pointer-events: none; padding: 0;"></div>`;
+                                    }
+                                }
+                            }
+                            cellsHtml += "";
+                            container.innerHTML = cellsHtml;
+                        }
+                    }
+                });
+            }
+            // Update non-V3 question box elements
+            const q = state.currentQuestion || {};
+            const qText = document.getElementById('qText');
+            const qPoints = document.getElementById('qPoints');
+            const hopeStarBadge = document.getElementById('hopeStarBadge');
+            const packagePointsContainer = document.getElementById('packagePointsContainer');
+            const ascendPtsBox = document.getElementById('ascendPtsBox');
+
+            if (q.active && q.text) {
+                if (qText) {
+                    qText.innerHTML = q.text;
+                    autoResizeText();
+                }
+            } else {
+                if (qText) qText.innerHTML = '&nbsp;';
+            }
+
+            if (q.active && q.points) {
+                if (qPoints) {
+                    const isMode1 = Boolean((state.lockedPackage && state.lockedPackage.mode === 1) || (state.pendingPackage && state.pendingPackage.mode === 1));
+                    qPoints.style.display = (isMode1 && currentTheme === 'default') ? 'block' : 'none';
+                    const ptsVal = (typeof q.points === 'object') ? (q.points.value || q.points.points || q.points.score || parseInt(JSON.stringify(q.points))) : parseInt(q.points) || q.points;
+                    qPoints.innerHTML = `${ptsVal} <span data-i18n="scr_pts">ĐIỂM</span>`;
+                }
+            } else {
+                if (qPoints) {
+                    qPoints.style.display = 'none';
+                    qPoints.innerHTML = `- <span data-i18n="scr_pts">ĐIỂM</span>`;
+                }
+            }
+
+            if (hopeStarBadge) {
+                if (state.hopeStar && state.hopeStar.active && state.hopeStar.teamId) {
+                    const activeTeam = state.teams.find(t => t.id === state.hopeStar.teamId);
+                    if (activeTeam) {
+                        hopeStarBadge.style.display = 'block';
+                        hopeStarBadge.innerHTML = `<span style="color:#ffd700">★</span> NGÔI SAO HY VỌNG`;
+                    } else {
+                        hopeStarBadge.style.display = 'none';
+                    }
+                } else {
+                    hopeStarBadge.style.display = 'none';
+                }
+            }
+
+            if (ascendPtsBox) {
+                if (currentTheme === 'ascend_2026') {
+                    const isMode1 = Boolean((state.lockedPackage && state.lockedPackage.mode === 1) || (state.pendingPackage && state.pendingPackage.mode === 1));
+                    if (isMode1) {
+                        ascendPtsBox.style.display = 'flex';
+                        ascendPtsBox.style.setProperty('--ascend-chip-count', '1');
+                        const ptsVal = (q && q.points !== undefined && q.points !== null) ? (typeof q.points === 'object' ? (q.points.value || q.points.points || q.points.score || parseInt(JSON.stringify(q.points))) : parseInt(q.points) || q.points) : null;
+                        const labelText = ptsVal ? `${ptsVal} ĐIỂM` : '';
+                        ascendPtsBox.innerHTML = `<div class="ascend-pts-chip active-pts" style="background:linear-gradient(135deg, #5bd4ff 0%, #24b0ff 100%); color:#07131f; width:100%; height:100%; font-size:24px; font-weight:900; display:flex; align-items:center; justify-content:center; flex: 1 1 100%; max-width: 100%;">${labelText}</div>`;
+                    } else {
+                        const showPackageChips = Boolean((state.lockedPackage || state.pendingPackage) && ((state.lockedPackage && state.lockedPackage.mode === 2) || (state.lockedPackage && state.lockedPackage.mode === 3) || (state.pendingPackage && state.pendingPackage.mode === 2) || (state.pendingPackage && state.pendingPackage.mode === 3)));
+                        if (showPackageChips) {
+                            ascendPtsBox.style.display = 'flex';
+                            const pkg2 = state.lockedPackage || state.pendingPackage || {};
+                            const questions2 = Array.isArray(pkg2.questions) ? pkg2.questions : (Array.isArray(pkg2.package) ? pkg2.package : []);
+                            const chipCount = Math.max(1, questions2.length);
+                            const chipWidthPercent = chipCount > 0 ? `${100 / chipCount}%` : '100%';
+                            ascendPtsBox.style.setProperty('--ascend-chip-count', String(chipCount));
+                            ascendPtsBox.innerHTML = questions2.map((question, index) => {
+                                const pointValue = question ? (question.points !== undefined ? question.points : (question.point !== undefined ? question.point : (question.score !== undefined ? question.score : question.value))) : undefined;
+                                const label = pointValue !== undefined && pointValue !== null ? pointValue : (index + 1);
+                                const isActive = q && q.active && !q.isHidden && state.lockedPackage && (state.lockedPackage.currentIndex === index);
+                                return `<div class="ascend-pts-chip${isActive ? ' active-pts' : ''}" style="background:${isActive ? 'linear-gradient(135deg, #5bd4ff 0%, #24b0ff 100%)' : 'rgba(255,255,255,0.85)'}; color:${isActive ? '#07131f' : '#000000'}; width:${chipWidthPercent}; flex:0 0 ${chipWidthPercent}; max-width:${chipWidthPercent};">${label}</div>`;
+                            }).join('');
+                        } else {
+                            ascendPtsBox.style.display = 'none';
+                            ascendPtsBox.style.setProperty('--ascend-chip-count', '1');
+                            ascendPtsBox.innerHTML = '';
+                        }
+                    }
+                } else {
+                    ascendPtsBox.style.display = 'none';
+                    ascendPtsBox.style.setProperty('--ascend-chip-count', '1');
+                    ascendPtsBox.innerHTML = '';
+                }
+            }
+
+            if (packagePointsContainer) {
+                if (currentTheme === 'default') {
+                    const showPackageChips2 = Boolean((state.lockedPackage || state.pendingPackage) && ((state.lockedPackage && state.lockedPackage.mode === 2) || (state.lockedPackage && state.lockedPackage.mode === 3) || (state.pendingPackage && state.pendingPackage.mode === 2) || (state.pendingPackage && state.pendingPackage.mode === 3)));
+                    if (showPackageChips2) {
+                        packagePointsContainer.style.display = 'flex';
+                        packagePointsContainer.style.gap = '10px';
+                        packagePointsContainer.style.justifyContent = 'center';
+                        packagePointsContainer.style.marginBottom = '5px'; // Dịch xuống thấp hơn
+                        const qBoxNode = document.getElementById('qBox');
+                        if (qBoxNode) {
+                            qBoxNode.style.marginTop = '10px'; // Giảm khoảng cách để các ô dịch xuống gần hộp câu hỏi
+                        }
+                        const pkg3 = state.lockedPackage || state.pendingPackage || {};
+                        const questions3 = Array.isArray(pkg3.questions) ? pkg3.questions : (Array.isArray(pkg3.package) ? pkg3.package : []);
+                        packagePointsContainer.innerHTML = questions3.map((question, index) => {
+                            const pointValue = question ? (question.points !== undefined ? question.points : (question.point !== undefined ? question.point : (question.score !== undefined ? question.score : question.value))) : undefined;
+                            const label = pointValue !== undefined && pointValue !== null ? pointValue : (index + 1);
+                            const isActive = q && q.active && !q.isHidden && state.lockedPackage && (state.lockedPackage.currentIndex === index);
+                            const bg = isActive ? 'linear-gradient(180deg, #ff9900, #ff5500)' : 'linear-gradient(180deg, #111, #333)';
+                            const border = isActive ? '2px solid #fff' : '2px solid #555';
+                            const color = isActive ? '#fff' : '#aaa';
+                            return `<div style="background:${bg}; border:${border}; color:${color}; font-size:30px; font-weight:bold; padding:10px 20px; border-radius:10px; min-width:80px; text-align:center; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">${label}</div>`;
+                        }).join('');
+                    } else {
+                        packagePointsContainer.style.display = 'none';
+                        packagePointsContainer.innerHTML = '';
+                        const qBoxNode = document.getElementById('qBox');
+                        if (qBoxNode) {
+                            qBoxNode.style.marginTop = ''; // Reset về mặc định
+                        }
+                    }
+                } else {
+                    packagePointsContainer.style.display = 'none';
+                    packagePointsContainer.innerHTML = '';
+                    const qBoxNode = document.getElementById('qBox');
+                    if (qBoxNode) {
+                        qBoxNode.style.marginTop = ''; // Reset về mặc định
+                    }
+                }
+            }
+
+            if (currentTheme !== 'v3') {
+                if (state.lockedPackage) {
+                    var elapsed = Date.now() - state.lockedPackage.lockedAt;
+                    if (elapsed < 1000) {
+                        clearTimeout(window.packageTransitionTimeout);
+                        window.packageTransitionTimeout = setTimeout(() => {
+                            window.packageTransitionTimeout = null;
+                            applyVisibility(window.currentState);
+                            autoResizeText();
+                            setTimeout(autoResizeText, 50);
+                        }, 1000 - elapsed);
+                    }
+                } else {
+                    clearTimeout(window.packageTransitionTimeout);
+                    window.packageTransitionTimeout = null;
+                }
+                window.currentState = state;
+                applyVisibility(state); // Chỉ áp dụng logic DOM cũ nếu KHÔNG phải v3
+                autoResizeText();
+                setTimeout(autoResizeText, 50);
+            }
+            if (typeof autoScaleTeamNames === "function") {
+                setTimeout(autoScaleTeamNames, 0);
+            }
+        });
+
+        function applyVisibility(state) {
+            const ascendFrame = document.getElementById('ascendFrame');
+            const defScoreboard = document.getElementById('defaultScoreboard');
+            const qArea = document.querySelector('.question-area');
+            const qBoxNode = document.getElementById('qBox');
+            const qGridNode = document.getElementById('qGrid');
+            
+            let isMode1 = state.settings ? state.settings.questionSelectionMode === 1 : true;
+            if (state.lockedPackage) isMode1 = (state.lockedPackage.mode === 1);
+            
+            let showGrid = false;
+            let showQBox = false;
+            let q = state.currentQuestion || {};
+            
+            let withinLockDelay = false;
+            if (state.lockedPackage && state.lockedPackage.lockedAt) {
+                const elapsed = Date.now() - state.lockedPackage.lockedAt;
+                if (elapsed < 1000) {
+                    withinLockDelay = true;
+                }
+            }
+
+            if (state.isGridVisibleOnOverlay || withinLockDelay) {
+                showGrid = true;
+            }
+            
+            if ((q.active || (state.lockedPackage != null && !showGrid)) && !withinLockDelay) {
+                showQBox = true;
+            }
+
+            if (showQBox) {
+                if (qGridNode) qGridNode.style.setProperty('display', 'none', 'important');
+                if (qArea) qArea.style.setProperty('display', 'flex', 'important');
+                if (ascendFrame) {
+                    ascendFrame.style.setProperty('display', 'flex', 'important');
+                }
+                if (defScoreboard) {
+                    if (currentTheme === 'default') {
+                        defScoreboard.style.setProperty('display', 'flex', 'important');
+                    } else {
+                        defScoreboard.style.setProperty('display', 'none', 'important');
+                    }
+                }
+                if (qBoxNode) qBoxNode.style.setProperty('display', 'flex', 'important');
+            } else if (showGrid) {
+                if (qArea) qArea.style.setProperty('display', 'flex', 'important');
+                if (qBoxNode) qBoxNode.style.setProperty('display', 'none', 'important');
+                if (ascendFrame) {
+                    ascendFrame.style.setProperty('display', 'none', 'important'); // Grid and Question Graphic should not be visible at the same time
+                }
+                if (defScoreboard) defScoreboard.style.setProperty('display', 'none', 'important'); 
+                if (qGridNode) qGridNode.style.setProperty('display', 'flex', 'important');
+                if (currentTheme === 'ascend_2026') {
+                    if (defScoreboard) defScoreboard.style.setProperty('display', 'none', 'important');
+                    if (ascendFrame) ascendFrame.style.setProperty('display', 'none', 'important');
+                } else {
+                    if (defScoreboard) defScoreboard.style.setProperty('display', 'none', 'important');
+                    if (ascendFrame) ascendFrame.style.setProperty('display', 'none', 'important');
+                }
+            } else {
+                if (qGridNode) qGridNode.style.setProperty('display', 'none', 'important');
+                if (qArea) qArea.style.setProperty('display', 'none', 'important');
+                if (ascendFrame) {
+                    ascendFrame.style.setProperty('display', 'none', 'important');
+                }
+                if (defScoreboard) defScoreboard.style.setProperty('display', 'none', 'important');
+                if (qBoxNode) qBoxNode.style.setProperty('display', 'none', 'important');
+            }
+        }
+
+        function autoScaleTeamNames() {
+            var scoreboards = ['#ascendScoreboard', '#defaultScoreboard'];
+            scoreboards.forEach(sbId => {
+                document.querySelectorAll(sbId + ' .team-card').forEach(card => {
+                    var nameContainer = card.querySelector('.team-name');
+                    var nameInner = card.querySelector('.name-inner');
+                    if (nameContainer && nameInner) {
+                        nameInner.style.transition = 'none';
+                        nameInner.style.transform = 'scaleX(1)';
+                        var availName = nameContainer.clientWidth - 10;
+                        if (nameInner.scrollWidth > availName && availName > 0) {
+                            nameInner.style.transform = `scaleX(${availName / nameInner.scrollWidth})`;
+                        }
+                    }
+                    
+                    var schoolContainer = card.querySelector('.team-school');
+                    var schoolInner = card.querySelector('.school-inner');
+                    if (schoolContainer && schoolInner) {
+                        schoolInner.style.transition = 'none';
+                        schoolInner.style.transform = 'scaleX(1)';
+                        var availSchool = schoolContainer.clientWidth - 10;
+                        if (schoolInner.scrollWidth > availSchool && availSchool > 0) {
+                            schoolInner.style.transform = `scaleX(${availSchool / schoolInner.scrollWidth})`;
+                        }
+                    }
+                });
+            });
+
+            document.querySelectorAll('#compactScoreboard .compact-team-name').forEach(nameContainer => {
+                var inner = nameContainer.querySelector('.name-inner');
+                if (nameContainer && inner) {
+                    inner.style.transform = 'scaleX(1)';
+                    var avail = nameContainer.clientWidth - 5;
+                    if (inner.scrollWidth > avail && avail > 0) {
+                        inner.style.transform = `scaleX(${avail / inner.scrollWidth})`;
+                    }
+                }
+            });
+            document.querySelectorAll('#overallScoreboardGrid .overall-team-name-container').forEach(container => {
+                var inner = container.querySelector('.overall-team-name-inner');
+                if (inner) {
+                    inner.style.transform = 'scaleX(1)';
+                    var avail = container.clientWidth - 20;
+                    if (inner.scrollWidth > avail && avail > 0) {
+                        inner.style.transform = `scaleX(${avail / inner.scrollWidth})`;
+                    }
+                }
+            });
+
+            // Scaling for V3 player polys
+            document.querySelectorAll('#v3MasterContainer .player-poly').forEach(poly => {
+                var inner = poly.querySelector('.v3-player-inner');
+                if (inner) {
+                    inner.style.transition = 'none';
+                    inner.style.transform = 'scaleX(1)';
+                    var isScreenMode = poly.closest('#v3MasterContainer').classList.contains('screen-mode');
+                    var slant = isScreenMode ? 25.71 : 17.85;
+                    var avail = poly.clientWidth - 2 * slant - 15;
+                    if (inner.scrollWidth > avail && avail > 0) {
+                        inner.style.transform = `scaleX(${avail / inner.scrollWidth})`;
+                    }
+                }
+            });
+        }
+        window.autoScaleTeamNames = autoScaleTeamNames;
+        setInterval(autoScaleTeamNames, 1000);
+    </script>
+
+    <div id="round1-timer-container" style="display: none; position: absolute; background-color: transparent !important; z-index: 1000; transition: all 0.3s; pointer-events: none; text-align: center;">
+        <span id="round1-timer-text">00:00</span>
+    </div>
+
+    <div id="v3-wrapper-overlay" style="display: none; position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%); width: 1600px; height: 420px; z-index: 5000; pointer-events: none;">
+        <div id="v3MasterContainer" class="v3-new-root overlay-mode" style="display: none; width: 1600px; height: 250px; position: absolute; bottom: 0px; top: auto; left: 50%; margin-left: -800px; transform: scale(1.05); transform-origin: bottom center; pointer-events: auto;">
+            <div class="shape-container anim-container" id="cont-overlay" style="width: 1600px; height: 250px; position: absolute; top: 0px; left: 0px; transform: none;">
+                <!-- Cyan Arrows -->
+                <div class="shape-layer cyan-color a-alc layer-1 anim-element" style="z-index: 10;"></div>
+                <div class="shape-layer cyan-color a-alc layer-2 anim-element" style="z-index: 11;"></div>
+                <div class="shape-layer cyan-color a-alc layer-3 anim-element" style="z-index: 12;"></div>
+                
+                <div class="shape-layer cyan-color a-arc layer-1 anim-element" style="z-index: 10;"></div>
+                <div class="shape-layer cyan-color a-arc layer-2 anim-element" style="z-index: 11;"></div>
+                <div class="shape-layer cyan-color a-arc layer-3 anim-element" style="z-index: 12;"></div>
+                
+                <!-- Grid Group -->
+                <div class="anim-grid-group anim-element" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index: 20; opacity: 0; pointer-events: none;">
+                    <div class="shape-layer grid-bg a-grid-bg" style="z-index: 1;"></div>
+                    <svg class="svg-strokes s-g-svg-frame" preserveAspectRatio="none" style="z-index: 3; overflow: visible; position: absolute; width: 100%; height: 100%; top: 0; left: 0; pointer-events: none;">
+                        <path class="s-g-bg" fill="none" stroke="white" stroke-width="2" />
+                    </svg>
+                    <div class="v3-grid-mask-wrapper" style="position: absolute; width: 100%; height: 100%; left: 0; top: 0; z-index: 2;">
+                        <div class="v3-grid-pan-wrapper" style="position: absolute; width: 100%; height: 100%; left: 0; top: 0; transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1); pointer-events: auto;">
+                            <div class="shape-layer a-grid-content" style="z-index: 2; pointer-events: auto;"></div>
+                            <svg class="svg-strokes s-g-svg" preserveAspectRatio="none" style="z-index: 3; overflow: visible;">
+                                <g class="s-g-cells" fill="none" stroke="white" stroke-width="2"></g>
+                            </svg>
                         </div>
                     </div>
                 </div>
-
-                <div class="v3-oly-timer-container" id="timerContainerV3" style="height:20px; background:#111; position:absolute; bottom:0; left:20px; right:20px; display:none; z-index:20;">
-                    <div id="timerBarV3" class="time-bar-fill" style="height:100%; width:0%; background:linear-gradient(90deg, #ccc, #fff); transition:width 1s linear;">
+                
+                <!-- Question Group -->
+                <div class="anim-question-group anim-element" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index: 25; opacity: 0; pointer-events: none;">
+                    <div class="o-bg a-q-bg" style="z-index: 1;"></div>
+                    <div id="v3HopeStar" class="v3-hopestar-gif" style="position: absolute; top: -150px; left: 0px; transform: translateX(-50%) scale(0); width: 250px; height: 250px; z-index: 100; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s; opacity: 0; pointer-events: none;">
+                        <img src="/Star_1.gif" style="width: 100%; height: 100%; object-fit: contain;">
                     </div>
+                    <div class="ov-left-content" style="z-index: 40;">
+                        <div class="ov-top-bar o-top-bar a-q-top" style="display: flex; flex-direction: row; height: 50px; width: 100%;"></div>
+                        <div class="ov-question-wrapper o-question a-q-wrap" style="position: absolute; top: 50px; left: 180px; bottom: 0; width: 999px; box-sizing: border-box; display: flex; align-items: flex-start; justify-content: flex-start; padding: 15px 40px 15px 0px; overflow: visible;">
+                            <div class="ov-question" id="qTextV3" style="position: relative; z-index: 50; color: white; font-weight: 700; text-align: left; line-height: 1.4; font-size: 30px; text-shadow: 0 4px 10px rgba(0,0,0,0.5);"></div>
+                        </div>
+                        <!-- Timer Bar -->
+                        <div id="timerContainerV3" style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); width: 80%; height: 26px; background: linear-gradient(to bottom, #d1d5db, #6b7280); z-index: 30; clip-path: polygon(0 0, 100% 0, calc(100% - 15px) 100%, 15px 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
+                            <div style="position: relative; width: calc(100% - 60px); height: 8px; background: #000; border-radius: 4px; overflow: visible;">
+                                <div id="timerBarV3" style="position: absolute; top: 0; left: 0; width: 0%; height: 100%; background: #ff0000; transition: width 0.05s linear; border-radius: 4px;">
+                                    <div id="timerHandleV3" style="display: none; position: absolute; right: -8px; top: -4px; width: 16px; height: 16px; background: #fff; border-radius: 50%; box-shadow: 0 0 5px rgba(255,0,0,0.8); animation: pulse-timer-v3 0.6s infinite alternate;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ov-score-panel o-score a-q-score" style="z-index: 2; position: absolute; right: 0; top: 0; height: 100%; display: flex; flex-direction: column;">
+                        <div class="ov-score-main" id="v3ActiveScore" style="height: 85%; display: flex; align-items: center; justify-content: center; font-size: 130px; font-weight: 800; color: white; text-shadow: 0 4px 15px rgba(0,0,0,0.6);"></div>
+                        <div class="ov-score-pack o-pack-container a-q-pack" id="v3PointsArea" style="height: 15%; display: flex; position: absolute; bottom: 0; left: 0; padding: 0; margin: 0; width: 100%;"></div>
+                    </div>
+                    <div class="o-separator a-q-sep" style="z-index: 3;"></div>
+                    <svg class="svg-strokes s-o-svg" preserveAspectRatio="none" style="z-index: 4; overflow: visible;">
+                        <path class="s-o-bg" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2" />
+                        <path class="s-o-score" fill="none" stroke="white" stroke-width="2" />
+                    </svg>
                 </div>
 
-                <!-- Grid Layer -->
-                <div class="center-box grid-center" id="qGridV3" style="position:absolute; width:100%; height:100%; display:none; justify-content:center; align-items:center;">
-                    <div class="grid-content-wrapper qGrid v3-grid-wrapper" style="flex-direction: column; width: 100%; height: 100%; display: flex;">
-                        <div class="v3-grid-row" id="grid10-v3" style="flex: 1; display: flex; width: 100%;"></div>
-                        <div class="v3-grid-row" id="grid20-v3" style="flex: 1; display: flex; width: 100%; display: none;"></div>
-                        <div class="v3-grid-row" id="grid40-v3" style="flex: 1; display: flex; width: 100%; display: none;"></div>
-                    </div>
-                </div>
+                <!-- Navy Arrows -->
+                <div class="shape-layer navy-color a-aln layer-1 anim-element" style="z-index: 50;"></div>
+                <div class="shape-layer navy-color a-aln layer-2 anim-element" style="z-index: 51;"></div>
+                <div class="shape-layer navy-color a-aln layer-3 anim-element" style="z-index: 52;"></div>
+                
+                <div class="shape-layer navy-color a-arn layer-1 anim-element" style="z-index: 50;"></div>
+                <div class="shape-layer navy-color a-arn layer-2 anim-element" style="z-index: 51;"></div>
+                <div class="shape-layer navy-color a-arn layer-3 anim-element" style="z-index: 52;"></div>
+
+                <!-- Top SVG strokes for arrows -->
+                <svg class="svg-strokes s-g-svg-arrows layer-1" preserveAspectRatio="none" style="z-index: 60; overflow: visible;">
+                    <path class="s-g-alc anim-element" fill="none" stroke="white" stroke-width="2" />
+                    <path class="s-g-aln anim-element" fill="none" stroke="white" stroke-width="2" />
+                    <path class="s-g-arc anim-element" fill="none" stroke="white" stroke-width="2" />
+                    <path class="s-g-arn anim-element" fill="none" stroke="white" stroke-width="2" />
+                </svg>
+                <svg class="svg-strokes s-g-svg-arrows layer-2" preserveAspectRatio="none" style="z-index: 61; overflow: visible;">
+                    <path class="s-g-alc anim-element" fill="none" stroke="white" stroke-width="2" />
+                    <path class="s-g-aln anim-element" fill="none" stroke="white" stroke-width="2" />
+                    <path class="s-g-arc anim-element" fill="none" stroke="white" stroke-width="2" />
+                    <path class="s-g-arn anim-element" fill="none" stroke="white" stroke-width="2" />
+                </svg>
+                <svg class="svg-strokes s-g-svg-arrows layer-3" preserveAspectRatio="none" style="z-index: 62; overflow: visible;">
+                    <path class="s-g-alc anim-element" fill="none" stroke="white" stroke-width="2" />
+                    <path class="s-g-aln anim-element" fill="none" stroke="white" stroke-width="2" />
+                    <path class="s-g-arc anim-element" fill="none" stroke="white" stroke-width="2" />
+                    <path class="s-g-arn anim-element" fill="none" stroke="white" stroke-width="2" />
+                </svg>
             </div>
-
-            <!-- Right Arrows -->
-            <div class="v3-arrow-group ghost-l1 right-dir"><div class="arrow-navy"><svg preserveAspectRatio="none"><path d="M 0,0 L 44,0 L 44,200 L 0,200 Z" fill="#0a1936" /></svg></div><div class="arrow-cyan"><svg preserveAspectRatio="none"><path d="M 0,0 L 33,0 L 33,150 L 0,150 Z" fill="#00cfff" /></svg></div></div>
-            <div class="v3-arrow-group ghost-l2 right-dir"><div class="arrow-navy"><svg preserveAspectRatio="none"><path d="M 0,0 L 44,0 L 44,200 L 0,200 Z" fill="#0a1936" /></svg></div><div class="arrow-cyan"><svg preserveAspectRatio="none"><path d="M 0,0 L 33,0 L 33,150 L 0,150 Z" fill="#00cfff" /></svg></div></div>
-            <div class="v3-arrow-group l3 right-dir"><div class="arrow-navy"><svg preserveAspectRatio="none"><path d="M 0,0 L 44,0 L 44,200 L 0,200 Z" fill="#0a1936" /></svg></div><div class="arrow-cyan"><svg preserveAspectRatio="none"><path d="M 0,0 L 33,0 L 33,150 L 0,150 Z" fill="#00cfff" /></svg></div></div>
-        </div>
     </div>
+</div>
+<script id="v3-script">
+window.V3_CONFIGS = {"tv1": {"graphicWidth": 1600, "gridWidth": 1080, "height": 360, "shapes": {"bgPts": [[324.2857142857143, 0], [1275.7142857142858, 0], [1340.0, 180.0], [1275.7142857142858, 360], [324.2857142857143, 360], [260.0, 180.0]], "alnPts": [[284.2857142857143, 0], [324.2857142857143, 0], [260.0, 180.0], [324.2857142857143, 360], [284.2857142857143, 360], [220.0, 180.0]], "arnPts": [[1275.7142857142858, 0], [1315.7142857142858, 0], [1380.0, 180.0], [1315.7142857142858, 360], [1275.7142857142858, 360], [1340.0, 180.0]], "alcPts": [[238.21428571428572, 45.0], [268.2142857142857, 45.0], [220.0, 180.0], [268.2142857142857, 315.0], [238.21428571428572, 315.0], [190.0, 180.0]], "arcPts": [[1331.7857142857142, 45.0], [1361.7857142857142, 45.0], [1410.0, 180.0], [1361.7857142857142, 315.0], [1331.7857142857142, 315.0], [1380.0, 180.0]]}, "gridCells": [[[324.2857142857143, 0.0], [684.2857142857143, 0.0], [620.0, 180.0], [260.0, 180.0]], [[684.2857142857143, 0.0], [1044.2857142857142, 0.0], [980.0, 180.0], [620.0, 180.0]], [[1044.2857142857142, 0.0], [1404.2857142857142, 0.0], [1340.0, 180.0], [980.0, 180.0]], [[260.0, 180.0], [620.0, 180.0], [555.7142857142857, 360.0], [195.71428571428572, 360.0]], [[620.0, 180.0], [980.0, 180.0], [915.7142857142857, 360.0], [555.7142857142857, 360.0]], [[980.0, 180.0], [1340.0, 180.0], [1275.7142857142858, 360.0], [915.7142857142857, 360.0]]]}, "tv2": {"graphicWidth": 1600, "gridWidth": 1020, "height": 250, "shapes": {"bgPts": [[334.64285714285717, 0], [1265.357142857143, 0], [1310.0, 125.0], [1265.357142857143, 250], [334.64285714285717, 250], [290.0, 125.0]], "alnPts": [[294.64285714285717, 0], [334.64285714285717, 0], [290.0, 125.0], [334.64285714285717, 250], [294.64285714285717, 250], [250.0, 125.0]], "arnPts": [[1265.357142857143, 0], [1305.357142857143, 0], [1350.0, 125.0], [1305.357142857143, 250], [1265.357142857143, 250], [1310.0, 125.0]], "alcPts": [[253.48214285714286, 31.25], [283.4821428571429, 31.25], [250.0, 125.0], [283.4821428571429, 218.75], [253.48214285714286, 218.75], [220.0, 125.0]], "arcPts": [[1316.517857142857, 31.25], [1346.517857142857, 31.25], [1380.0, 125.0], [1346.517857142857, 218.75], [1316.517857142857, 218.75], [1350.0, 125.0]]}, "gridCells": [[[334.64285714285717, 0.0], [674.6428571428571, 0.0], [630.0, 125.0], [290.0, 125.0]], [[674.6428571428571, 0.0], [1014.6428571428571, 0.0], [970.0, 125.0], [630.0, 125.0]], [[1014.6428571428571, 0.0], [1354.642857142857, 0.0], [1310.0, 125.0], [970.0, 125.0]], [[290.0, 125.0], [630.0, 125.0], [585.3571428571429, 250.0], [245.35714285714286, 250.0]], [[630.0, 125.0], [970.0, 125.0], [925.3571428571429, 250.0], [585.3571428571429, 250.0]], [[970.0, 125.0], [1310.0, 125.0], [1265.357142857143, 250.0], [925.3571428571429, 250.0]]]}, "tv3": {"width": 1720, "height": 360, "shapes": {"bgPts": [[164.28571428571428, 0], [1435.7142857142858, 0], [1500, 180.0], [1435.7142857142858, 360], [164.28571428571428, 360], [100, 180.0]], "alnPts": [[124.28571428571428, 0], [164.28571428571428, 0], [100, 180.0], [164.28571428571428, 360], [124.28571428571428, 360], [60, 180.0]], "arnPts": [[1435.7142857142858, 0], [1475.7142857142858, 0], [1540, 180.0], [1475.7142857142858, 360], [1435.7142857142858, 360], [1500, 180.0]], "alcPts": [[78.21428571428572, 45.0], [108.21428571428572, 45.0], [60, 180.0], [108.21428571428572, 315.0], [78.21428571428572, 315.0], [30, 180.0]], "arcPts": [[1491.7857142857142, 45.0], [1521.7857142857142, 45.0], [1570, 180.0], [1521.7857142857142, 315.0], [1491.7857142857142, 315.0], [1540, 180.0]]}, "bgPts": [[164.28571428571428, 0], [1164.2857142857142, 0], [1035.7142857142858, 360], [164.28571428571428, 360], [100, 180.0]], "scorePts": [[50.00571428571429, 0], [314.28999999999996, 0], [400, 180.0], [314.28999999999996, 360], [0, 360]], "separator": {"angle": 19.65, "height": 509.69, "left": 1100}, "topBarWidth": 1171}, "tv4": {"width": 1600, "height": 250, "shapes": {"bgPts": [[144.64285714285714, 0], [1455.357142857143, 0], [1500, 125.0], [1455.357142857143, 250], [144.64285714285714, 250], [100, 125.0]], "alnPts": [[104.64285714285714, 0], [144.64285714285714, 0], [100, 125.0], [144.64285714285714, 250], [104.64285714285714, 250], [60, 125.0]], "arnPts": [[1455.357142857143, 0], [1495.357142857143, 0], [1540, 125.0], [1495.357142857143, 250], [1455.357142857143, 250], [1500, 125.0]], "alcPts": [[63.48214285714286, 31.25], [93.48214285714286, 31.25], [60, 125.0], [93.48214285714286, 218.75], [63.48214285714286, 218.75], [30, 125.0]], "arcPts": [[1506.517857142857, 31.25], [1536.517857142857, 31.25], [1570, 125.0], [1536.517857142857, 218.75], [1506.517857142857, 218.75], [1540, 125.0]]}, "bgPts": [[144.64285714285714, 0], [1244.642857142857, 0], [1155.357142857143, 250], [144.64285714285714, 250], [100, 125.0]], "scorePts": [[30.362857142857145, 0], [250, 0], [300, 125.0], [250, 250], [0, 250]], "separator": {"angle": 19.65, "height": 297.32, "left": 1200}, "topBarWidth": 1200}, "tv5": {"width": 1600, "height": 360, "shapes": {"bgPts": [[164.28571428571428, 0], [1435.7142857142858, 0], [1500, 180.0], [1435.7142857142858, 360], [164.28571428571428, 360], [100, 180.0]], "alnPts": [[124.28571428571428, 0], [164.28571428571428, 0], [100, 180.0], [164.28571428571428, 360], [124.28571428571428, 360], [60, 180.0]], "arnPts": [[1435.7142857142858, 0], [1475.7142857142858, 0], [1540, 180.0], [1475.7142857142858, 360], [1435.7142857142858, 360], [1500, 180.0]], "alcPts": [[78.21428571428572, 45.0], [108.21428571428572, 45.0], [60, 180.0], [108.21428571428572, 315.0], [78.21428571428572, 315.0], [30, 180.0]], "arcPts": [[1491.7857142857142, 45.0], [1521.7857142857142, 45.0], [1570, 180.0], [1521.7857142857142, 315.0], [1491.7857142857142, 315.0], [1540, 180.0]]}, "bgPts": [[164.28571428571428, 0], [1164.2857142857142, 0], [1035.7142857142858, 360], [164.28571428571428, 360], [100, 180.0]], "scorePts": [[50.00571428571429, 0], [314.28999999999996, 0], [400, 180.0], [314.28999999999996, 360], [0, 360]], "separator": {"angle": 19.65, "height": 509.69, "left": 1100}, "topBarWidth": 1171}, "tv6": {"width": 1600, "height": 250, "shapes": {"bgPts": [[144.64285714285714, 0], [1455.357142857143, 0], [1500, 125.0], [1455.357142857143, 250], [144.64285714285714, 250], [100, 125.0]], "alnPts": [[104.64285714285714, 0], [144.64285714285714, 0], [100, 125.0], [144.64285714285714, 250], [104.64285714285714, 250], [60, 125.0]], "arnPts": [[1455.357142857143, 0], [1495.357142857143, 0], [1540, 125.0], [1495.357142857143, 250], [1455.357142857143, 250], [1500, 125.0]], "alcPts": [[63.48214285714286, 31.25], [93.48214285714286, 31.25], [60, 125.0], [93.48214285714286, 218.75], [63.48214285714286, 218.75], [30, 125.0]], "arcPts": [[1506.517857142857, 31.25], [1536.517857142857, 31.25], [1570, 125.0], [1536.517857142857, 218.75], [1506.517857142857, 218.75], [1540, 125.0]]}, "bgPts": [[144.64285714285714, 0], [1244.642857142857, 0], [1155.357142857143, 250], [144.64285714285714, 250], [100, 125.0]], "scorePts": [[30.362857142857145, 0], [250, 0], [300, 125.0], [250, 250], [0, 250]], "separator": {"angle": 19.65, "height": 297.32, "left": 1200}, "topBarWidth": 1200}};
 
-    <script>
-        const displayController = new EconovaDisplayController(false);
-        displayController.init();
-    </script>
+document.addEventListener('DOMContentLoaded', () => {
+    var currentV3State = 0; 
+    var v3Transitioning = false;
+    var v3Wrapper = document.getElementById('v3-wrapper');
+    var lastV3State = null;
+    var v3LockedPackageTime = null;
+    var v3TransitionTimeout = null;
+    var v3IsFirstEntry = false;
+
+    function toPoly(pts) { return pts.map(p => p[0]+'px '+p[1]+'px').join(', '); }
+    function toSvgPath(pts) { return 'M ' + pts.map(p => p[0]+','+p[1]).join(' L ') + ' Z'; }
+    var colorL = '#051433';
+    var colorR = '#103b99';
+
+    var isScreen = false;
+    var qShapesCfg = isScreen ? window.V3_CONFIGS.tv3 : window.V3_CONFIGS.tv4;
+    var gShapesCfg = isScreen ? window.V3_CONFIGS.tv1 : window.V3_CONFIGS.tv2;
+    var tvW = qShapesCfg.width || 1600;
+    
+    var gW = tvW;
+    var gH = qShapesCfg.height || 360;
+    if (qShapesCfg && qShapesCfg.separator) { qShapesCfg.separator.height = gH; }
+    var gridW = gShapesCfg.gridWidth || 1080;
+    var scoreW = gW - (qShapesCfg.separator ? qShapesCfg.separator.left : (gW - 400));
+    var topH = isScreen ? 72 : 50;
+    var actual_S = gH * 0.3571; 
+    
+    var pad = 100;
+    var thick = 40;
+    var cThick = 30;
+    var slope = actual_S / gH;
+    var midY = gH / 2;
+    var pS = actual_S / 2;
+    // Set CSS variable so run-anim CSS animations use same slant as JS clip-paths
+    (function() {
+        var root = document.getElementById('v3MasterContainer') || document.documentElement;
+        root.style.setProperty('--offset-qbox', pS + 'px');
+        root.style.setProperty('--offset-qbox-screen', pS + 'px');
+    })();
+    var y1 = gH * 0.125;
+    var y2 = gH * 0.875;
+    var cShift = slope * (midY - y1);
+    
+    function makeShape(L, R, H) {
+        return {
+            bgPts: [[L+pS, 0], [R-pS, 0], [R, midY], [R-pS, H], [L+pS, H], [L, midY]],
+            alnPts: [[L+pS-thick, 0], [L+pS, 0], [L, midY], [L+pS, H], [L+pS-thick, H], [L-thick, midY]],
+            arnPts: [[R-pS, 0], [R-pS+thick, 0], [R+thick, midY], [R-pS+thick, H], [R-pS, H], [R, midY]],
+            alcPts: [[L-thick-cThick+cShift, y1], [L-thick+cShift, y1], [L-thick, midY], [L-thick+cShift, y2], [L-thick-cThick+cShift, y2], [L-thick-cThick, midY]],
+            arcPts: [[R+thick-cShift, y1], [R+thick+cThick-cShift, y1], [R+thick+cThick, midY], [R+thick+cThick-cShift, y2], [R+thick-cShift, y2], [R+thick, midY]]
+        };
+    }
+    
+    function makeRevealShape(L, R, H) {
+        return {
+            bgPts: [[L+pS, 0], [R+actual_S, 0], [R+pS, midY], [R, H], [L+pS, H], [L, midY]]
+        };
+    }
+    
+    function makeMaskPts(pts, H) {
+        return [
+            pts[0],
+            pts[1],
+            pts[2],
+            pts[3],
+            [pts[3][0], 2000],
+            [pts[4][0], 2000],
+            pts[4],
+            pts[5]
+        ];
+    }
+    // Full mask: straight right edge at gW+200 so score panel is fully exposed on the right.
+    // Left edge defined by topL (x at y=0), botL (x at y=gH), midL (x at y=midY).
+    // Use for qGroup transition: score panel always shows with correct shape via its own clip-path.
+    function makeFullMaskPts(topL, midL, botL) {
+        return [
+            [topL, 0],          // top-left
+            [gW + 2000, 0],      // top-right straight
+            [gW + 2000, midY],   // mid-right straight
+            [gW + 2000, gH],     // bottom-right straight
+            [gW + 2000, 2000],   // below-right
+            [botL, 2000],       // below-left
+            [botL, gH],         // bottom-left
+            [midL, midY]        // mid-left
+        ];
+    }
+
+    var cShapes = makeShape(gW/2, gW/2, gH);
+    var qShapes = makeShape(pad, gW - pad, gH);
+    var gShapes = makeShape((gW - gridW) / 2, (gW - gridW) / 2 + gridW, gH);
+    qShapesCfg.shapes = qShapes;
+    gShapesCfg.shapes = gShapes;
+    var openShapes = makeShape(0, gW + 100, gH);
+    var cRevealShapes = makeRevealShape(gW/2, gW/2, gH);
+    var openRevealShapes = makeRevealShape(0, gW + 100, gH);
+
+    // Compute bgPts dynamically: trapezoid from inner edge of left navy arrow (alnPts[1][0]) to separator
+    // Use qShapesCfg.shapes.alnPts[1][0] as inner-right of left arrow, and separator.left as right bound
+    (function() {
+        var alnRight = qShapes.alnPts[1][0]; // inner-right corner of left navy arrow (top)
+        var alnRightBot = qShapes.alnPts[3][0]; // inner-right corner of left navy arrow (bottom)
+        var alnMidX = qShapes.alnPts[2][0]; // mid point of left navy arrow
+        var sepLeft = qShapesCfg.separator.left;
+        
+        // Correct right edge coordinates for slanted separator:
+        // Top-right: sepLeft + actual_S
+        // Mid-right: sepLeft + pS
+        // Bottom-right: sepLeft
+        qShapesCfg.bgPts = [
+            [alnRight, 0],
+            [sepLeft + actual_S, 0],
+            [sepLeft + pS, midY],
+            [sepLeft, gH],
+            [alnRightBot, gH],
+            [alnMidX, midY]
+        ];
+    })();
+
+    function applyAnimState(targetState) {
+        var tv = document.getElementById('v3MasterContainer');
+        if (!tv) return;
+
+        if (window.v3RunAnimTimeout) {
+            clearTimeout(window.v3RunAnimTimeout);
+            window.v3RunAnimTimeout = null;
+        }
+
+        var gridGroup = tv.querySelector('.anim-grid-group');
+        var qGroup = tv.querySelector('.anim-question-group');
+        var dur = 0.85;
+        var wipeOut = 'inset(0 50% 0 50%)'; 
+
+        var getEls = (side, layer) => {
+            if (side === 'left') return tv.querySelectorAll(`.layer-${layer}.a-aln, .layer-${layer}.a-alc, .layer-${layer} .s-g-aln, .layer-${layer} .s-g-alc`);
+            else return tv.querySelectorAll(`.layer-${layer}.a-arn, .layer-${layer}.a-arc, .layer-${layer} .s-g-arn, .layer-${layer} .s-g-arc`);
+        };
+
+        var layers = [1, 2, 3];
+
+        if (targetState === 'pre-entry') {
+            tv.classList.remove('is-closing');
+            tv.classList.remove('run-anim');
+            ['aln', 'alc', 'arn', 'arc'].forEach(k => {
+                var pts = cShapes[k+'Pts'];
+                var isLeft = k.startsWith('al');
+                var startX = isLeft ? 1300 : -1300;
+                tv.querySelectorAll(`.a-${k}`).forEach(el => { 
+                    el.style.transition = 'none'; 
+                    el.style.clipPath = `polygon(${toPoly(pts)})`; 
+                    el.style.transform = `translateX(${startX}px) scale(1)`; 
+                    el.style.opacity = '0'; 
+                });
+                tv.querySelectorAll(`.s-g-${k}`).forEach(path => { 
+                    if(path) { 
+                        path.style.transition = 'none'; 
+                        path.setAttribute('d', toSvgPath(pts)); 
+                        path.style.transform = `translateX(${startX}px) scale(1)`; 
+                        path.style.opacity = '0'; 
+                    } 
+                });
+            });
+            gridGroup.style.transition = 'none'; gridGroup.style.opacity = '0'; gridGroup.style.clipPath = wipeOut;
+            qGroup.style.transition = 'none'; qGroup.style.opacity = '0'; qGroup.style.clipPath = wipeOut;
+
+        } else if (targetState === 'grid') {
+            tv.classList.remove('is-closing');
+            qGroup.style.opacity = '0';
+            
+            if (!v3IsFirstEntry) {
+                tv.classList.remove('run-anim');
+            }
+
+            ['aln', 'alc', 'arn', 'arc'].forEach(k => {
+                var pts = cShapes[k+'Pts'];
+                tv.querySelectorAll(`.a-${k}`).forEach(el => { 
+                    el.style.transition = 'none'; 
+                    el.style.clipPath = `polygon(${toPoly(pts)})`; 
+                    el.style.transform = 'translateX(0px) scale(1)'; 
+                });
+                tv.querySelectorAll(`.s-g-${k}`).forEach(path => { 
+                    if(path) { 
+                        path.style.transition = 'none'; 
+                        path.setAttribute('d', toSvgPath(pts)); 
+                        path.style.transform = 'translateX(0px) scale(1)'; 
+                    } 
+                });
+            });
+
+            gridGroup.style.transition = 'none';
+            gridGroup.style.clipPath = `polygon(${toPoly(cShapes.bgPts)})`;
+            gridGroup.style.opacity = '1';
+
+            var L_grid = (gW - gridW) / 2;
+            var dist_grid = (gW/2) - L_grid;
+            
+            void tv.offsetWidth;
+            layers.forEach((l, i) => {
+                var delay = i * 0.125;
+                var op = l === 1 ? '0.3' : (l === 2 ? '0.65' : '1');
+                getEls('left', l).forEach(el => {
+                    el.style.transition = `transform ${dur}s cubic-bezier(0.25, 1, 0.5, 1) ${delay}s, opacity ${dur}s ${delay}s`;
+                    el.style.transform = `translateX(${-dist_grid}px) scale(1)`;
+                    el.style.opacity = op;
+                });
+                getEls('right', l).forEach(el => {
+                    el.style.transition = `transform ${dur}s cubic-bezier(0.25, 1, 0.5, 1) ${delay}s, opacity ${dur}s ${delay}s`;
+                    el.style.transform = `translateX(${dist_grid}px) scale(1)`;
+                    el.style.opacity = op;
+                });
+            });
+            
+            gridGroup.style.transition = `clip-path ${dur}s cubic-bezier(0.25, 1, 0.5, 1) 0.25s, opacity ${dur}s 0s`;
+            gridGroup.style.clipPath = `polygon(${toPoly(gShapes.bgPts)})`;
+            gridGroup.style.opacity = '1';
+
+        } else if (targetState === 'exit-sides') {
+            tv.classList.add('is-closing');
+            tv.classList.remove('run-anim');
+            ['aln', 'alc', 'arn', 'arc'].forEach(k => {
+                var isLeft = k.startsWith('al');
+                var endX = isLeft ? 1300 : -1300;
+                tv.querySelectorAll(`.a-${k}`).forEach(el => { 
+                    el.style.transition = `transform ${dur}s cubic-bezier(0.25, 1, 0.5, 1), opacity ${dur}s`; 
+                    el.style.transform = `translateX(${endX}px) scale(1)`; 
+                    el.style.opacity = '0'; 
+                });
+                tv.querySelectorAll(`.s-g-${k}`).forEach(path => { 
+                    if(path) { 
+                        path.style.transition = `transform ${dur}s cubic-bezier(0.25, 1, 0.5, 1), opacity ${dur}s`; 
+                        path.style.transform = `translateX(${endX}px) scale(1)`; 
+                        path.style.opacity = '0'; 
+                    } 
+                });
+            });
+        } else if (targetState === 'closing') {
+            tv.classList.add('is-closing');
+            
+            if (v3IsFirstEntry) {
+                tv.classList.remove('run-anim');
+                void tv.offsetWidth;
+                tv.classList.add('run-anim');
+                window.v3RunAnimTimeout = setTimeout(() => {
+                    tv.classList.remove('run-anim');
+                    window.v3RunAnimTimeout = null;
+                }, 3000);
+            } else {
+                tv.classList.remove('run-anim');
+            }
+            
+            gridGroup.style.transition = `clip-path ${dur}s cubic-bezier(0.25, 1, 0.5, 1) 0s, opacity ${dur}s 0s`;
+            gridGroup.style.clipPath = `polygon(${toPoly(cShapes.bgPts)})`;
+            gridGroup.style.opacity = '0';
+            
+            qGroup.style.transition = `clip-path ${dur}s cubic-bezier(0.25, 1, 0.5, 1) 0s`;
+            qGroup.style.clipPath = `polygon(${toPoly(makeMaskPts(cShapes.bgPts, gH))})`;
+            qGroup.style.opacity = '0';
+
+            layers.forEach((l, i) => {
+                var delay = (2 - i) * 0.125; 
+                var op = l === 1 ? '0.3' : (l === 2 ? '0.65' : '1');
+                getEls('left', l).forEach(el => {
+                    el.style.transition = `transform ${dur}s cubic-bezier(0.25, 1, 0.5, 1) ${delay}s, opacity ${dur}s ${delay}s`;
+                    el.style.transform = 'translateX(0px) scale(1)';
+                    el.style.opacity = op;
+                });
+                getEls('right', l).forEach(el => {
+                    el.style.transition = `transform ${dur}s cubic-bezier(0.25, 1, 0.5, 1) ${delay}s, opacity ${dur}s ${delay}s`;
+                    el.style.transform = 'translateX(0px) scale(1)';
+                    el.style.opacity = op;
+                });
+            });
+
+        } else if (targetState === 'question') {
+            tv.classList.remove('is-closing');
+            gridGroup.style.opacity = '0';
+            
+            var panWrapper = tv.querySelector('.v3-grid-pan-wrapper');
+            var maskWrapper = tv.querySelector('.v3-grid-mask-wrapper');
+            if (panWrapper && maskWrapper) {
+                panWrapper.style.transform = 'translateX(0px)';
+                maskWrapper.style.webkitMaskImage = 'none';
+                maskWrapper.style.maskImage = 'none';
+            }
+            
+            if (!v3IsFirstEntry) {
+                tv.classList.remove('run-anim');
+            }
+
+            ['aln', 'alc', 'arn', 'arc'].forEach(k => {
+                var pts = cShapes[k+'Pts'];
+                tv.querySelectorAll(`.a-${k}`).forEach(el => { 
+                    el.style.transition = 'none'; 
+                    el.style.clipPath = `polygon(${toPoly(pts)})`; 
+                    el.style.transform = 'translateX(0px) scale(1)'; 
+                });
+                tv.querySelectorAll(`.s-g-${k}`).forEach(path => { 
+                    if(path) { 
+                        path.style.transition = 'none'; 
+                        path.setAttribute('d', toSvgPath(pts)); 
+                        path.style.transform = 'translateX(0px) scale(1)'; 
+                    } 
+                });
+            });
+            
+            var oBg = qGroup.querySelector('.a-q-bg');
+            if (oBg) { oBg.style.clipPath = `polygon(${toPoly(qShapesCfg.bgPts)})`; }
+            var oScore = qGroup.querySelector('.a-q-score');
+            // Do not override score clip-path here, it is correctly generated by renderV3QBox based on layout
+            var oSep = qGroup.querySelector('.a-q-sep');
+            if (oSep) {
+                oSep.style.transformOrigin = 'bottom left';
+                oSep.style.left = qShapesCfg.separator.left + 'px';
+                oSep.style.height = qShapesCfg.separator.height + 'px';
+                oSep.style.transform = `skewX(-${qShapesCfg.separator.angle}deg)`;
+            }
+            
+            qGroup.style.transition = 'none';
+            qGroup.style.clipPath = `polygon(${toPoly(makeMaskPts(cShapes.bgPts, gH))})`;
+            qGroup.style.opacity = '1';
+            
+            var dist_question = (gW/2) - pad; // 760px
+            void tv.offsetWidth;
+
+            layers.forEach((l, i) => {
+                var delay = i * 0.125;
+                var op = l === 1 ? '0.3' : (l === 2 ? '0.65' : '1');
+                getEls('left', l).forEach(el => {
+                    el.style.transition = `transform ${dur}s cubic-bezier(0.25, 1, 0.5, 1) ${delay}s, opacity ${dur}s ${delay}s`;
+                    el.style.transform = `translateX(${-dist_question}px) scale(1)`;
+                    el.style.opacity = op;
+                });
+                getEls('right', l).forEach(el => {
+                    el.style.transition = `transform ${dur}s cubic-bezier(0.25, 1, 0.5, 1) ${delay}s, opacity ${dur}s ${delay}s`;
+                    el.style.transform = `translateX(${dist_question}px) scale(1)`;
+                    el.style.opacity = op;
+                });
+            });
+
+            qGroup.style.transition = `clip-path ${dur}s cubic-bezier(0.25, 1, 0.5, 1) 0.25s, opacity ${dur}s 0s`;
+            var endMaskPts = JSON.parse(JSON.stringify(qShapes.bgPts));
+            endMaskPts[1][0] = 3600; // top right
+            endMaskPts[2][0] = 3600 + (qShapes.bgPts[2][0] - qShapes.bgPts[1][0]); // mid right tip
+            endMaskPts[3][0] = 3600; // bottom right
+            qGroup.style.clipPath = `polygon(${toPoly(makeMaskPts(endMaskPts, gH))})`;
+            qGroup.style.opacity = '1';
+            // Remove group clip after animation — child clips handle all shaping
+            setTimeout(() => { qGroup.style.clipPath = 'none'; }, 1200);
+            if (window.doResizeV3) setTimeout(window.doResizeV3, 50);
+        }
+    }
+    
+    function triggerV3Transition(newState, stateObj) {
+        if (v3Transitioning) return;
+        v3Transitioning = true;
+        var v3Master = document.getElementById('v3MasterContainer');
+        v3IsFirstEntry = (currentV3State === 0);
+
+        clearTimeout(window.v3AnimTimeout1);
+        clearTimeout(window.v3AnimTimeout2);
+        clearTimeout(window.v3AnimTimeout3);
+
+        if (newState === 0) {
+            applyAnimState('closing');
+            window.v3AnimTimeout1 = setTimeout(() => {
+                v3Master.style.transition = 'transform 0.85s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.85s cubic-bezier(0.25, 1, 0.5, 1)';
+                v3Master.style.transform = isScreen ? 'scale(0.8)' : 'scale(0.8)';
+                v3Master.style.opacity = '0';
+                applyAnimState('exit-sides');
+            }, 1200);
+            window.v3AnimTimeout2 = setTimeout(() => {
+                v3Master.style.display = 'none'; 
+                v3Master.style.transition = 'none';
+                v3Master.style.transform = '';
+                v3Master.style.opacity = '1';
+                applyAnimState('pre-entry'); 
+                v3Master.style.transition = 'none';
+                v3Master.style.transform = '';
+                v3Master.style.opacity = '1';
+                v3Transitioning = false; 
+                currentV3State = 0; 
+                if (window.currentState) renderV3(window.currentState);
+            }, 2050);
+        } else if (newState === 1) {
+            v3Master.style.display = 'block'; renderV3Grid(stateObj); 
+            var tStart = Date.now() + 50;
+            var now = Date.now();
+            if (currentV3State === 0) {
+                applyAnimState('pre-entry');
+                v3Master.style.transition = 'none';
+                v3Master.style.transform = isScreen ? 'scale(0.8)' : 'scale(0.8)';
+                v3Master.style.opacity = '0';
+            }
+            var delayClosing = Math.max(0, tStart - now);
+            var delayGrid = Math.max(0, (tStart + 1200) - now);
+            var delayEnd = Math.max(0, (tStart + 2400) - now);
+
+            window.v3AnimTimeout1 = setTimeout(() => {
+                applyAnimState('closing'); 
+                v3Master.style.transition = 'transform 0.85s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.85s cubic-bezier(0.25, 1, 0.5, 1)';
+                v3Master.style.transform = isScreen ? 'scale(1)' : 'scale(1.05)';
+                v3Master.style.opacity = '1';
+            }, delayClosing);
+
+            window.v3AnimTimeout2 = setTimeout(() => {
+                applyAnimState('grid');
+            }, delayGrid);
+
+            window.v3AnimTimeout3 = setTimeout(() => {
+                v3Transitioning = false;
+                currentV3State = 1;
+                if (window.currentState) renderV3(window.currentState);
+            }, delayEnd);
+        } else if (newState === 2) {
+            v3Master.style.display = 'block'; renderV3QBox(stateObj); 
+            var lockedAt = (stateObj.lockedPackage && stateObj.lockedPackage.lockedAt) ? stateObj.lockedPackage.lockedAt : Date.now();
+            var tStart = lockedAt + 1000;
+            var now = Date.now();
+
+            if (now >= tStart + 2400) {
+                applyAnimState('question');
+                v3Transitioning = false;
+                currentV3State = 2;
+                if (window.currentState) renderV3(window.currentState);
+                return;
+            }
+
+            if (currentV3State === 0) {
+                applyAnimState('pre-entry');
+                v3Master.style.transition = 'none';
+                v3Master.style.transform = isScreen ? 'scale(0.8)' : 'scale(0.8)';
+                v3Master.style.opacity = '0';
+            }
+
+            var delayClosing = Math.max(0, tStart - now);
+            var delayQuestion = Math.max(0, (tStart + 1200) - now);
+            var delayEnd = Math.max(0, (tStart + 2400) - now);
+
+            window.v3AnimTimeout1 = setTimeout(() => {
+                applyAnimState('closing'); 
+                v3Master.style.transition = 'transform 0.85s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.85s cubic-bezier(0.25, 1, 0.5, 1)';
+                v3Master.style.transform = isScreen ? 'scale(1)' : 'scale(1.05)';
+                v3Master.style.opacity = '1';
+            }, delayClosing);
+
+            window.v3AnimTimeout2 = setTimeout(() => {
+                applyAnimState('question');
+            }, delayQuestion);
+
+            window.v3AnimTimeout3 = setTimeout(() => {
+                v3Transitioning = false;
+                currentV3State = 2;
+                if (window.currentState) renderV3(window.currentState);
+            }, delayEnd);
+        }
+    }
+
+    function renderV3(state) {
+        var q = state.currentQuestion || {};
+        var computedMachineState = 0; 
+
+        var isMode1 = state.settings ? state.settings.questionSelectionMode === 1 : true;
+        if (state.lockedPackage) isMode1 = (state.lockedPackage.mode === 1);
+
+        if (state.lockedPackage) {
+            computedMachineState = 2;
+            clearTimeout(window.v3TransitionTimeout);
+            window.v3TransitionTimeout = null;
+        } else if (isMode1 && q.active) {
+            computedMachineState = 2;
+        } else if (state.isGridVisibleOnOverlay) {
+            computedMachineState = 1;
+            clearTimeout(window.v3TransitionTimeout); window.v3TransitionTimeout = null;
+        } else {
+            computedMachineState = 0;
+            clearTimeout(window.v3TransitionTimeout); window.v3TransitionTimeout = null;
+        }
+
+        lastV3State = state;
+        if (computedMachineState !== currentV3State && !v3Transitioning) {
+            triggerV3Transition(computedMachineState, state);
+        } else if (!v3Transitioning) { 
+            if (computedMachineState === 1) renderV3Grid(state); 
+            else if (computedMachineState === 2) renderV3QBox(state); 
+            else {
+                var v3Master = document.getElementById('v3MasterContainer');
+                if (v3Master) v3Master.style.display = 'none';
+            }
+        }
+    }
+
+    window.renderV3 = renderV3;
+
+    function renderV3Grid(state) {
+        var tv = document.getElementById('v3MasterContainer'); if (!tv) return; var gridContent = tv.querySelector('.a-grid-content'); if (!gridContent) return;
+        var mode = parseInt(state.settings ? state.settings.questionSelectionMode : 1); if (state.lockedPackage) mode = parseInt(state.lockedPackage.mode);
+        var gHtml = ''; var gSvgCells = ''; var L = (gW - gridW) / 2; var R = L + gridW; var midY = gH / 2;
+        var pS = actual_S / 2;
+        var getL0 = (y) => (y <= midY) ? L + pS - (pS/midY)*y : L + (pS/midY)*(y - midY);
+        var getL3 = (y) => (y <= midY) ? R - pS + (pS/midY)*y : R - (pS/midY)*(y - midY);
+        
+        var gridBg = tv.querySelector('.a-grid-bg');
+        if (gridBg) {
+            gridBg.style.clipPath = `polygon(${toPoly(gShapesCfg.shapes.bgPts)})`;
+            gridBg.style.background = 'linear-gradient(135deg, rgba(4, 15, 33, 0.95), rgba(0, 100, 150, 0.8))';
+        }
+        
+        if (mode === 1) {
+            // Mode 1: always build from full question bank, not from package structure
+            var pkgQuestions = [];
+            var qCount = state.questionCount || { "10": 12, "20": 12, "40": 12 };
+            [10, 20, 40].forEach(function(pt) {
+                var count = qCount[String(pt)] !== undefined ? qCount[String(pt)] : (qCount[pt] !== undefined ? qCount[pt] : 12);
+                for (var j = 0; j < count; j++) {
+                    pkgQuestions.push({ points: pt, idx: j });
+                }
+            });
+            
+            var ptsTypes = [...new Set(pkgQuestions.map(q => parseInt(q.points) || 10))].sort((a,b)=>a-b);
+            if (ptsTypes.length !== 3) ptsTypes = [10, 20, 40];
+            
+            var groups = ptsTypes.map(pt => ({
+                pts: pt,
+                qs: pkgQuestions.filter(q => (parseInt(q.points) || 10) === pt)
+            }));
+            
+            var colW = gridW / 3;
+            var getSepX = (y, baseX) => baseX + (y <= midY ? (y/midY)*pS : ((gH-y)/midY)*pS);
+            
+            var B1 = (y) => getSepX(y, L + colW - pS/2);
+            var B2 = (y) => getSepX(y, L + 2*colW - pS/2);
+            gSvgCells += `<path d="M ${B1(0)} 0 L ${B1(midY)} ${midY} L ${B1(gH)} ${gH}" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>`;
+            gSvgCells += `<path d="M ${B2(0)} 0 L ${B2(midY)} ${midY} L ${B2(gH)} ${gH}" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>`;
+            
+            var fontSizePts = isScreen ? '64px' : '45px';
+            var gap = isScreen ? '6px' : '6px';
+            var cellW = isScreen ? '52px' : '45px';
+            var cellH = isScreen ? '40px' : '34px';
+            var cellFs = isScreen ? '18px' : '18px';
+            
+            groups.forEach((group, i) => {
+                var cx = L + i * colW;
+                var qHtml = '';
+                group.qs.forEach((q, idx) => {
+                    var isPlayed = false, isActive = false;
+                    var played = (state.lockedPackage && state.lockedPackage.playedQuestions) || [];
+                    if (played.includes(q.idx)) {
+                        isPlayed = true;
+                    } else if (state.currentQuestion && state.currentQuestion.idx === q.idx && state.currentQuestion.active) {
+                        isActive = true;
+                    } else if (mode === 1 && state.pendingPackage && state.pendingPackage.mode === 1 && state.pendingPackage.points == group.pts && state.pendingPackage.idx == q.idx) {
+                        isActive = true;
+                    }
+                    var bgColor = isActive ? 'rgba(200, 0, 0, 0.85)' : (isPlayed ? 'rgba(0,0,0,0.7)' : 'rgba(20, 40, 90, 0.7)');
+                    var fontColor = isPlayed ? '#444' : '#fff';
+                    var displayNum = idx + 1;
+                    qHtml += `<div style="width:${cellW}; height:${cellH}; line-height:${cellH}; background:${bgColor}; color:${fontColor}; text-align:center; font-size:${cellFs}; font-weight:bold; border-radius:4px; border:1px solid rgba(255,255,255,0.2);">${displayNum}</div>`;
+                });
+                
+                var paddingTop = isScreen ? '0px' : '0px';
+                var justify = 'center';
+                var gridWidthCss = isScreen ? '230px' : '200px';
+                var gridMarginTop = isScreen ? '15px' : '10px';
+                
+                gHtml += `<div style="position:absolute; left:${cx}px; top:0px; width:${colW}px; height:${gH}px; pointer-events:auto; display:flex; flex-direction:column; align-items:center; justify-content:${justify}; padding-top:${paddingTop};">
+                    <div style="font-size:${fontSizePts}; font-weight:900; line-height:1; color:#fff; font-family:var(--font-general); text-shadow:2px 2px 4px rgba(0,0,0,0.5);">${group.pts}</div>
+                    <div style="width:${gridWidthCss}; display:flex; flex-wrap:wrap; justify-content:center; gap:${gap}; margin-top:${gridMarginTop};">
+                        ${qHtml}
+                    </div>
+                </div>`;
+            });
+        } else {
+            var pkg2 = state.lockedPackage || state.pendingPackage;
+            var rawQuestions = pkg2 ? (pkg2.questions || pkg2.package || []) : [];
+
+            var lockedPkg = state.lockedPackage;
+            var numCols = 3;
+            if (lockedPkg && lockedPkg.questions && lockedPkg.questions.length > 0) {
+                numCols = lockedPkg.questions.length;
+            } else if (state.settings && state.settings.questionsPerTeam) {
+                numCols = state.settings.questionsPerTeam;
+            }
+            if (numCols < 1) numCols = 1;
+            
+            var rowH = gH / 3;
+            var mode2StartQ = (state.settings && state.settings.mode2StartQ) || 1;
+            var c = [];
+
+            var shift = pS;
+            var colW_last = (gridW / numCols) + shift;
+            var colW_normal = (numCols > 1) ? (gridW - colW_last) / (numCols - 1) : gridW;
+            if (numCols === 1) colW_last = gridW;
+            
+            var minW = isScreen ? 80 : 60;
+            if (numCols > 1 && colW_normal < minW) {
+                colW_normal = minW;
+                colW_last = minW + shift;
+            }
+            var virtualGridW = (numCols === 1) ? gridW : ((numCols - 1) * colW_normal + colW_last);
+            var activeColIndex = null;
+            
+            var virtualR = L + virtualGridW;
+            var getL3_virtual = (y) => (y <= midY) ? virtualR - pS + (pS/midY)*y : virtualR - (pS/midY)*(y - midY);
+
+            for(var r=0; r<3; r++) {
+                var y1_2 = r*rowH, y2_2 = (r+1)*rowH;
+                for(var col=0; col<numCols; col++) {
+                    var _col = col; 
+                    var getLeft = (function(c2) {
+                        return function(y) {
+                            if (c2 === 0) return getL0(y);
+                            return getL0(y) + c2 * colW_normal;
+                        };
+                    })(_col);
+                    var getRight = (function(c2) {
+                        return function(y) {
+                            if (c2 === numCols - 1) return getL3_virtual(y);
+                            return getL0(y) + (c2 + 1) * colW_normal;
+                        };
+                    })(_col);
+
+                    var pts2 = [];
+                    if (r === 1) {
+                        pts2 = [ [getLeft(y1_2), y1_2], [getRight(y1_2), y1_2], [getRight(midY), midY], [getRight(y2_2), y2_2], [getLeft(y2_2), y2_2], [getLeft(midY), midY] ];
+                    } else {
+                        pts2 = [ [getLeft(y1_2), y1_2], [getRight(y1_2), y1_2], [getRight(y2_2), y2_2], [getLeft(y2_2), y2_2] ];
+                    }
+                    c.push({ pts: pts2, r: r, col: col, getLeft: getLeft, getRight: getRight });
+                }
+            }
+
+            var ptsTypes = [10, 20, 40];
+
+            c.forEach((cell, i) => {
+                var { pts, r, col } = cell;
+                var minX = Math.min(...pts.map(p => p[0])), maxX = Math.max(...pts.map(p => p[0])), minY = Math.min(...pts.map(p => p[1])), maxY = Math.max(...pts.map(p => p[1]));
+                var cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+
+                var colPts = ptsTypes[r];
+
+                var targetQ = rawQuestions[col];
+                var cellStateClass = 'inactive-tab';
+                var isChosen = false;
+                var badgeText = '';
+
+                if (targetQ) {
+                    if (parseInt(targetQ.points) === colPts) {
+                        var qIndex = col;
+                        var played = (state.lockedPackage && state.lockedPackage.playedQuestions) || [];
+
+                        if (played.includes(qIndex)) {
+                            cellStateClass = 'played';
+                        } else if (state.currentQuestion && state.currentQuestion.idx === targetQ.idx) {
+                            cellStateClass = 'active-tab';
+                            isChosen = true;
+                        } else if (state.pendingPackage && !state.lockedPackage &&
+                                   state.pendingPackage.package && state.pendingPackage.package[qIndex] !== undefined) {
+                            // Câu đang được KTV hover/chọn trong gói pending (mode 2/3)
+                            cellStateClass = 'active-tab';
+                            isChosen = true;
+                        } else {
+                            // Câu bình thường chưa được chọn - không dùng cho pan
+                            cellStateClass = 'inactive-tab';
+                        }
+                    }
+
+                    if (mode === 2 && parseInt(targetQ.points) === colPts) {
+                        if (targetQ.idx !== undefined && targetQ.idx !== -1) {
+                            badgeText = `Câu ${targetQ.idx + 1}`;
+                        } else {
+                            badgeText = `Câu ${mode2StartQ + col}`;
+                        }
+                    }
+                }
+
+                if (cellStateClass === 'active-tab' || cellStateClass === 'active-red') {
+                    activeColIndex = col;
+
+                }
+
+                var badgeHtml = '';
+                var badgeFontSize = numCols >= 5 ? (isScreen ? '15px' : '11px')
+                                  : numCols === 4 ? (isScreen ? '18px' : '13px')
+                                  : (isScreen ? '22px' : '16px');
+                if (badgeText) {
+                    badgeHtml = `<div class="v3-q-order-badge" style="position:static !important; bottom:auto !important; left:auto !important; transform:none !important; margin-top:2px !important; font-size:${badgeFontSize} !important; background:rgba(0,0,0,0.6) !important; padding:2px 6px !important; border-radius:6px !important; font-weight:bold !important; color:#00cfff !important; border:1px solid rgba(0, 207, 255, 0.4) !important; text-transform:uppercase !important;">${badgeText}</div>`;
+                }
+
+                // Font size tự co theo số cột
+                var fsClass = numCols >= 5 ? (isScreen ? '38px' : '22px')
+                            : numCols === 4 ? (isScreen ? '46px' : '28px')
+                            : (isScreen ? '60px' : '36px');
+                var fontStyle = `font-size:${fsClass}; font-weight:900; line-height:1; color:#fff; font-family: var(--font-general);`;
+
+                gHtml += `<div class="v3-cell ${cellStateClass}" style="width:100%; height:100%; top:0; left:0; clip-path:polygon(${toPoly(pts)}); pointer-events:auto; position:absolute; transition:all 0.3s;">
+                            <div style="position:absolute; left:${cx}px; top:${cy}px; transform: translate(-50%, -50%); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+                                <div style="${fontStyle}">${colPts}</div>
+                                ${badgeHtml}
+                            </div>
+                         </div>`;
+                gSvgCells += `<path d="${toSvgPath(pts)}" />`;
+            });
+        }
+
+        gridContent.innerHTML = gHtml; tv.querySelector('.s-g-cells').innerHTML = gSvgCells;
+
+        var panWrapper = tv.querySelector('.v3-grid-pan-wrapper');
+        var maskWrapper = tv.querySelector('.v3-grid-mask-wrapper');
+        if (panWrapper && maskWrapper) {
+            if (state.lockedPackage) {
+                // Khi đã chốt gói → reset về 0 để đồng bộ với viền animation
+                panWrapper.style.width = '100%';
+                window.v3GridPanX = 0;
+            } else if (activeColIndex !== null && virtualGridW > gridW && mode !== 1) {
+                var cellAbsLeft = activeColIndex * colW_normal;
+                var cellAbsRight = (activeColIndex === numCols - 1) ? virtualGridW : (activeColIndex + 1) * colW_normal;
+                var cellCenter = (cellAbsLeft + cellAbsRight) / 2;
+
+                // Căn câu hỏi ra đúng tâm khung
+                var desiredPanX = (gridW / 2) - cellCenter;
+
+                // Clamp để không tạo khoảng trắng ở hai đầu
+                var maxPanLeft = gridW - virtualGridW;
+                if (desiredPanX > 0) desiredPanX = 0;
+                if (desiredPanX < maxPanLeft) desiredPanX = maxPanLeft;
+
+                window.v3GridPanX = desiredPanX;
+            } else {
+                panWrapper.style.width = '100%';
+                window.v3GridPanX = 0;
+            }
+            panWrapper.style.transform = `translateX(${window.v3GridPanX}px)`;
+            
+            var isFadingLeft = (window.v3GridPanX < -1); 
+            var isFadingRight = (window.v3GridPanX > (gridW - virtualGridW) + 1);
+            
+            var maskString = 'none';
+            if (virtualGridW > gridW && (isFadingLeft || isFadingRight)) {
+                var cL1 = isFadingLeft ? 'transparent' : 'black';
+                var cL2 = 'black';
+                var cR1 = 'black';
+                var cR2 = isFadingRight ? 'transparent' : 'black';
+                maskString = `linear-gradient(to right, transparent 0, transparent ${L}px, ${cL1} ${L}px, ${cL2} ${L+80}px, ${cR1} ${R-80}px, ${cR2} ${R}px, transparent ${R}px, transparent 100%)`;
+            }
+            maskWrapper.style.webkitMaskImage = maskString;
+            maskWrapper.style.maskImage = maskString;
+        }
+    }
+
+    function renderV3QBox(state) {
+        var tv = document.getElementById('v3MasterContainer');
+        if (!tv) return;
+
+        var topBar = tv.querySelector('.o-top-bar');
+        if (topBar && state.teams) {
+            var pCount = state.teams.length;
+            var pBoxSlant = actual_S * (topH / gH); 
+            var pTopHtml = '';
+            
+            var mainTeamId = null;
+            if (state.currentQuestion && state.currentQuestion.active) {
+                mainTeamId = state.currentQuestion.mainTeamId;
+            } else if (state.turnOrder && state.turnOrder.length > 0) {
+                mainTeamId = state.turnOrder[0];
+            }
+            
+            var separatorsHtml = '';
+            var numTeams = state.teams.length;
+            var topBarWidthVal = gW - scoreW + actual_S - (pad + actual_S/2) + pBoxSlant;
+            var W_item = (topBarWidthVal + (numTeams - 1) * pBoxSlant) / numTeams;
+            var skewDeg = Math.atan(pBoxSlant / topH) * 180 / Math.PI;
+
+            state.teams.forEach((team, i) => {
+                var style = `clip-path: polygon(${pBoxSlant}px 0, 100% 0, calc(100% - ${pBoxSlant}px) 100%, 0 100%); margin-left: ${i===0?'0':(-pBoxSlant+'px')}`;
+                
+                var isActive = team.id === mainTeamId;
+                var isBuzzed = state.buzzedTeam === team.id;
+                var polyClasses = 'player-poly';
+                if (isActive) polyClasses += ' t-active';
+                if (isBuzzed) polyClasses += ' t-buzzed';
+                
+                if (isActive) {
+                    pTopHtml += `<div class="${polyClasses}" style="${style}"><span class="v3-player-inner" style="display:inline-block; white-space:nowrap; transform-origin:center center;">${team.name}</span></div>`;
+                } else {
+                    pTopHtml += `<div class="${polyClasses}" style="${style}"><span class="v3-player-inner" style="display:inline-block; white-space:nowrap; transform-origin:center center;">${team.name} (${team.score})</span></div>`;
+                }
+
+                if (i < numTeams - 1) {
+                    var xPos = (i + 1) * W_item - i * pBoxSlant;
+                    separatorsHtml += `<div style="position: absolute; bottom: 12.5%; left: ${xPos - pBoxSlant}px; width: 4px; height: 75%; background: #ffffff; border-radius: 99px; transform-origin: bottom center; transform: skewX(-${skewDeg}deg); z-index: 15; box-shadow: 0 0 8px rgba(255,255,255,0.6); pointer-events: none;"></div>`;
+                }
+            });
+            topBar.style.left = (pad + actual_S/2 - pBoxSlant) + 'px';
+            topBar.style.right = (scoreW - actual_S) + 'px';
+            topBar.style.width = 'auto';
+            topBar.style.marginLeft = '0px';
+            topBar.innerHTML = pTopHtml + separatorsHtml;
+        }
+
+        var finalActiveQNum = null;
+
+        var pointsArea = document.getElementById('v3PointsArea');
+        if (pointsArea) {
+            var activeTeamId = null;
+            if (state.turnOrder && state.turnOrder.length > 0) activeTeamId = state.turnOrder[0];
+            if (state.currentQuestion && state.currentQuestion.active) activeTeamId = state.currentQuestion.mainTeamId;
+            
+            var p = state.lockedPackage || state.pendingPackage;
+            if (!p && state.packages && activeTeamId) {
+                p = state.packages.find(pkg => pkg.teamId === activeTeamId);
+            }
+            
+            var mode = parseInt(state.settings ? state.settings.questionSelectionMode : 1);
+            if (p) mode = parseInt(p.mode);
+            
+            var ptsHtml = '';
+            var packH = gH * 0.15;
+            var boxSlant = actual_S * (packH / gH); 
+            var packW = scoreW - pad - actual_S/2 + boxSlant;
+            var numPoints = (p && p.questions) ? p.questions.length : 3;
+            var cellSeparatorsHtml = '';
+
+            if (p && p.questions && (mode === 2 || mode === 3)) {
+                var activeQNum = null;
+                var ptsTypes = [10, 20, 40];
+                var mode2StartQ = (state.settings && state.settings.mode2StartQ) || 1;
+                
+                var numRows = 1;
+                if (numPoints >= 19) {
+                    numRows = Math.ceil(numPoints / 9);
+                } else if (numPoints >= 10) {
+                    numRows = 2;
+                }
+                
+                var packH = gH * 0.15;
+                var rowH = numRows >= 3 ? (packH / 2) : (packH / numRows);
+                var boxSlant = actual_S * (packH / gH);
+                var boxSlant_row = rowH * (actual_S / gH);
+                var cellSkewDeg = Math.atan(boxSlant_row / rowH) * 180 / Math.PI;
+                
+                var cellsPerRow = Math.ceil(numPoints / numRows);
+                var rowsData = [];
+                var tempIndex = 0;
+                for (var r = 0; r < numRows; r++) {
+                    var countThisRow = cellsPerRow;
+                    if (r === numRows - 1) {
+                        countThisRow = numPoints - tempIndex;
+                    } else if (tempIndex + countThisRow > numPoints) {
+                        countThisRow = numPoints - tempIndex;
+                    }
+                    var rowQuestions = [];
+                    for (var cIdx = 0; cIdx < countThisRow; cIdx++) {
+                        rowQuestions.push({ qItem: p.questions[tempIndex], globalIdx: tempIndex });
+                        tempIndex++;
+                    }
+                    rowsData.push(rowQuestions);
+                }
+
+                // Determine activeRowIdx and scrollRow
+                var activeRowIdx = 0;
+                rowsData.forEach((rowQuestions, rIdx) => {
+                    if (rowQuestions.some(rq => rq.globalIdx === p.currentIndex)) {
+                        activeRowIdx = rIdx;
+                    }
+                });
+                var scrollRow = numRows >= 3 ? Math.min(activeRowIdx, numRows - 2) : 0;
+                
+                var rowsHtml = '';
+                rowsData.forEach((rowQuestions, rIdx) => {
+                    var C = rowQuestions.length;
+                    var W_cell = (packW + (C - 1) * boxSlant_row) / C;
+                    var rowCellsHtml = '';
+                    var rowSeparatorsHtml = '';
+                    
+                    rowQuestions.forEach((rowQ, cellIdx) => {
+                        var qItem = rowQ.qItem;
+                        var globalIdx = rowQ.globalIdx;
+                        
+                        var color = '#aaaaaa';
+                        var bgColor = 'rgba(0,0,0,0.6)';
+                        var isActive = false;
+                        var isPlayed = false;
+                        
+                        if (state.currentQuestion && state.currentQuestion.active && !state.currentQuestion.isHidden) {
+                            isActive = (p.currentIndex === globalIdx);
+                        }
+                        
+                        if (p.currentIndex > globalIdx) {
+                            isPlayed = true;
+                        } else if (p.currentIndex === globalIdx && state.currentQuestion && state.currentQuestion.resolved) {
+                            isPlayed = true;
+                        }
+                        
+                        var cellFs = '24px';
+                        if (numRows === 1) {
+                            cellFs = numPoints >= 5 ? '12px' : (numPoints === 4 ? '14px' : '16px');
+                        } else if (numRows === 2) {
+                            cellFs = '10px';
+                        } else {
+                            cellFs = '8px';
+                        }
+                        
+                        var borderStyle = '1px solid rgba(255,255,255,0.2)';
+                        var cellGlow = 'none';
+                        if (isActive) {
+                            color = '#ffffff';
+                            bgColor = 'linear-gradient(135deg, #cc0000, #880000)';
+                            borderStyle = '2px solid #ffffff';
+                            cellGlow = '0 0 10px rgba(255, 0, 0, 0.8), inset 0 0 10px rgba(255, 0, 0, 0.8)';
+                            if (mode === 2) {
+                                activeQNum = mode2StartQ + qItem.idx * 3 + ptsTypes.indexOf(parseInt(qItem.points));
+                            } else {
+                                activeQNum = globalIdx + 1;
+                            }
+                            finalActiveQNum = activeQNum;
+                        } else if (isPlayed) {
+                            color = '#555555';
+                            bgColor = 'rgba(0,0,0,0.8)';
+                        }
+                        
+                        rowCellsHtml += `<div class="pack-poly ${isActive?'active':''}" data-global-idx="${globalIdx}" style="clip-path: polygon(${boxSlant_row}px 0, 100% 0, calc(100% - ${boxSlant_row}px) 100%, 0 100%); margin-left: ${cellIdx===0?'0':(-boxSlant_row+'px')}; background: ${bgColor}; color: ${color}; width: ${W_cell}px; min-width: ${W_cell}px; max-width: ${W_cell}px; flex: 0 0 ${W_cell}px; border: ${borderStyle}; box-shadow: ${cellGlow}; display: flex; align-items: center; justify-content: center; font-size: ${cellFs}; font-weight: 900; box-sizing: border-box; height: 100%;">${qItem.points}</div>`;
+                        
+                        if (cellIdx < C - 1) {
+                            var xPosCell = (cellIdx + 1) * W_cell - cellIdx * boxSlant_row;
+                            rowSeparatorsHtml += `<div style="position: absolute; bottom: 15%; left: ${xPosCell - boxSlant_row}px; width: 1.5px; height: 70%; background: rgba(255,255,255,0.4); border-radius: 99px; transform-origin: bottom center; transform: skewX(-${cellSkewDeg}deg); z-index: 15; box-shadow: 0 0 4px rgba(255,255,255,0.3); pointer-events: none;"></div>`;
+                        }
+                    });
+                    
+                    var v_idx = rIdx - scrollRow;
+                    var offset_r = (numRows - 1 - v_idx) * boxSlant_row;
+                    var rowTop = v_idx * rowH;
+                    rowsHtml += `<div class="v3-points-row" data-row-idx="${rIdx}" style="position: absolute; left: ${offset_r}px; top: ${rowTop}px; display: flex; flex-direction: row; height: ${rowH}px; width: ${packW}px; margin: 0; padding: 0; overflow: visible; transition: all 0.5s ease-in-out;">
+                        ${rowCellsHtml}
+                        ${rowSeparatorsHtml}
+                    </div>`;
+                });
+                ptsHtml = rowsHtml;
+            } else if (mode === 1) {
+                var activeQPoints = 10;
+                var activeQIdx = 1;
+                if (state.currentQuestion && state.currentQuestion.active) {
+                    activeQPoints = parseInt(state.currentQuestion.points) || 10;
+                    activeQIdx = state.currentQuestion.idx !== undefined ? state.currentQuestion.idx + 1 : 1;
+                }
+                var dispText = activeQPoints + ' - Câu ' + activeQIdx;
+                var bgColor = 'linear-gradient(135deg, #cc0000, #880000)';
+                var color = '#ffffff';
+                
+                ptsHtml += `<div class="pack-poly active" style="clip-path: polygon(${boxSlant}px 0, 100% 0, calc(100% - ${boxSlant}px) 100%, 0 100%); background: ${bgColor}; color: ${color}; width: ${packW}px; max-width: ${packW}px; flex: 0 0 ${packW}px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900;">${dispText}</div>`;
+            }
+            pointsArea.style.width = (packW + 40) + 'px';
+            pointsArea.style.height = packH + 'px';
+            pointsArea.style.left = '0px';
+            pointsArea.style.overflow = 'hidden';
+
+            // Key chỉ bao gồm cấu trúc (số cell + điểm) — không bao gồm active state
+            var structKey = (p && p.questions) ? p.questions.map(q => q.points).join(',') : '';
+            var needRebuild = (pointsArea.getAttribute('data-struct') !== structKey);
+
+            if (needRebuild) {
+                var animStyle = `animation: v3SlideUpFade 0.5s ease forwards; animation-delay: 0.85s; opacity: 0; transform: translateY(20px); width: 100%; height: 100%; position: relative;`;
+                var newHtml = `<div style="${animStyle}">${ptsHtml}</div>`;
+                pointsArea.innerHTML = newHtml;
+                pointsArea.setAttribute('data-struct', structKey);
+            } else {
+                if (!p || !p.questions) return; // Mode 1 pendingPackage has no questions array
+                // Compute scrollRow in the update block
+                var numPoints = p.questions.length;
+                var numRows = 1;
+                if (numPoints >= 19) {
+                    numRows = Math.ceil(numPoints / 9);
+                } else if (numPoints >= 10) {
+                    numRows = 2;
+                }
+                var packH = gH * 0.15;
+                var rowH = numRows >= 3 ? (packH / 2) : (packH / numRows);
+                var boxSlant_row = rowH * (actual_S / gH);
+                
+                var cellsPerRow = Math.ceil(numPoints / numRows);
+                var activeRowIdx = 0;
+                var tempIndex = 0;
+                for (var r = 0; r < numRows; r++) {
+                    var countThisRow = cellsPerRow;
+                    if (r === numRows - 1) {
+                        countThisRow = numPoints - tempIndex;
+                    } else if (tempIndex + countThisRow > numPoints) {
+                        countThisRow = numPoints - tempIndex;
+                    }
+                    if (p.currentIndex >= tempIndex && p.currentIndex < tempIndex + countThisRow) {
+                        activeRowIdx = r;
+                    }
+                    tempIndex += countThisRow;
+                }
+                var scrollRow = numRows >= 3 ? Math.min(activeRowIdx, numRows - 2) : 0;
+                
+                // Update top and left of rows for diagonal auto-scrolling
+                var rows = pointsArea.querySelectorAll('.v3-points-row');
+                rows.forEach(function(rowDiv, rIdx) {
+                    var v_idx = rIdx - scrollRow;
+                    var offset_r = (numRows - 1 - v_idx) * boxSlant_row;
+                    var rowTop = v_idx * rowH;
+                    rowDiv.style.left = offset_r + 'px';
+                    rowDiv.style.top = rowTop + 'px';
+                });
+
+                p.questions.forEach(function(qItem, idx) {
+                    var cell = pointsArea.querySelector(`.pack-poly[data-global-idx="${idx}"]`);
+                    if (!cell) return;
+
+                    var isAct = false, isPla = false;
+                    if (state.currentQuestion && state.currentQuestion.active && !state.currentQuestion.isHidden) {
+                        isAct = (p.currentIndex === idx);
+                    }
+                    if (p.currentIndex > idx) isPla = true;
+                    else if (p.currentIndex === idx && state.currentQuestion && state.currentQuestion.resolved) isPla = true;
+
+                    var col = isAct ? '#ffffff' : (isPla ? '#555555' : '#aaaaaa');
+                    var bg  = isAct ? 'linear-gradient(135deg, #cc0000, #880000)' : (isPla ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.6)');
+                    var brd = isAct ? '2px solid #ffffff' : '1px solid rgba(255,255,255,0.2)';
+                    var shd = isAct ? '0 0 10px rgba(255,0,0,0.8), inset 0 0 10px rgba(255,0,0,0.8)' : 'none';
+
+                    cell.style.background = bg;
+                    cell.style.color = col;
+                    cell.style.border = brd;
+                    cell.style.boxShadow = shd;
+                });
+            }
+            if (!document.getElementById('v3SlideUpFadeStyle')) {
+                var st = document.createElement('style');
+                st.id = 'v3SlideUpFadeStyle';
+                st.innerHTML = `@keyframes v3SlideUpFade { to { opacity: 1; transform: translateY(0); } }`;
+                document.head.appendChild(st);
+            }
+            
+            // Toggle V3 Hope Star GIF based on state
+            var hopeStar = document.getElementById('v3HopeStar');
+            if (hopeStar) {
+                var isHopeActive = false;
+                if (state.currentQuestion && state.currentQuestion.isHopeStar && currentV3State === 2 && !v3Transitioning) {
+                    isHopeActive = true;
+                }
+                var hopeStarLeft = qShapesCfg.separator.left + (scoreW / 2);
+                hopeStar.style.left = hopeStarLeft + 'px';
+                
+                if (isHopeActive) {
+                    hopeStar.style.transform = 'translateX(-50%) scale(1)';
+                    hopeStar.style.opacity = '1';
+                    if (!window.lastV3HopeStarActive) {
+                        playSound('hope_star');
+                    }
+                } else {
+                    hopeStar.style.transform = 'translateX(-50%) scale(0)';
+                    hopeStar.style.opacity = '0';
+                }
+                window.lastV3HopeStarActive = isHopeActive;
+            }
+        }
+
+        var qTextV3 = document.getElementById('qTextV3');
+        if (qTextV3) {
+            if (state.currentQuestion && state.currentQuestion.active) {
+                var textHtml = state.currentQuestion.isHidden ? '' : (state.currentQuestion.text || state.currentQuestion.content || state.currentQuestion.question || '').toString().replace(/\n/g, '<br>');
+                
+                if (qTextV3.getAttribute('data-raw') !== textHtml) {
+                    qTextV3.innerHTML = textHtml;
+                    qTextV3.setAttribute('data-raw', textHtml);
+                }
+                
+                var wrapper = qTextV3.parentElement;
+                if (wrapper) {
+                    var textLeft = pad + (actual_S / 2) + 20;
+                    var textWidth = (gW - scoreW) - textLeft - 10;
+                    wrapper.style.left = textLeft + 'px';
+                    wrapper.style.width = textWidth + 'px';
+                    var doResize = () => {
+                        window.doResizeV3 = doResize;
+                        var fs = 30;
+                        qTextV3.style.setProperty('font-size', fs + 'px', 'important');
+                        qTextV3.style.lineHeight = '1.35';
+                        qTextV3.style.width = '100%';
+                        
+                        var maxH = 190; // Hardcode to 190px to avoid browser measurement quirks during transition
+                        
+                        void qTextV3.offsetHeight; // Force reflow
+                        
+                        while (qTextV3.scrollHeight > maxH && fs > 18) {
+                            fs -= 1;
+                            qTextV3.style.setProperty('font-size', fs + 'px', 'important');
+                            void qTextV3.offsetHeight; // Force reflow
+                        }
+                        
+                        qTextV3.style.setProperty('font-size', fs + 'px', 'important');
+                        qTextV3.style.lineHeight = '1.2';
+                        qTextV3.style.width = '100%';
+                        
+                        if (qTextV3.scrollHeight < maxH - 20) {
+                            wrapper.style.alignItems = 'center';
+                            wrapper.style.paddingTop = '0px';
+                        } else {
+                            wrapper.style.alignItems = 'flex-start';
+                            wrapper.style.paddingTop = '10px';
+                        }
+                    };
+                    
+                    doResize();
+                    requestAnimationFrame(doResize);
+                    setTimeout(doResize, 150);
+                    setTimeout(doResize, 600);
+                    setTimeout(doResize, 1300);
+                    setTimeout(doResize, 2000);
+                    if (document.fonts && document.fonts.ready) {
+                        document.fonts.ready.then(doResize);
+                    }
+                }
+            } else {
+                qTextV3.innerHTML = '';
+                qTextV3.removeAttribute('data-raw');
+            }
+        }
+
+        var scoreMain = document.getElementById('v3ActiveScore');
+        if (scoreMain) {
+            var mainTeamId = null;
+            if (state.currentQuestion && state.currentQuestion.active) {
+                mainTeamId = state.currentQuestion.mainTeamId;
+            } else if (state.turnOrder && state.turnOrder.length > 0) {
+                mainTeamId = state.turnOrder[0];
+            }
+            var mainTeam = (mainTeamId && state.teams) ? state.teams.find(t => t.id === mainTeamId) : null;
+            scoreMain.textContent = mainTeam ? mainTeam.score : '';
+            scoreMain.style.boxSizing = 'border-box';
+            scoreMain.style.paddingLeft = (actual_S / 2) + 'px';
+            scoreMain.style.paddingRight = pad + 'px';
+        }
+        var scorePts = [ [actual_S, 0], [scoreW - pad - actual_S/2, 0], [scoreW - pad, gH/2], [scoreW - pad - actual_S/2, gH], [0, gH] ];
+
+        var oBg = tv.querySelector('.o-bg');
+        if (oBg) {
+            var newBgClip = `polygon(${toPoly(qShapesCfg.bgPts)})`;
+            if (oBg.style.clipPath !== newBgClip) oBg.style.clipPath = newBgClip;
+            var newBgStyle = `linear-gradient(135deg, ${colorL}, #000)`;
+            if (oBg.style.background !== newBgStyle) oBg.style.background = newBgStyle;
+        }
+
+        var soBg = tv.querySelector('.s-o-bg');
+        if (soBg) {
+            var newSoBgD = toSvgPath(qShapesCfg.bgPts);
+            if (soBg.getAttribute('d') !== newSoBgD) soBg.setAttribute('d', newSoBgD);
+        }
+
+        var scoreEl = tv.querySelector('.o-score');
+        if (scoreEl) {
+            scoreEl.style.right = 'auto'; 
+            scoreEl.style.left = qShapesCfg.separator.left + 'px'; 
+
+            var newScoreClip = `polygon(${toPoly(scorePts)})`;
+            if (scoreEl.style.clipPath !== newScoreClip) scoreEl.style.clipPath = newScoreClip;
+            var newScoreW = scoreW + 'px';
+            if (scoreEl.style.width !== newScoreW) scoreEl.style.width = newScoreW;
+            var newScoreBg = `linear-gradient(135deg, ${colorR}, #050a14)`;
+            if (scoreEl.style.background !== newScoreBg) scoreEl.style.background = newScoreBg;
+        }
+
+        var soScore = tv.querySelector('.s-o-score');
+        if (soScore) {
+            var newSoScoreD = toSvgPath(scorePts);
+            if (soScore.getAttribute('d') !== newSoScoreD) soScore.setAttribute('d', newSoScoreD);
+            var newSoScoreTransform = `translate(${qShapesCfg.separator.left}, 0)`;
+            if (soScore.getAttribute('transform') !== newSoScoreTransform) soScore.setAttribute('transform', newSoScoreTransform);
+        }
+
+        var sep = tv.querySelector('.o-separator');
+        if (sep) {
+            var newSepH = qShapesCfg.separator.height + 'px';
+            if (sep.style.height !== newSepH) sep.style.height = newSepH;
+            var newSepLeft = qShapesCfg.separator.left + 'px';
+            if (sep.style.left !== newSepLeft) sep.style.left = newSepLeft;
+            var newSepTransform = `skewX(-${qShapesCfg.separator.angle}deg)`;
+            if (sep.style.transform !== newSepTransform) sep.style.transform = newSepTransform;
+        }
+
+        tv.querySelectorAll('.s-o-svg, .s-o-svg-arrows, .s-g-svg, .s-g-svg-arrows').forEach(svg => {
+            var newVB = `0 0 ${gW} ${gH}`;
+            if (svg.getAttribute('viewBox') !== newVB) svg.setAttribute('viewBox', newVB);
+        });
+
+        // FIX TIMER POSITION AND WIDTH - place at vertical center of background panel
+        var timerV3 = document.getElementById('timerContainerV3');
+        if (timerV3) {
+            var timerHeight = 26;
+            // Left edge: inner-right of left navy arrow at mid-height = alnPts[2][0], extrapolate to timer's y
+            var alnPts = qShapes.alnPts;
+            var xLeft_top = alnPts[1][0]; // alnPts top-right corner (at y=0)
+            var xLeft_mid = alnPts[2][0]; // alnPts mid point (at y=midY)
+            var xLeft_bot = alnPts[3][0]; // alnPts bottom-right corner (at y=gH)
+            var sepLeft = qShapesCfg.separator.left;
+            var timerTopY = gH - timerHeight;
+            var timerBotY = gH;
+            // Interpolate left edge X at timerTopY and timerBotY
+            var xLeftAtTop = (timerTopY <= midY)
+                ? xLeft_top + (xLeft_mid - xLeft_top) * (timerTopY / midY)
+                : xLeft_mid + (xLeft_bot - xLeft_mid) * ((timerTopY - midY) / midY);
+            var xLeftAtBot = (timerBotY <= midY)
+                ? xLeft_top + (xLeft_mid - xLeft_top) * (timerBotY / midY)
+                : xLeft_mid + (xLeft_bot - xLeft_mid) * ((timerBotY - midY) / midY);
+            // Separator right edge — vertical (no tilt for separator line itself)
+            var xRight_top = sepLeft + actual_S;
+            var xRight_bot = sepLeft;
+            var xRightAtTop = sepLeft + actual_S - slope * timerTopY;
+            var xRightAtBot = sepLeft + actual_S - slope * timerBotY;
+            // Width at mid: use mid values
+            var xL = xLeft_mid;
+            var xR = sepLeft + pS;
+            var wFull = xR - xL;
+            var deltaX = timerHeight * slope;
+
+            // Move timerV3 to leftContent to guarantee it is drawn underneath the text wrapper
+            var leftContent = tv.querySelector('.ov-left-content');
+            if (leftContent && timerV3.parentNode !== leftContent) {
+                leftContent.insertBefore(timerV3, leftContent.firstChild);
+            }
+            
+            timerV3.style.position = 'absolute';
+            timerV3.style.bottom = 'auto';
+            timerV3.style.top = timerTopY + 'px';
+            timerV3.style.left = (xLeftAtTop - 2) + 'px';
+            timerV3.style.width = (xRightAtTop - xLeftAtTop + 4) + 'px';
+            timerV3.style.height = timerHeight + 'px';
+            timerV3.style.minHeight = timerHeight + 'px';
+            timerV3.style.margin = '0';
+            timerV3.style.padding = '0';
+            timerV3.style.transform = 'none';
+            timerV3.style.clipPath = `polygon(0 0, 100% 0, calc(100% - ${deltaX + 2}px) 100%, ${deltaX + 2}px 100%)`;
+            timerV3.style.display = 'flex';
+            timerV3.style.zIndex = '5';
+            
+            var blackBar = timerV3.querySelector('div');
+            if (blackBar) {
+                blackBar.style.position = 'absolute';
+                blackBar.style.top = '50%';
+                blackBar.style.transform = 'translateY(-50%)';
+                blackBar.style.left = (12 + deltaX) + 'px';
+                blackBar.style.right = (12 + deltaX) + 'px';
+                blackBar.style.width = 'auto';
+                blackBar.style.height = '8px';
+            }
+        }
+
+        if (typeof window.autoScaleTeamNames === 'function') {
+            window.autoScaleTeamNames();
+        }
+    }
+
+    function autoScale() {
+        var baseW = 1920;
+        var baseH = 1080;
+        var scaleX = window.innerWidth / baseW;
+        var scaleY = window.innerHeight / baseH;
+        var responsiveScale = Math.min(scaleX, scaleY);
+        var manualScale = (window.currentState && window.currentState.settings && window.currentState.settings.scale) ? window.currentState.settings.scale / 100 : 1;
+        var scale = Math.max(0.2, Math.min(2.5, responsiveScale * manualScale));
+        
+        var mainContainer = document.getElementById('main-container');
+        if (mainContainer) {
+            mainContainer.style.transform = `scale(${scale})`;
+            mainContainer.style.transformOrigin = 'bottom center';
+        }
+        document.documentElement.style.setProperty('--v3-scale', scale);
+    }
+    window.autoScale = autoScale;
+    window.addEventListener('resize', autoScale);
+    window.addEventListener('load', autoScale);
+    autoScale();
+
+    if (window.currentState && window.currentState.settings && window.currentState.settings.theme === 'v3') {
+        isEconovaV3 = true;
+        v3Wrapper.style.display = 'block';
+        var qArea = document.querySelector('.question-area'); if (qArea) { qArea.style.opacity = '0'; qArea.style.visibility = 'hidden'; }
+        var timerDefault = document.getElementById('timerContainerDefault'); if (timerDefault) { timerDefault.style.opacity = '0'; timerDefault.style.visibility = 'hidden'; }
+        var bgGrid = document.querySelector('.bg-grid'); if (bgGrid) bgGrid.style.display = 'none';
+        renderV3(window.currentState);
+    }
+    window.addEventListener('resize', autoResizeText);
+});
+</script>
 </body>
 </html>

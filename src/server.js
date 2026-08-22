@@ -1079,7 +1079,8 @@ const roomPin = (pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0'
         const result = roomManager.verifyAdmin(pin, pass);
         if (result.success) {
             socket.isAdmin = true;
-            socket.join(result.room.pin);
+                socket.currentRoomPin = cleanPin;
+                socket.join(result.room.pin);
             socket.currentRoomPin = result.room.pin;
             if (result.room.connectedClients) result.room.connectedClients.add(socket.id);
             socket.emit('updateState', result.room.gameState || gameState);
@@ -1114,7 +1115,8 @@ const roomPin = (pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0'
         const result = roomManager.verifyMC(pin, pass);
         if (result.success) {
             socket.isMC = true;
-            socket.join(result.room.pin);
+                socket.currentRoomPin = cleanPin;
+                socket.join(result.room.pin);
             socket.currentRoomPin = result.room.pin;
             if (result.room.connectedClients) result.room.connectedClients.add(socket.id);
             socket.emit('updateState', result.room.gameState || gameState);
@@ -1147,29 +1149,83 @@ const roomPin = (pin || '').toString().trim().replace(/\D/g, '').padStart(6, '0'
     }
     socket.emit('serverIPs', getLocalIPs());
     if (global.activeTunnel) socket.emit('publicLinkResult', { success: true, url: global.activeTunnel.url });
-    console.log('[SERVER] Socket connected and updateState emitted to client:', socket.id);
-    console.log('[SERVER] Current theme:', gameState.settings.theme);
-    console.log('[SERVER] Teams in state:', gameState.teams.length, 'teams');
+    console.log('[SERVER] Socket connected:', socket.id);
 
     // Allow clients to request current state (for late-connecting listeners)
     socket.on('get-state', () => {
         if (socket.currentRoomPin) {
             const room = roomManager.getRoom(socket.currentRoomPin);
-            if (room) { socket.emit('updateState', room.gameState); return; }
+            if (room) { emitToSocketFiltered(socket, 'updateState', room.gameState); return; }
         }
         socket.emit('updateState', gameState);
     });
 
     socket.on('requestState', () => {
-        console.log('[SERVER] Client requesting state...');
         if (socket.currentRoomPin) {
             const room = roomManager.getRoom(socket.currentRoomPin);
-            if (room) { socket.emit('updateState', room.gameState); return; }
+            if (room) { emitToSocketFiltered(socket, 'updateState', room.gameState); return; }
         }
         socket.emit('updateState', gameState);
     });
 
+    // --- THÍ SINH: Chọn đội ---
+    socket.on('claimTeam', (data, callback) => {
+        const pin = socket.currentRoomPin;
+        if (!pin) {
+            if (typeof callback === 'function') callback({ success: false, message: 'Chưa vào phòng!' });
+            return;
+        }
+        const room = roomManager.getRoom(pin);
+        if (!room) {
+            if (typeof callback === 'function') callback({ success: false, message: 'Phòng không tồn tại!' });
+            return;
+        }
+        const state = room.gameState;
+        const teamId = parseInt(data.teamId);
+        const clientId = data.clientId;
 
+        if (!state.claimedTeams) state.claimedTeams = {};
+
+        // Kiểm tra đội này đã bị người khác chọn chưa
+        const existing = state.claimedTeams[teamId];
+        if (existing) {
+            const existingSocket = io.sockets.sockets.get(existing.socketId);
+            const isOnline = existingSocket && existingSocket.connected;
+            const isSameClient = existing.clientId === clientId;
+            if (isOnline && !isSameClient) {
+                if (typeof callback === 'function') callback({ success: false, message: 'Đội này đã có thí sinh khác chọn!' });
+                socket.emit('claimError', { message: 'Đội này đã có thí sinh khác chọn! Vui lòng chọn đội khác.' });
+                return;
+            }
+        }
+
+        // Đăng ký đội cho socket này
+        state.claimedTeams[teamId] = { socketId: socket.id, clientId: clientId, teamId: teamId };
+        socket.teamId = teamId;
+
+        if (typeof callback === 'function') callback({ success: true, teamId: teamId });
+        broadcastState(socket);
+        scheduleSaveRooms(2000);
+    });
+
+    // --- ADMIN: Giải phóng thiết bị thí sinh ---
+    socket.on('releaseTeam', (teamId) => {
+        const pin = socket.currentRoomPin;
+        if (!pin) return;
+        const room = roomManager.getRoom(pin);
+        if (!room) return;
+        const state = room.gameState;
+        if (!state.claimedTeams) return;
+
+        const claim = state.claimedTeams[teamId];
+        if (claim) {
+            const targetSocket = io.sockets.sockets.get(claim.socketId);
+            if (targetSocket) targetSocket.emit('teamReleased', { teamId: teamId });
+        }
+        delete state.claimedTeams[teamId];
+        broadcastState(socket);
+        scheduleSaveRooms(2000);
+    });
 
     // Mở phòng / Đóng phòng
     socket.on('toggleRoom', (isOpen, pin) => {
@@ -2153,37 +2209,73 @@ if (!state.isBuzzerLocked && state.buzzedTeam === null) {
 
     // --- NGẮT KẾT NỐI -> Giải phóng đội ---
     socket.on('disconnect', () => {
-        let changed = false;
-        for (let tid in gameState.claimedTeams) {
-            if (gameState.claimedTeams[tid].socketId === socket.id) {
-                delete gameState.claimedTeams[tid];
-                changed = true;
+        const roomPin = socket.currentRoomPin;
+        if (roomPin) {
+            const room = roomManager.getRoom(roomPin);
+            if (room) {
+                // Clean up claimed teams in room
+                let changed = false;
+                const state = room.gameState;
+                if (state.claimedTeams) {
+                    for (let tid in state.claimedTeams) {
+                        if (state.claimedTeams[tid].socketId === socket.id) {
+                            delete state.claimedTeams[tid];
+                            changed = true;
+                        }
+                    }
+                }
+                // Remove from connectedClients
+                if (room.connectedClients) room.connectedClients.delete(socket.id);
+                if (changed) {
+                    // Notify remaining clients in room that a team was freed
+                    const socketsInRoom = io.sockets.adapter.rooms.get(roomPin);
+                    if (socketsInRoom) {
+                        socketsInRoom.forEach(sid => {
+                            const s = io.sockets.sockets.get(sid);
+                            if (s) emitToSocketFiltered(s, 'updateState', state);
+                        });
+                    }
+                    scheduleSaveRooms(2000);
+                }
+                broadcastDeviceStatus(roomPin);
             }
+        } else {
+            // Legacy desktop mode fallback
+            let changed = false;
+            for (let tid in gameState.claimedTeams) {
+                if (gameState.claimedTeams[tid].socketId === socket.id) {
+                    delete gameState.claimedTeams[tid];
+                    changed = true;
+                }
+            }
+            if (changed) io.emit('updateState', gameState);
         }
-        if (changed) io.emit('updateState', gameState);
     });
 
     // --- ANTI-CHEAT: Ghi nhận gian lận và mở khoá ---
     socket.on('antiCheatViolation', (data) => {
         const state = getActiveState(socket);
-console.log("RECEIVED VIOLATION:", data);
         let tid = data.teamId;
         if (!tid) return;
 
         if (!state.antiCheatViolations) state.antiCheatViolations = {};
         if (!state.bannedTeams) state.bannedTeams = [];
 
-        if (state.bannedTeams.includes(tid)) return; // Already banned
+        if (state.bannedTeams.includes(tid)) return;
 
         state.antiCheatViolations[tid] = (state.antiCheatViolations[tid] || 0) + 1;
         let count = state.antiCheatViolations[tid];
 
         if (count >= 3) {
             state.bannedTeams.push(tid);
-            io.emit('antiCheatBanned', { teamId: tid });
+            if (socket.currentRoomPin) {
+                io.to(socket.currentRoomPin).emit('antiCheatBanned', { teamId: tid });
+            } else { io.emit('antiCheatBanned', { teamId: tid }); }
             playSoundInRoom(socket, 'wrong');
         } else {
-            io.emit('antiCheatWarning', { teamId: tid, count: count, reason: data.reason });
+            if (socket.currentRoomPin) {
+                io.to(socket.currentRoomPin).emit('antiCheatWarning', { teamId: tid, count: count, reason: data.reason });
+            } else { io.emit('antiCheatWarning', { teamId: tid, count: count, reason: data.reason }); }
         }
 
         broadcastState(socket);
@@ -2191,14 +2283,17 @@ console.log("RECEIVED VIOLATION:", data);
     
     socket.on('unbanTeam', (teamId) => {
         const state = getActiveState(socket);
-if (!state.bannedTeams) return;
+        if (!state.bannedTeams) return;
         state.bannedTeams = state.bannedTeams.filter(id => id !== teamId);
         if (state.antiCheatViolations) {
             state.antiCheatViolations[teamId] = 0;
         }
-        io.emit('antiCheatUnbanned', { teamId: teamId });
+        if (socket.currentRoomPin) {
+            io.to(socket.currentRoomPin).emit('antiCheatUnbanned', { teamId: teamId });
+        } else { io.emit('antiCheatUnbanned', { teamId: teamId }); }
         broadcastState(socket);
     });
+
 
     // --- LỐI THOÁT KHẨN CẤP BÍ MẬT ---
     socket.on('secretExitRequest', (data) => {

@@ -408,7 +408,7 @@
         const socket = io();
         socket.on('connect', () => {
             const roomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
-            if (roomPin) socket.emit('joinRoom', roomPin);
+            if (roomPin) socket.emit('joinRoom', roomPin, (res) => { if (res && res.gameState) { if (typeof handleUpdateState === 'function') handleUpdateState(res.gameState); } });
         });
         var currentTheme = 'v3';
         function autoResizeText() {

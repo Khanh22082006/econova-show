@@ -538,7 +538,7 @@
             socket = window.socket;
             socket.on('connect', () => {
                 const roomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
-                if (roomPin) socket.emit('joinRoom', roomPin);
+                if (roomPin) socket.emit('joinRoom', roomPin, (res) => { if (res && res.gameState) { if (typeof handleUpdateState === 'function') handleUpdateState(res.gameState); } });
             });
         } catch (e) {
             console.warn('Socket.io unavailable on screen page:', e);

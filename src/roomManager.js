@@ -34,16 +34,25 @@ class RoomManager {
         }
         return {
             currentRound: "Khởi Động",
-            currentQuestion: null,
-            contestants: [
-                { name: "Đội 1", score: 0 },
-                { name: "Đội 2", score: 0 },
-                { name: "Đội 3", score: 0 },
-                { name: "Đội 4", score: 0 }
+            currentQuestion: { active: false, points: 0, mainTeamId: null, isHopeStar: false, deductedFromMain: false, text: "", answer: "", idx: null, isHidden: false },
+            teams: [
+                { id: 1, name: "Đội 1", school: "", score: 0 },
+                { id: 2, name: "Đội 2", school: "", score: 0 },
+                { id: 3, name: "Đội 3", school: "", score: 0 },
+                { id: 4, name: "Đội 4", school: "", score: 0 }
             ],
-            theme: "v3",
-            bellLocked: false,
-            timer: { active: false, time: 0 }
+            claimedTeams: {},
+            settings: { theme: "v3", questionsPerTeam: 3 },
+            isBuzzerLocked: true,
+            buzzedTeam: null,
+            buzzTimes: {},
+            turnOrder: [],
+            turnStats: {},
+            isGridVisibleOnOverlay: false,
+            playedQuestions: { "10": [], "20": [], "40": [] },
+            scoreLog: [],
+            antiCheatViolations: {},
+            bannedTeams: []
         };
     }
 

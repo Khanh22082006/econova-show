@@ -769,8 +769,12 @@
             sessionStorage.setItem('claimedTeamId_' + roomPin, targetId.toString());
             const sScreen = document.getElementById('selectScreen');
             const bScreen = document.getElementById('buzzScreen');
+            const qGrid2 = document.getElementById('qGrid');
             if (sScreen) sScreen.style.display = 'none';
             if (bScreen) bScreen.style.display = 'flex';
+            if (qGrid2) qGrid2.style.display = 'none';
+            const bc = document.getElementById('buzzerContainer');
+            if (bc) bc.style.display = 'flex';
             if (statusText) statusText.innerText = typeof t === 'function' ? t('con_wait_admin', currentGlobalLang) : '⏳ ĐANG CHỜ CÂU HỎI...';
             if (btnIcon) btnIcon.innerText = "⏳";
             if (buzzBtn) buzzBtn.classList.add('locked');
@@ -936,7 +940,10 @@
                 }
             }
 
-            if (!state.teams) return;
+            if (!state.teams || !Array.isArray(state.teams) || state.teams.length === 0) {
+                // Phòng chưa có danh sách đội - hiển thị skeleton tiếp tục
+                return;
+            }
             
             if (currentTeamCount !== null && currentTeamCount !== state.teams.length) {
                 myTeamId = null;
