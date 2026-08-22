@@ -1883,7 +1883,8 @@ state.activeBankSlot = slotId;
     // --- ADMIN: Đội chính ĐÚNG ---
     socket.on('correctMainTeam', () => {
         const state = getActiveState(socket);
-let q = state.currentQuestion;
+        if (!state) return;
+        let q = state.currentQuestion || {};
         if (!q.active || !q.mainTeamId || q.resolved) return;
 
         let team = state.teams.find(t => t.id === q.mainTeamId);
@@ -1908,9 +1909,13 @@ let q = state.currentQuestion;
     // --- ADMIN: Đội chính SAI -> Mở chuông 5s ---
     socket.on('startBuzzer', () => {
         const state = getActiveState(socket);
-let q = state.currentQuestion;
+        if (!state) return;
+        if (!state.currentQuestion) {
+            state.currentQuestion = { active: false, points: 10, mainTeamId: null, isHopeStar: false };
+        }
+        let q = state.currentQuestion;
 
-        if (q.active && q.isHopeStar && !q.deductedFromMain) {
+        if (q && q.active && q.isHopeStar && !q.deductedFromMain) {
             let team = state.teams.find(t => t.id === q.mainTeamId);
             if (team) { 
                 team.score -= q.points; 
@@ -1952,25 +1957,27 @@ let q = state.currentQuestion;
     // --- ADMIN: Đội giành quyền ĐÚNG ---
     socket.on('correctBuzzedTeam', () => {
         const state = getActiveState(socket);
-let q = state.currentQuestion;
+        if (!state) return;
+        let q = state.currentQuestion || {};
         let buzzedId = state.buzzedTeam;
 
         if (buzzedId && !q.resolved) {
             let bTeam = state.teams.find(t => t.id === buzzedId);
+            let pts = (q && q.points) ? q.points : 10;
             if (bTeam) {
-                bTeam.score += q.points;
+                bTeam.score += pts;
                 if (!state.scoreLog) state.scoreLog = [];
-                state.scoreLog.unshift({ id: require('crypto').randomUUID(), time: Date.now(), teamId: bTeam.id, delta: q.points, reason: "Giành quyền trả lời ĐÚNG" });
+                state.scoreLog.unshift({ id: require('crypto').randomUUID(), time: Date.now(), teamId: bTeam.id, delta: pts, reason: "Giành quyền trả lời ĐÚNG" });
             }
 
             if (q.active && q.mainTeamId && !q.deductedFromMain) {
                 let mTeam = state.teams.find(t => t.id === q.mainTeamId);
                 if (mTeam && mTeam.id !== buzzedId) { 
-                    mTeam.score -= q.points; 
+                    mTeam.score -= pts; 
                     if (mTeam.score < 0) mTeam.score = 0; 
                     
                     if (!state.scoreLog) state.scoreLog = [];
-                    state.scoreLog.unshift({ id: require('crypto').randomUUID(), time: Date.now(), teamId: mTeam.id, delta: -q.points, reason: "Bị trừ vì đội khác giành quyền" });
+                    state.scoreLog.unshift({ id: require('crypto').randomUUID(), time: Date.now(), teamId: mTeam.id, delta: -pts, reason: "Bị trừ vì đội khác giành quyền" });
                 }
                 q.deductedFromMain = true;
             }
@@ -1979,7 +1986,7 @@ let q = state.currentQuestion;
         q.resolved = true;
         // Không reset isHopeStar ở đây - để MC tắt thủ công
         state.isBuzzerLocked = true;
-        if (state.turnStats && state.turnStats[q.mainTeamId] >= (state.settings.questionsPerTeam || 3)) {
+        if (q.mainTeamId && state.turnStats && state.turnStats[q.mainTeamId] >= (state.settings.questionsPerTeam || 3)) {
             state.turnOrder = state.turnOrder.filter(id => id !== q.mainTeamId);
         }
         updateTurnOrder(state); // Sort after score change
@@ -1990,11 +1997,13 @@ let q = state.currentQuestion;
     // --- ADMIN: Đội giành quyền SAI ---
     socket.on('wrongBuzzedTeam', () => {
         const state = getActiveState(socket);
-let q = state.currentQuestion;
+        if (!state) return;
+        let q = state.currentQuestion || {};
         let buzzedId = state.buzzedTeam;
+        let pts = (q && q.points) ? q.points : 10;
 
         if (buzzedId && !q.resolved) {
-            updateTeamScore(buzzedId, -(q.points / 2), "Bấm chuông trả lời SAI", state);
+            updateTeamScore(buzzedId, -(pts / 2), "Bấm chuông trả lời SAI", state);
         }
 
         q.resolved = true;
