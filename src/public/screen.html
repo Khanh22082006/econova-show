@@ -273,8 +273,8 @@
         body.ascend_2026 #qGrid { background: rgba(4, 15, 33, 0.98) !important; backdrop-filter: blur(15px) !important; -webkit-backdrop-filter: blur(15px) !important; border-radius: 20px !important; border: 2px solid rgba(255, 255, 255, 0.15) !important; padding: 30px !important; box-shadow: 0 0 30px rgba(0, 0, 0, 0.5) !important; margin: auto !important; width: 90% !important; max-width: 1600px !important; animation: flip3D 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; transform-origin: center center; }
         @keyframes flip3D { 0% { transform: perspective(1200px) rotateX(-90deg); opacity: 0; } 100% { transform: perspective(1200px) rotateX(0deg); opacity: 1; } }
 
-        #videoOverlay { position: fixed; inset: 0; background: #000; z-index: 9000; display: none; flex-direction: column; align-items: center; justify-content: center; }
-        #mainVideo { width: 100%; height: 100%; object-fit: contain; }
+        #videoOverlay { position: fixed; inset: 0; background: #000; z-index: 9000; display: none; flex-direction: column; align-items: center; justify-content: center; transform: translateZ(0); will-change: transform; backface-visibility: hidden; }
+        #mainVideo { width: 100%; height: 100%; object-fit: contain; transform: translateZ(0); will-change: transform; backface-visibility: hidden; }
         body { user-select: none; -webkit-user-select: none; font-family: 'SF Pro Display Bold', 'Segoe UI', sans-serif; font-family: var(--font-general); }
         input, textarea { user-select: text; -webkit-user-select: text; }
         #qrCodeOverlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 9999; display: none; flex-direction: column; justify-content: center; align-items: center; }
@@ -752,17 +752,7 @@
             });
         }
 
-        let lastVideoSyncEmit = 0;
         if (mainVideo) {
-            mainVideo.addEventListener('timeupdate', () => {
-                const now = Date.now();
-                if (now - lastVideoSyncEmit >= 2000) {
-                    lastVideoSyncEmit = now;
-                    if (socket && socket.emit) {
-                        socket.emit('videoSync', mainVideo.currentTime);
-                    }
-                }
-            });
             mainVideo.addEventListener('play', () => {
                 if (socket && socket.emit) {
                     socket.emit('videoPlayState', 'play');

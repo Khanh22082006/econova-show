@@ -34,13 +34,6 @@
             mainVideo.pause(); mainVideo.src = ""; videoOverlay.style.display = 'none';
         });
 
-        // Slave video sync
-        socket.on('videoSync', (time) => {
-            if (mainVideo && !mainVideo.paused && Math.abs(mainVideo.currentTime - time) > 2.5) {
-                mainVideo.currentTime = time;
-            }
-        });
-
         socket.on('videoPlayState', (state) => {
             if (state === 'play') {
                 mainVideo.play().catch(e => {});

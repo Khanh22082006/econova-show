@@ -580,61 +580,18 @@ function streamVideoFile(filePath, req, res) {
         if (!fs.existsSync(filePath)) {
             return res.status(404).send('Video not found');
         }
-        const stat = fs.statSync(filePath);
-        const fileSize = stat.size;
-        const range = req.headers.range;
-
-        const ext = path.extname(filePath).toLowerCase();
-        const mimeTypes = {
-            '.mp4': 'video/mp4',
-            '.webm': 'video/webm',
-            '.ogg': 'video/ogg',
-            '.mov': 'video/quicktime',
-            '.mkv': 'video/x-matroska'
-        };
-        const contentType = mimeTypes[ext] || 'video/mp4';
-
         res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Accept-Ranges', 'bytes');
-        res.setHeader('Cache-Control', 'public, max-age=3600');
-
-        if (req.method === 'HEAD') {
-            res.writeHead(200, {
-                'Content-Length': fileSize,
-                'Content-Type': contentType
-            });
-            return res.end();
-        }
-
-        if (range) {
-            const parts = range.replace(/bytes=/, "").split("-");
-            const start = parseInt(parts[0], 10);
-            const CHUNK_LIMIT = 2 * 1024 * 1024; // 2MB chunk for instant playback & smooth streaming
-            let end = parts[1] ? parseInt(parts[1], 10) : Math.min(start + CHUNK_LIMIT - 1, fileSize - 1);
-            
-            if (start >= fileSize) {
-                res.status(416).send('Requested range not satisfiable\n' + start + ' >= ' + fileSize);
-                return;
+        res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+        res.sendFile(path.resolve(filePath), {
+            acceptRanges: true,
+            maxAge: '1d',
+            immutable: true
+        }, (err) => {
+            if (err && !res.headersSent && err.code !== 'ECONNABORTED' && err.code !== 'ERR_STREAM_PREMATURE_CLOSE') {
+                console.error('Lỗi khi gửi video file:', err);
+                try { res.status(500).send('Video transfer error'); } catch(e) {}
             }
-
-            if (end >= fileSize) end = fileSize - 1;
-            const chunksize = (end - start) + 1;
-            const file = fs.createReadStream(filePath, { start, end });
-            const head = {
-                'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-                'Content-Length': chunksize,
-                'Content-Type': contentType,
-            };
-            res.writeHead(206, head);
-            file.pipe(res);
-        } else {
-            const head = {
-                'Content-Length': fileSize,
-                'Content-Type': contentType
-            };
-            res.writeHead(200, head);
-            fs.createReadStream(filePath).pipe(res);
-        }
+        });
     } catch(err) {
         console.error('Lỗi khi stream video:', err);
         if (!res.headersSent) res.status(500).send('Internal video stream error');
