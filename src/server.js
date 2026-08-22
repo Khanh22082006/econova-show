@@ -646,16 +646,54 @@ try { fs.mkdirSync(videosDir2, { recursive: true }); } catch(e) {}
 
 app.get('/videos/:filename', (req, res) => {
     const fn = path.basename(req.params.filename);
-    const candidates = [
-        path.join(videosDir1, fn),
-        path.join(videosDir2, fn),
-        path.join(basePath, 'videos', fn)
+    const ext = path.extname(fn).toLowerCase();
+    const nameWithoutExt = path.basename(fn, ext);
+    const basePrefix = nameWithoutExt.replace(/_\d{10,}$/, '');
+
+    const checkDirs = [
+        videosDir1,
+        videosDir2,
+        path.join(basePath, 'videos'),
+        path.join(basePath, 'public', 'videos'),
+        path.join(__dirname, 'public', 'videos')
     ];
-    for (const cand of candidates) {
+
+    // 1. Exact filename match
+    for (const dir of checkDirs) {
+        const cand = path.join(dir, fn);
         if (fs.existsSync(cand)) {
             return streamVideoFile(cand, req, res);
         }
     }
+
+    // 2. Exact base name without timestamp (e.g. KH__1.mp4)
+    if (basePrefix !== nameWithoutExt) {
+        const exactBaseFn = `${basePrefix}${ext}`;
+        for (const dir of checkDirs) {
+            const cand = path.join(dir, exactBaseFn);
+            if (fs.existsSync(cand)) {
+                return streamVideoFile(cand, req, res);
+            }
+        }
+    }
+
+    // 3. Prefix search in directory
+    for (const dir of checkDirs) {
+        if (fs.existsSync(dir)) {
+            try {
+                const files = fs.readdirSync(dir);
+                const found = files.find(f => {
+                    const fExt = path.extname(f).toLowerCase();
+                    const fBase = path.basename(f, fExt);
+                    return (fBase === basePrefix || fBase.startsWith(basePrefix + '_') || fBase.startsWith(basePrefix)) && (fExt === ext || fExt === '.mp4');
+                });
+                if (found) {
+                    return streamVideoFile(path.join(dir, found), req, res);
+                }
+            } catch(e) {}
+        }
+    }
+
     res.status(404).send('Video not found');
 });
 

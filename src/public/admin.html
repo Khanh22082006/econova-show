@@ -1554,21 +1554,123 @@
 
         function startCountdown(secs) { socket.emit('startCountdown', secs); }
         
-        function playVideo() {
+        // ============================================================
+        // INDEXEDDB VIDEO CACHE (Persistent across Render Restarts)
+        // ============================================================
+        const VIDEO_DB_NAME = 'EconovaVideoCache_v1';
+        const VIDEO_STORE_NAME = 'videos';
+
+        function openVideoDB() {
+            return new Promise((resolve, reject) => {
+                if (!window.indexedDB) return resolve(null);
+                const req = indexedDB.open(VIDEO_DB_NAME, 1);
+                req.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(VIDEO_STORE_NAME)) {
+                        db.createObjectStore(VIDEO_STORE_NAME, { keyPath: 'key' });
+                    }
+                };
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => resolve(null);
+            });
+        }
+
+        async function saveVideoToCache(keyName, fileBlob) {
+            try {
+                if (!keyName || !fileBlob) return;
+                const db = await openVideoDB();
+                if (!db) return;
+                const tx = db.transaction(VIDEO_STORE_NAME, 'readwrite');
+                const cleanKey = keyName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                tx.objectStore(VIDEO_STORE_NAME).put({ key: cleanKey, rawKey: keyName, blob: fileBlob, savedAt: Date.now() });
+            } catch(e) {
+                console.warn('Lỗi lưu cache video:', e);
+            }
+        }
+
+        async function getVideoFromCache(keyName) {
+            try {
+                if (!keyName) return null;
+                const db = await openVideoDB();
+                if (!db) return null;
+                const tx = db.transaction(VIDEO_STORE_NAME, 'readonly');
+                const cleanKey = keyName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                return new Promise((resolve) => {
+                    const req = tx.objectStore(VIDEO_STORE_NAME).get(cleanKey);
+                    req.onsuccess = () => resolve(req.result ? req.result.blob : null);
+                    req.onerror = () => resolve(null);
+                });
+            } catch(e) {
+                return null;
+            }
+        }
+
+        async function playVideo() {
             let url = currentVideoUrl || (currentState && currentState.currentQuestion && currentState.currentQuestion.vid) || "";
             if (!url) {
                 document.getElementById('videoUploadInput').click();
                 return;
             }
             
-            // Check if user is running on Web Cloud (e.g. Render) with a local Windows path (C:\...) that is not yet on cloud
             const isCloudWeb = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
             const isLocalDiskPath = (/^[a-zA-Z]:[\\\/]/.test(url) || url.includes('\\')) && !url.startsWith('/videos/');
             
-            if (isCloudWeb && isLocalDiskPath) {
-                // Lập tức mở file picker tải video lên không cần chờ xác nhận
-                document.getElementById('videoUploadInput').click();
-                return;
+            if (isCloudWeb) {
+                if (isLocalDiskPath) {
+                    const baseName = url.split(/[\\\/]/).pop();
+                    const cachedBlob = await getVideoFromCache(baseName);
+                    if (cachedBlob) {
+                        const vText = document.getElementById('adminVText');
+                        if (vText) vText.innerText = `⏳ Đang tự động khôi phục video ${baseName} lên máy chủ...`;
+                        try {
+                            const res = await fetch('/api/video/upload_raw?filename=' + encodeURIComponent(baseName), {
+                                method: 'POST',
+                                headers: { 'Content-Type': cachedBlob.type || 'video/mp4' },
+                                body: cachedBlob
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                                currentVideoUrl = data.url;
+                                if (vText) vText.innerText = data.url;
+                                socket.emit('updateCurrentQuestionVideo', { vid: data.url });
+                                socket.emit('playVideo', data.url);
+                                return;
+                            }
+                        } catch(e) {}
+                    }
+                    document.getElementById('videoUploadInput').click();
+                    return;
+                }
+
+                // If URL is /videos/... check if it still exists or if Render restarted
+                if (url.startsWith('/videos/')) {
+                    try {
+                        const check = await fetch(url, { method: 'HEAD' });
+                        if (!check.ok) {
+                            const baseName = url.split('/').pop().split('?')[0];
+                            const cachedBlob = await getVideoFromCache(baseName);
+                            if (cachedBlob) {
+                                const vText = document.getElementById('adminVText');
+                                if (vText) vText.innerText = `⏳ Đang tự động khôi phục video ${baseName} sau khởi động lại...`;
+                                const res = await fetch('/api/video/upload_raw?filename=' + encodeURIComponent(baseName), {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': cachedBlob.type || 'video/mp4' },
+                                    body: cachedBlob
+                                });
+                                const data = await res.json();
+                                if (data.success) {
+                                    currentVideoUrl = data.url;
+                                    if (vText) vText.innerText = data.url;
+                                    socket.emit('updateCurrentQuestionVideo', { vid: data.url });
+                                    socket.emit('playVideo', data.url);
+                                    return;
+                                }
+                            }
+                            document.getElementById('videoUploadInput').click();
+                            return;
+                        }
+                    } catch(e) {}
+                }
             }
             
             socket.emit('playVideo', url);
@@ -1579,6 +1681,8 @@
         function handleUploadVideoFile(event) {
             const file = event.target.files && event.target.files[0];
             if (!file) return;
+            
+            saveVideoToCache(file.name, file);
             
             const vText = document.getElementById('adminVText');
             if (vText) vText.innerText = `⏳ Đang tải lên video ${file.name} (${(file.size / (1024*1024)).toFixed(1)}MB)...`;
@@ -1601,8 +1705,8 @@
                         if (data.success) {
                             currentVideoUrl = data.url;
                             if (vText) vText.innerText = data.url;
+                            saveVideoToCache(data.url.split('/').pop(), file);
                             socket.emit('updateCurrentQuestionVideo', { vid: data.url });
-                            // Tải xong video lên thì lập tức hiện và chạy video ngay cho tất cả màn hình!
                             socket.emit('playVideo', data.url);
                         } else {
                             alert(data.message || 'Lỗi khi tải video');
@@ -1635,6 +1739,7 @@
             
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
+                saveVideoToCache(file.name, file);
                 try {
                     if (statusEl) statusEl.innerHTML = `<span style="color:#feca57">⏳ Đang tải lên ${i+1}/${total}: ${file.name}...</span>`;
                     const res = await fetch('/api/video/upload_raw?filename=' + encodeURIComponent(file.name), {
@@ -1645,6 +1750,7 @@
                     const data = await res.json();
                     if (data.success) {
                         successCount++;
+                        saveVideoToCache(data.url.split('/').pop(), file);
                         // Map to question bank
                         const baseName = file.name.toLowerCase();
                         if (window.questionBank) {
