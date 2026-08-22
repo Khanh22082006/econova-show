@@ -1556,11 +1556,24 @@
         
         function playVideo() {
             let url = currentVideoUrl || (currentState && currentState.currentQuestion && currentState.currentQuestion.vid) || "";
-            if (url) {
-                socket.emit('playVideo', url);
-            } else {
-                alert('Vui lòng chọn hoặc tải lên video trước khi phát!');
+            if (!url) {
+                alert('Câu hỏi này chưa có video! Vui lòng bấm [📤 Tải video mới (.mp4)] hoặc [🔗 Đổi link Video] để thêm video.');
+                return;
             }
+            
+            // Check if user is running on Web Cloud (e.g. Render) with a local Windows path (C:\...) that is not yet on cloud
+            const isCloudWeb = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+            const isLocalDiskPath = (/^[a-zA-Z]:[\\\/]/.test(url) || url.includes('\\')) && !url.startsWith('/videos/');
+            
+            if (isCloudWeb && isLocalDiskPath) {
+                const conf = confirm(`⚠️ File video "${url}" là đường dẫn trên máy tính cá nhân.\n\nTrên bản Web đám mây, server không thể tự đọc ổ đĩa C:\\ trên máy bạn nếu chưa tải lên.\n\n👉 Bấm OK để chọn file từ máy tính và tải lên máy chủ ngay bây giờ (chỉ mất vài giây)!`);
+                if (conf) {
+                    document.getElementById('videoUploadInput').click();
+                }
+                return;
+            }
+            
+            socket.emit('playVideo', url);
         }
         
         function closeVideo() { socket.emit('closeVideo'); }

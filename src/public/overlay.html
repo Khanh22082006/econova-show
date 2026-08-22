@@ -356,6 +356,11 @@
     <div id="videoOverlay">
         <video id="mainVideo" playsinline webkit-playsinline controls src="" style="max-width: 100%; max-height: 100%; object-fit: contain;"></video>
         <iframe id="mainVideoIframe" style="display: none; width: 90%; height: 80%; border: none; border-radius: 12px; box-shadow: 0 0 30px rgba(0,0,0,0.8);" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>
+        <div id="videoErrorNotice" style="display:none; color:#ff4757; font-size: 22px; text-align:center; padding: 25px; background: rgba(0,0,0,0.92); border: 2px solid #ff4757; border-radius: 12px; max-width: 80%; line-height: 1.5; z-index: 9999;">
+            ⚠️ <b>Chưa tìm thấy file video trên máy chủ</b><br>
+            <span style="color:#feca57; font-size: 16px; word-break: break-all;" id="videoErrorPath"></span><br><br>
+            <span style="color:#fff; font-size: 15px;">👉 Quản trị viên vui lòng dùng nút <b>[📤 Tải video mới]</b> hoặc <b>[📁 Tải lên nhiều file video]</b> tại trang Quản trị để đồng bộ video từ máy tính lên máy chủ!</span>
+        </div>
     </div>
 
     <div id="main-container" style="width: 1920px; height: 1080px; position: absolute; bottom: 0; left: 50%; margin-left: -960px; transform-origin: bottom center; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 75px;">
@@ -598,6 +603,10 @@
                 return;
             }
 
+            const errNotice = document.getElementById('videoErrorNotice');
+            const errPath = document.getElementById('videoErrorPath');
+            if (errNotice) errNotice.style.display = 'none';
+
             // HTML5 Video
             if (iframe) {
                 iframe.src = '';
@@ -607,6 +616,19 @@
                 mainVideo.style.display = 'block';
                 mainVideo.preload = 'auto';
                 mainVideo.src = url;
+                
+                mainVideo.onerror = function() {
+                    console.error('Lỗi khi tải nguồn video:', url);
+                    if (errNotice && errPath) {
+                        errPath.innerText = rawUrl;
+                        errNotice.style.display = 'block';
+                    }
+                };
+                
+                mainVideo.onplaying = function() {
+                    if (errNotice) errNotice.style.display = 'none';
+                };
+
                 try { mainVideo.load(); } catch(e) {}
                 if (videoOverlay) videoOverlay.style.display = 'flex';
                 const p = mainVideo.play();
@@ -631,6 +653,8 @@
                 iframe.src = '';
                 iframe.style.display = 'none';
             }
+            const errNotice = document.getElementById('videoErrorNotice');
+            if (errNotice) errNotice.style.display = 'none';
             if (videoOverlay) videoOverlay.style.display = 'none';
         });
 

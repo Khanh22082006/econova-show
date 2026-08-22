@@ -594,6 +594,18 @@ function streamVideoFile(filePath, req, res) {
         };
         const contentType = mimeTypes[ext] || 'video/mp4';
 
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+
+        if (req.method === 'HEAD') {
+            res.writeHead(200, {
+                'Content-Length': fileSize,
+                'Content-Type': contentType
+            });
+            return res.end();
+        }
+
         if (range) {
             const parts = range.replace(/bytes=/, "").split("-");
             const start = parseInt(parts[0], 10);
@@ -608,7 +620,6 @@ function streamVideoFile(filePath, req, res) {
             const file = fs.createReadStream(filePath, { start, end });
             const head = {
                 'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-                'Accept-Ranges': 'bytes',
                 'Content-Length': chunksize,
                 'Content-Type': contentType,
             };
@@ -617,8 +628,7 @@ function streamVideoFile(filePath, req, res) {
         } else {
             const head = {
                 'Content-Length': fileSize,
-                'Content-Type': contentType,
-                'Accept-Ranges': 'bytes'
+                'Content-Type': contentType
             };
             res.writeHead(200, head);
             fs.createReadStream(filePath).pipe(res);
