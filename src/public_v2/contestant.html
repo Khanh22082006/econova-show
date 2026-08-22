@@ -1201,7 +1201,6 @@
                         qBox.style.display = 'none';
                         buzzerContainer.style.display = 'flex';
                         statusText.style.display = 'block';
-                        statusText.textContent = typeof t === 'function' ? t('con_wait_admin', window.currentGlobalLang) : '⏳ ĐANG CHỜ CÂU HỎI TIẾP THEO...';
                     } else {
                         let textPts = typeof t === 'function' ? t("scr_pts", window.currentGlobalLang) : "ĐIỂM";
                         qPoints.textContent = `${q.points} ${textPts}`;
@@ -1210,9 +1209,8 @@
                         
                         qBox.style.display = 'flex';
                         buzzerContainer.style.display = 'flex';
-                        
-                        fitText(newText);
                         statusText.style.display = 'block';
+                        fitText(newText);
                     }
                 }
 
@@ -1224,11 +1222,8 @@
 
                     setTimeout(() => {
                         window.isAnimating = false;
-                        if (window.currentState && !window.currentState.currentQuestion.active) {
-                            // ignore
-                        } else {
-                            applyVisibility();
-                        }
+                        applyVisibility();
+                        renderBuzzerUI();
                     }, 500);
                 } else if (!window.isAnimating) {
                     applyVisibility();

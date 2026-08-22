@@ -425,8 +425,17 @@ app.get('/api/room/state', async (req, res) => {
 });
 
 // Static file serving AFTER all API routes (so /api/* requests reach handlers first)
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/public_v2', express.static(path.join(__dirname, 'public_v2')));
+const staticOptions = {
+    setHeaders: (res, path) => {
+        if (path.endsWith('.html') || path.endsWith('.js')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        }
+    }
+};
+app.use(express.static(path.join(__dirname, 'public'), staticOptions));
+app.use('/public_v2', express.static(path.join(__dirname, 'public_v2'), staticOptions));
 
 app.use('/Themes', express.static(path.join(basePath, 'Themes')));
 const thumbsDir = path.join(os.tmpdir(), 'econova_ppt_thumbs');
