@@ -557,12 +557,25 @@
         try {
             window.socket = window.socket || io();
             socket = window.socket;
+            const roomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
+            if (roomPin) {
+                fetch('/api/room/state?pin=' + encodeURIComponent(roomPin))
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data && data.success && data.gameState) {
+                            if (typeof handleUpdateState === 'function') handleUpdateState(data.gameState);
+                            else window.pendingInitialState = data.gameState;
+                        }
+                    })
+                    .catch(() => {});
+            }
+
             function doJoinRoom() {
-                const roomPin = new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
                 if (roomPin) {
                     socket.emit('joinRoom', roomPin, (res) => {
                         if (res && res.gameState) {
                             if (typeof handleUpdateState === 'function') handleUpdateState(res.gameState);
+                            else window.pendingInitialState = res.gameState;
                         }
                     });
                 }
@@ -1853,7 +1866,7 @@
                         if (ascendQBox) ascendQBox.style.setProperty('display', 'none', 'important');
                         if (qGridNode) qGridNode.style.setProperty('display', 'flex', 'important');  
                     } else {
-                        if (ascendFrame) ascendFrame.style.setProperty('display', 'none', 'important');
+                        if (ascendFrame) ascendFrame.style.setProperty('display', 'flex', 'important');
                         if (ascendQArea) ascendQArea.style.setProperty('display', 'none', 'important');
                         if (ascendQBox) ascendQBox.style.setProperty('display', 'none', 'important');
                         if (qGridNode) qGridNode.style.setProperty('display', 'none', 'important');
@@ -1874,12 +1887,12 @@
                     if (defQBox) defQBox.style.setProperty('display', 'flex', 'important');
                     if (qGridNode) qGridNode.style.setProperty('display', 'none', 'important');
                 } else if (displayState === 1) {
-                    if (defScoreboard) defScoreboard.style.setProperty('display', 'flex', 'important');
+                    if (defScoreboard) defScoreboard.style.setProperty('display', 'none', 'important');
                     if (defQArea) defQArea.style.setProperty('display', 'none', 'important');
-                    if (defQBox) defQBox.style.setProperty('display', 'flex', 'important');
+                    if (defQBox) defQBox.style.setProperty('display', 'none', 'important');
                     if (qGridNode) qGridNode.style.setProperty('display', 'flex', 'important');
                 } else {
-                    if (defScoreboard) defScoreboard.style.setProperty('display', 'none', 'important');
+                    if (defScoreboard) defScoreboard.style.setProperty('display', 'flex', 'important');
                     if (defQArea) defQArea.style.setProperty('display', 'none', 'important');
                     if (defQBox) defQBox.style.setProperty('display', 'none', 'important');
                     if (qGridNode) qGridNode.style.setProperty('display', 'none', 'important');
@@ -1953,6 +1966,10 @@
             setTimeout(autoResizeText, 50);
         }
         socket.on('updateState', handleUpdateState);
+        if (window.pendingInitialState) {
+            handleUpdateState(window.pendingInitialState);
+            window.pendingInitialState = null;
+        }
 
         function autoResizeText() {
             var theme = currentTheme || 'default';
