@@ -2052,22 +2052,25 @@
             sessionStorage.removeItem('currentRoomPin');
             window.location.href = './index.html';
         });
-        function startPublicServer() { socket.emit('startPublicServer'); }
-        function toggleQRCode() { socket.emit('toggleQRCode'); }
-        function correctMainTeam() { socket.emit('correctMainTeam'); }
-        function startBuzzer() { socket.emit('startBuzzer'); }
-        function correctBuzzedTeam() { socket.emit('correctBuzzedTeam'); }
-        function wrongBuzzedTeam() { socket.emit('wrongBuzzedTeam'); }
-        function closeQuestion() { socket.emit('closeQuestion'); }
-        function finishTurn() { socket.emit('finishTurn'); }
-        function finishTurnForTeam(id) { socket.emit('finishTurnForTeam', id); }
+        function getAdminRoomPin() {
+            return new URLSearchParams(window.location.search).get('pin') || sessionStorage.getItem('currentRoomPin') || '';
+        }
+        function startPublicServer() { socket.emit('startPublicServer', { pin: getAdminRoomPin() }); }
+        function toggleQRCode() { socket.emit('toggleQRCode', { pin: getAdminRoomPin() }); }
+        function correctMainTeam() { socket.emit('correctMainTeam', { pin: getAdminRoomPin() }); }
+        function startBuzzer(duration) { socket.emit('startBuzzer', { duration: duration, pin: getAdminRoomPin() }); }
+        function correctBuzzedTeam() { socket.emit('correctBuzzedTeam', { pin: getAdminRoomPin() }); }
+        function wrongBuzzedTeam() { socket.emit('wrongBuzzedTeam', { pin: getAdminRoomPin() }); }
+        function closeQuestion() { socket.emit('closeQuestion', { pin: getAdminRoomPin() }); }
+        function finishTurn() { socket.emit('finishTurn', { pin: getAdminRoomPin() }); }
+        function finishTurnForTeam(id) { socket.emit('finishTurnForTeam', { teamId: id, pin: getAdminRoomPin() }); }
         function manualChangeInput(id, multiplier) { 
             let input = document.getElementById(`customPts${id}`);
             let pts = parseInt(input.value) || 0;
-            socket.emit('updateScore', { teamId: id, points: pts * multiplier }); 
+            socket.emit('updateScore', { teamId: id, points: pts * multiplier, pin: getAdminRoomPin() }); 
             if (input) input.value = '';
         }
-        function unlockTeam(id) { socket.emit('unlockTeam', id); }
+        function unlockTeam(id) { socket.emit('unlockTeam', { teamId: id, pin: getAdminRoomPin() }); }
         
         // --- ADMIN VÒNG 1 (POWERPOINT) ---
         let pptCurrentSlide = 0;

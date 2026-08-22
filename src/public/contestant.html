@@ -917,7 +917,7 @@
         function tryBuzz() {
             if (myTeamId !== null && !isBanned) {
                 const token = window.currentState ? window.currentState.buzzToken : null;
-                socket.emit('buzz', myTeamId, token);
+                socket.emit('buzz', { teamId: myTeamId, token: token, clientId: myClientId, pin: roomPin });
             }
         }
 

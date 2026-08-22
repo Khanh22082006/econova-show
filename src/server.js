@@ -1935,7 +1935,19 @@ state.activeBankSlot = slotId;
     });
 
     // --- ADMIN: Đội chính SAI / Mở chuông giành quyền ---
-    socket.on('startBuzzer', (customDuration) => {
+    socket.on('startBuzzer', (data) => {
+        let customDuration, pin;
+        if (typeof data === 'object' && data !== null) {
+            customDuration = data.duration;
+            pin = data.pin;
+        } else {
+            customDuration = data;
+        }
+        if (pin && !socket.currentRoomPin) {
+            const roomPin = pin.toString().trim().replace(/\D/g, '').padStart(6, '0');
+            socket.currentRoomPin = roomPin;
+            socket.join(roomPin);
+        }
         const state = getActiveState(socket);
         if (!state) return;
         if (!state.currentQuestion) {
@@ -2563,13 +2575,29 @@ if (newCount < 2 || newCount > 6) return;
 // Duplicate claimTeam removed
 
     // --- THÍ SINH: Bấm chuông ---
-    socket.on('buzz', (teamId, token) => {
-        teamId = parseInt(teamId);
+    socket.on('buzz', (data, tokenArg) => {
+        let teamId, token, clientId, pin;
+        if (typeof data === 'object' && data !== null) {
+            teamId = parseInt(data.teamId);
+            token = data.token;
+            clientId = data.clientId;
+            pin = data.pin;
+        } else {
+            teamId = parseInt(data);
+            token = tokenArg;
+        }
+
+        if (pin && !socket.currentRoomPin) {
+            const roomPin = pin.toString().trim().replace(/\D/g, '').padStart(6, '0');
+            socket.currentRoomPin = roomPin;
+            socket.join(roomPin);
+        }
+
         const state = getActiveState(socket);
         if (!state) return;
         
         // Chống gian lận: Yêu cầu phải gửi kèm buzzToken khớp với server
-        if (state.buzzToken && token !== state.buzzToken) {
+        if (state.buzzToken && token && token !== state.buzzToken) {
             console.log(`[BUZZ] Token mismatch for team ${teamId} (client token: ${token}, server token: ${state.buzzToken}).`);
             if (state.isBuzzerLocked || state.buzzedTeam !== null) {
                 return;
@@ -2580,18 +2608,17 @@ if (newCount < 2 || newCount > 6) return;
         if (!state.claimedTeams) state.claimedTeams = {};
         let claim = state.claimedTeams[teamId];
         if (!claim) {
-            if (socket.teamId && Number(socket.teamId) === Number(teamId)) {
-                state.claimedTeams[teamId] = { socketId: socket.id, clientId: socket.clientId, teamId: teamId };
-                claim = state.claimedTeams[teamId];
-            } else {
-                console.log(`[BUZZ REJECTED] Team ${teamId} has no claim in room ${socket.currentRoomPin}`);
-                return;
-            }
+            state.claimedTeams[teamId] = { socketId: socket.id, clientId: clientId || socket.clientId, teamId: teamId };
+            claim = state.claimedTeams[teamId];
         }
         if (claim && claim.socketId !== socket.id) {
-            if ((socket.clientId && claim.clientId === socket.clientId) || (socket.teamId && Number(socket.teamId) === Number(teamId))) {
-                console.log(`[BUZZ] Reconnection fallback: Auto-updating socketId for team ${teamId} from ${claim.socketId} to ${socket.id}`);
+            const isMatch = (clientId && claim.clientId === clientId) || 
+                            (socket.clientId && claim.clientId === socket.clientId) || 
+                            (socket.teamId && Number(socket.teamId) === Number(teamId)) ||
+                            (!claim.clientId);
+            if (isMatch) {
                 claim.socketId = socket.id;
+                if (clientId) claim.clientId = clientId;
             } else {
                 return;
             }
