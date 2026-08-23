@@ -464,11 +464,19 @@
                     <label data-i18n="adm_sb_font_team">Font Tên Đội:</label>
                     <select id="settingFontTeamName" onchange="let s=document.getElementById('settingFontTeamNameGlobal'); if(s) s.value=this.value; applySettings()" style="font-size: 13px;">
                     </select>
+                    <div style="display: flex; gap: 10px; margin-top: 5px; font-size: 12px;">
+                        <label><input type="checkbox" id="settingFontTeamNameBold" onchange="applySettings()"> <b>In Đậm</b></label>
+                        <label><input type="checkbox" id="settingFontTeamNameItalic" onchange="applySettings()"> <i>In Nghiêng</i></label>
+                    </div>
                 </div>
                 <div style="flex: 1;">
                     <label data-i18n="adm_sb_font_score">Font Điểm Số:</label>
                     <select id="settingFontScore" onchange="let s=document.getElementById('settingFontScoreGlobal'); if(s) s.value=this.value; applySettings()" style="font-size: 13px;">
                     </select>
+                    <div style="display: flex; gap: 10px; margin-top: 5px; font-size: 12px;">
+                        <label><input type="checkbox" id="settingFontScoreBold" onchange="applySettings()"> <b>In Đậm</b></label>
+                        <label><input type="checkbox" id="settingFontScoreItalic" onchange="applySettings()"> <i>In Nghiêng</i></label>
+                    </div>
                 </div>
             </div>
 
@@ -2403,6 +2411,11 @@
             let globalFontEnabled = document.getElementById('settingGlobalFontEnabled')?.checked || false;
             let fontTeamName = document.getElementById('settingFontTeamName')?.value || 'Orbitron';
             let fontScore = document.getElementById('settingFontScore')?.value || 'Myriad Pro';
+            let fontTeamNameBold = document.getElementById('settingFontTeamNameBold')?.checked || false;
+            let fontTeamNameItalic = document.getElementById('settingFontTeamNameItalic')?.checked || false;
+            let fontScoreBold = document.getElementById('settingFontScoreBold')?.checked || false;
+            let fontScoreItalic = document.getElementById('settingFontScoreItalic')?.checked || false;
+            
             let scoreboardY = parseInt(document.getElementById('settingScoreboardY')?.value || 50);
             let scoreboardTitle = (document.getElementById('settingScoreboardTitle')?.value || '').trim();
             let questionsPerTeam = parseInt(document.getElementById('settingQuestionsPerTeam')?.value || 3);
@@ -2411,7 +2424,7 @@
             let disableBuzzerTimerBar = document.getElementById('settingDisableBuzzerTimerBar')?.checked || false;
 
             localStorage.setItem('econova_lang', language);
-            socket.emit('updateSettings', { theme, language, brightness, scale, antiCheat, fontTeamName, fontScore, scoreboardY, scoreboardTitle, globalFontEnabled, fontGlobal, fontGeneral, fontQuestion, questionsPerTeam, turnOrderRule, buzzerDelayMs, disableBuzzerTimerBar });
+            socket.emit('updateSettings', { theme, language, brightness, scale, antiCheat, fontTeamName, fontScore, fontTeamNameBold, fontTeamNameItalic, fontScoreBold, fontScoreItalic, scoreboardY, scoreboardTitle, globalFontEnabled, fontGlobal, fontGeneral, fontQuestion, questionsPerTeam, turnOrderRule, buzzerDelayMs, disableBuzzerTimerBar });
         }
 
         function updateMaxQuestions() {
@@ -2618,6 +2631,19 @@
             if (inputQuestionsPerTeam && state.settings && state.settings.questionsPerTeam) {
                 inputQuestionsPerTeam.value = state.settings.questionsPerTeam;
             }
+            
+            // Sync new Font settings
+            if (state.settings) {
+                let cb1 = document.getElementById('settingFontTeamNameBold');
+                if (cb1) cb1.checked = !!state.settings.fontTeamNameBold;
+                let cb2 = document.getElementById('settingFontTeamNameItalic');
+                if (cb2) cb2.checked = !!state.settings.fontTeamNameItalic;
+                let cb3 = document.getElementById('settingFontScoreBold');
+                if (cb3) cb3.checked = !!state.settings.fontScoreBold;
+                let cb4 = document.getElementById('settingFontScoreItalic');
+                if (cb4) cb4.checked = !!state.settings.fontScoreItalic;
+            }
+            
             let selectTurnOrderRule = document.getElementById('settingTurnOrderRule');
             if (selectTurnOrderRule && state.settings && state.settings.turnOrderRule) {
                 selectTurnOrderRule.value = state.settings.turnOrderRule;
@@ -2731,6 +2757,8 @@
                             <input type="range" id="teamOverlap${team.id}" min="10" max="50" value="${team.avatarOverlap || 10}" style="width:100%" oninput="document.getElementById('lblTeamOverlap${team.id}').innerText=this.value" onchange="saveTeamAvatarSettings(${team.id})">
                             <label style="color:#0abde3;">${window.t("adm_ts_offsetx", currentGlobalLang)}<span id="lblTeamOffsetX${team.id}">${team.avatarOffsetX || 0}</span>%):</label>
                             <input type="range" id="teamOffsetX${team.id}" min="-100" max="100" value="${team.avatarOffsetX || 0}" style="width:100%" oninput="document.getElementById('lblTeamOffsetX${team.id}').innerText=this.value" onchange="saveTeamAvatarSettings(${team.id})">
+                            <label style="color:#ff9f43; display:block; margin-top:10px; font-weight:bold;">📷 Đổi ảnh đại diện:</label>
+                            <input type="file" accept="image/png, image/jpeg" style="font-size: 11px; margin-top: 3px; color: #a4b0be; width: 100%;" onchange="uploadTeamAvatar(event, ${team.id})">
                         </div>
                     `;
                 });
@@ -3198,6 +3226,17 @@
 
             let containerHtml = `<div class="mini-preview-container" style="position:absolute; top:0; left:0; width:1920px; height:1080px; transform-origin: top left; transform: scale(${scale}); pointer-events:none;">`;
 
+            let fontTeamNameBold = state.settings && state.settings.fontTeamNameBold ? 'bold' : 'normal';
+            let fontTeamNameItalic = state.settings && state.settings.fontTeamNameItalic ? 'italic' : 'normal';
+            let fontScoreBold = state.settings && state.settings.fontScoreBold ? 'bold' : 'normal';
+            let fontScoreItalic = state.settings && state.settings.fontScoreItalic ? 'italic' : 'normal';
+
+            let titleHtml = title 
+                ? `<div style="position:absolute; top: 10%; width: 100%; text-align: center; z-index: 10;">
+                       <span style="font-family:'CustomTeamFont', '${fontTeamName}',sans-serif;font-size:75px;font-weight:${fontTeamNameBold};font-style:${fontTeamNameItalic};color:#fff;text-shadow:0 4px 15px rgba(0,0,0,0.8),0 2px 5px rgba(0,0,0,0.5);letter-spacing:4px;text-transform:uppercase;">${title}</span>
+                   </div>`
+                : '';
+
             let teamHtml = state.teams.map(team => {
                 let avatarUrl = `/Themes/Avatars/${team.id}.png`;
                 if (state.avatarTimestamps && state.avatarTimestamps[team.id]) avatarUrl += `?t=${state.avatarTimestamps[team.id]}`;
@@ -3212,20 +3251,14 @@
                             <!-- Khối chứa Tên + Điểm -->
                             <div style="width: ${Math.min(tSize, 100)}%; margin-top: -${tOverlap}%; z-index: 2; display: flex; flex-direction: column; border: 3px solid rgba(255, 255, 255, 0.9); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden;">
                                 <div style="background: linear-gradient(180deg, #d2e4f6, #9bc2ea); padding: 8px 10px; text-align: center; border-bottom: 2px solid rgba(255,255,255,0.5); overflow: hidden; display: flex; justify-content: center;">
-                                    <div style="font-family: 'CustomTeamFont', '${fontTeamName}', sans-serif; font-size: 26px; font-weight: normal; color: #012a5e; margin: 0; text-transform: uppercase; white-space: nowrap;">${team.name}</div>
+                                    <div style="font-family: 'CustomTeamFont', '${fontTeamName}', sans-serif; font-size: 26px; font-weight: ${fontTeamNameBold}; font-style: ${fontTeamNameItalic}; color: #012a5e; margin: 0; text-transform: uppercase; white-space: nowrap;">${team.name}</div>
                                 </div>
                                 <div style="background: linear-gradient(180deg, #1059a4, #083466); padding: 12px 10px; text-align: center;">
-                                    <div style="font-family: 'CustomScoreFont', '${fontScore}', sans-serif; font-size: 50px; font-weight: normal; color: #ffffff; margin: 0; line-height: 1;">${team.score}</div>
+                                    <div style="font-family: 'CustomScoreFont', '${fontScore}', sans-serif; font-size: 50px; font-weight: ${fontScoreBold}; font-style: ${fontScoreItalic}; color: #ffffff; margin: 0; line-height: 1;">${team.score}</div>
                                 </div>
                             </div>
                         </div>`;
             }).join('');
-
-            let titleHtml = title 
-                ? `<div style="position:absolute; top: 10%; width: 100%; text-align: center; z-index: 10;">
-                       <span style="font-family:'CustomTeamFont', '${fontTeamName}',sans-serif;font-size:75px;font-weight:normal;color:#fff;text-shadow:0 4px 15px rgba(0,0,0,0.8),0 2px 5px rgba(0,0,0,0.5);letter-spacing:4px;text-transform:uppercase;">${title}</span>
-                   </div>`
-                : '';
 
             let overallHtml = `
                 ${titleHtml}
