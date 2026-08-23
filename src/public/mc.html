@@ -664,10 +664,10 @@
                 if (globalEnabled) {
                     rules += `@font-face { font-family: 'CustomFontGlobal'; src: url('/font/${encodeURIComponent(fGlobal)}'); }\n`;
                     rules += `:root { 
-                        --font-general: 'CustomFontGlobal', '${fGlobal}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
-                        --font-team-name: 'CustomFontGlobal', '${fGlobal}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-general: 'CustomFontGlobal', '${fGlobal}', '${fGlobal.replace(/\s+/g, \'\')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-team-name: 'CustomFontGlobal', '${fGlobal}', '${fGlobal.replace(/\s+/g, \'\')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
                         --font-score: 'CustomFontGlobal', '${fGlobal}', 'Orbitron', sans-serif;
-                        --font-question: 'CustomFontGlobal', '${fGlobal}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-question: 'CustomFontGlobal', '${fGlobal}', '${fGlobal.replace(/\s+/g, \'\')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
                     }`;
                 } else {
                     rules += `@font-face { font-family: 'CustomFontGeneral'; src: url('/font/${encodeURIComponent(fGeneral)}'); }\n`;
@@ -676,10 +676,10 @@
                     rules += `@font-face { font-family: 'CustomFontScore'; src: url('/font/${encodeURIComponent(fScore)}'); }\n`;
                     
                     rules += `:root { 
-                        --font-general: 'CustomFontGeneral', '${fGeneral}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
-                        --font-team-name: 'CustomFontTeamName', '${fTeam}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
-                        --font-score: 'CustomFontScore', '${fScore}', 'Orbitron', sans-serif;
-                        --font-question: 'CustomFontQuestion', '${fQuestion}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-general: 'CustomFontGeneral', '${fGeneral}', '${fGeneral.replace(/\s+/g, \'\')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-team-name: 'CustomFontTeamName', '${fTeam}', '${fTeam.replace(/\s+/g, \'\')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-score: 'CustomFontScore', '${fScore}', '${fScore.replace(/\s+/g, \'\')}', 'Orbitron', sans-serif;
+                        --font-question: 'CustomFontQuestion', '${fQuestion}', '${fQuestion.replace(/\s+/g, \'\')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
                     }`;
                 }
                 

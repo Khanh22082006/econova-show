@@ -3372,10 +3372,10 @@
                             <!-- Khối chứa Tên + Điểm -->
                             <div style="width: ${Math.min(tSize, 100)}%; margin-top: -${tOverlap}%; z-index: 2; display: flex; flex-direction: column; border: 3px solid rgba(255, 255, 255, 0.9); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden;">
                                 <div style="background: linear-gradient(180deg, #d2e4f6, #9bc2ea); padding: 8px 10px; text-align: center; border-bottom: 2px solid rgba(255,255,255,0.5); overflow: hidden; display: flex; justify-content: center;">
-                                    <div style="font-family: 'CustomTeamFont', '${fontTeamName}', sans-serif; font-size: 26px; font-weight: ${fontTeamNameBold}; font-style: ${fontTeamNameItalic}; color: #012a5e; margin: 0; text-transform: uppercase; white-space: nowrap;">${team.name}</div>
+                                    <div style="font-family: 'CustomTeamFont', '${fontTeamName}', '${fontTeamName.replace(/\s+/g, \'\')}', sans-serif; font-size: 26px; font-weight: ${fontTeamNameBold}; font-style: ${fontTeamNameItalic}; color: #012a5e; margin: 0; text-transform: uppercase; white-space: nowrap;">${team.name}</div>
                                 </div>
                                 <div style="background: linear-gradient(180deg, #1059a4, #083466); padding: 12px 10px; text-align: center;">
-                                    <div style="font-family: 'CustomScoreFont', '${fontScore}', sans-serif; font-size: 50px; font-weight: ${fontScoreBold}; font-style: ${fontScoreItalic}; color: #ffffff; margin: 0; line-height: 1;">${team.score}</div>
+                                    <div style="font-family: 'CustomScoreFont', '${fontScore}', '${fontScore.replace(/\s+/g, \'\')}', sans-serif; font-size: 50px; font-weight: ${fontScoreBold}; font-style: ${fontScoreItalic}; color: #ffffff; margin: 0; line-height: 1;">${team.score}</div>
                                 </div>
                             </div>
                         </div>`;

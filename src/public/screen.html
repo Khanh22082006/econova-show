@@ -208,7 +208,7 @@
         }
         body.ascend_2026 .team-card:last-child { border-right: none; }
         body.ascend_2026 .team-school { display: none; }
-        body.ascend_2026 .team-name { font-size: 26px; font-weight: 700; color: #fff; margin:0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); white-space: nowrap; flex: 1; min-width: 0; display: flex; align-items: center; overflow: hidden; line-height: 1.5; margin-top: 0px; }
+        body.ascend_2026 .team-name { font-family: var(--font-team-name); font-size: 26px; font-weight: 700; color: #fff; margin:0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); white-space: nowrap; flex: 1; min-width: 0; display: flex; align-items: center; overflow: hidden; line-height: 1.5; margin-top: 0px; }
         body.ascend_2026 .name-inner { display: inline-block; white-space: nowrap; transform-origin: left center; }
         body.ascend_2026 .team-score { font-family: 'Orbitron', sans-serif; font-family: var(--font-score); font-size: 32px; font-weight: 900; color: #fff; text-shadow: 0 0 15px rgba(255,255,255,0.5); }
         body.ascend_2026 .team-card.is-main { background: rgba(255, 255, 255, 0.85); box-shadow: inset 0 0 30px rgba(255,255,255,1), 0 0 20px rgba(255,255,255,0.8); }
@@ -273,7 +273,7 @@
         body.ascend_2026 .q-meta { display: none; } 
         .hope-star-badge { position: absolute; top: -110px; right: -120px; width: 350px; height: 350px; background: url('/Star_1.gif') no-repeat center center; background-size: contain; z-index: 20; animation: star-pulse 2s infinite; }
         @keyframes star-pulse { 0%, 100% { transform: scale(1) rotate(0deg); } 50% { transform: scale(1.1) rotate(15deg); } }
-        .question-text { font-size: 28px; font-weight: 700; line-height: 1.25; text-align: left; width: 100%; margin-top: 0; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
+        .question-text { font-family: var(--font-question); font-size: 28px; font-weight: 700; line-height: 1.25; text-align: left; width: 100%; margin-top: 0; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
 
         body.ascend_2026 #qGrid { background: rgba(4, 15, 33, 0.98) !important; backdrop-filter: blur(15px) !important; -webkit-backdrop-filter: blur(15px) !important; border-radius: 20px !important; border: 2px solid rgba(255, 255, 255, 0.15) !important; padding: 30px !important; box-shadow: 0 0 30px rgba(0, 0, 0, 0.5) !important; margin: auto !important; width: 90% !important; max-width: 1600px !important; animation: flip3D 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; transform-origin: center center; }
         @keyframes flip3D { 0% { transform: perspective(1200px) rotateX(-90deg); opacity: 0; } 100% { transform: perspective(1200px) rotateX(0deg); opacity: 1; } }
@@ -1235,10 +1235,10 @@
                 if (globalEnabled) {
                     rules += `@font-face { font-family: 'CustomFontGlobal'; src: url('/font/${encodeURIComponent(fGlobal)}'); }\n`;
                     rules += `:root { 
-                        --font-general: 'CustomFontGlobal', '${fGlobal}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
-                        --font-team-name: 'CustomFontGlobal', '${fGlobal}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-general: 'CustomFontGlobal', '${fGlobal}', '${fGlobal.replace(/\s+/g, \'\')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-team-name: 'CustomFontGlobal', '${fGlobal}', '${fGlobal.replace(/\s+/g, \'\')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
                         --font-score: 'CustomFontGlobal', '${fGlobal}', 'Orbitron', sans-serif;
-                        --font-question: 'CustomFontGlobal', '${fGlobal}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-question: 'CustomFontGlobal', '${fGlobal}', '${fGlobal.replace(/\s+/g, \'\')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
                     }`;
                 } else {
                     rules += `@font-face { font-family: 'CustomFontGeneral'; src: url('/font/${encodeURIComponent(fGeneral)}'); }\n`;
@@ -1247,10 +1247,10 @@
                     rules += `@font-face { font-family: 'CustomFontScore'; src: url('/font/${encodeURIComponent(fScore)}'); }\n`;
                     
                     rules += `:root { 
-                        --font-general: 'CustomFontGeneral', '${fGeneral}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
-                        --font-team-name: 'CustomFontTeamName', '${fTeam}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
-                        --font-score: 'CustomFontScore', '${fScore}', 'Orbitron', sans-serif;
-                        --font-question: 'CustomFontQuestion', '${fQuestion}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-general: 'CustomFontGeneral', '${fGeneral}', '${fGeneral.replace(/\s+/g, \'\')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-team-name: 'CustomFontTeamName', '${fTeam}', '${fTeam.replace(/\s+/g, \'\')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-score: 'CustomFontScore', '${fScore}', '${fScore.replace(/\s+/g, \'\')}', 'Orbitron', sans-serif;
+                        --font-question: 'CustomFontQuestion', '${fQuestion}', '${fQuestion.replace(/\s+/g, \'\')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
                     }`;
                 }
                 
