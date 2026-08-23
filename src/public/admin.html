@@ -261,6 +261,14 @@
                         <input type="file" id="batchVideoFilesInput" accept="video/mp4,video/webm,video/ogg,video/quicktime" multiple style="display:none;" onchange="handleBatchUploadVideos(event)">
                         <button type="button" class="btn-purple" onclick="document.getElementById('batchVideoFilesInput').click()" style="background: #8e44ad; border: none; border-radius: 4px; color: #fff; padding: 8px 14px; cursor: pointer; font-weight: bold;">📁 TẢI LÊN NHIỀU FILE VIDEO (.MP4)</button>
                     </div>
+                    
+                    <div id="localVideoSyncAlert" style="display: none; margin-top: 15px; padding: 15px; background: rgba(255, 71, 87, 0.2); border: 2px dashed #ff4757; border-radius: 8px;">
+                        <strong style="color: #ff6b81; font-size: 15px; display: block; margin-bottom: 8px;">⚠️ Phát hiện <span id="localVideoCountText"></span> Video đang sử dụng đường dẫn Local (Ổ đĩa máy tính)!</strong>
+                        <span style="color: #dfe4ea; font-size: 13px; display: block; margin-bottom: 12px;">Do phần mềm đang chạy trên máy chủ đám mây, bạn phải ĐỒNG BỘ các video này lên Server trước khi bắt đầu chơi để tránh lỗi không phát được hình ảnh.</span>
+                        <input type="file" id="localVideoFolderInput" webkitdirectory directory multiple style="display:none;" onchange="handleSyncLocalVideosFolder(event)">
+                        <button class="btn-red" onclick="document.getElementById('localVideoFolderInput').click()" style="padding: 10px 15px; font-size: 14px; font-weight: bold; background: #ff4757; color: white; border: none; border-radius: 6px; cursor: pointer; box-shadow: 0 0 15px rgba(255,71,87,0.4);">🔄 BẤM VÀO ĐÂY ĐỂ CHỌN THƯ MỤC CHỨA VIDEO VÀ ĐỒNG BỘ TỰ ĐỘNG</button>
+                        <div id="localVideoSyncStatus" style="margin-top: 10px; font-size: 13px; font-weight: bold; color: #feca57;"></div>
+                    </div>
                 </div>
             </div>
             <div id="excelStatus" style="margin-bottom: 20px; font-size: 14px; color: #a4b0be;"><span data-i18n="adm_bank_empty">Chưa tải file.</span></div>
@@ -844,6 +852,104 @@
         let questionBank = { 10: [], 20: [], 40: [] };
         let currentVideoUrl = "";
 
+        function checkLocalVideosNeeded() {
+            if (!questionBank) return;
+            let localCount = 0;
+            const isLocal = (url) => url && !url.startsWith('/videos/') && !url.startsWith('http') && !url.startsWith('/');
+            ['10', '20', '40'].forEach(pts => {
+                if (questionBank[pts]) {
+                    questionBank[pts].forEach(q => {
+                        if (isLocal(q.vid)) localCount++;
+                    });
+                }
+            });
+            const alertBox = document.getElementById('localVideoSyncAlert');
+            const countText = document.getElementById('localVideoCountText');
+            if (alertBox && countText) {
+                if (localCount > 0) {
+                    countText.innerText = localCount;
+                    alertBox.style.display = 'block';
+                } else {
+                    alertBox.style.display = 'none';
+                }
+            }
+        }
+
+        async function handleSyncLocalVideosFolder(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+            
+            const statusEl = document.getElementById('localVideoSyncStatus');
+            const isLocal = (url) => url && !url.startsWith('/videos/') && !url.startsWith('http') && !url.startsWith('/');
+            
+            // Collect all local path basenames we need
+            let neededNames = new Set();
+            ['10', '20', '40'].forEach(pts => {
+                if (questionBank[pts]) {
+                    questionBank[pts].forEach(q => {
+                        if (isLocal(q.vid)) {
+                            // Extract basename (e.g. from C:\Videos\cau1.mp4 -> cau1.mp4)
+                            let baseName = q.vid.split(/[\/\\]/).pop().toLowerCase();
+                            neededNames.add(baseName);
+                        }
+                    });
+                }
+            });
+            
+            if (neededNames.size === 0) return;
+            
+            let matchedFiles = [];
+            for (let i = 0; i < files.length; i++) {
+                if (neededNames.has(files[i].name.toLowerCase())) {
+                    matchedFiles.push(files[i]);
+                }
+            }
+            
+            if (matchedFiles.length === 0) {
+                if (statusEl) statusEl.innerHTML = `<span style="color:#ff4757">❌ Không tìm thấy video nào trong thư mục khớp với danh sách cần đồng bộ!</span>`;
+                return;
+            }
+            
+            if (statusEl) statusEl.innerHTML = `<span>⏳ Đang tải lên 0/${matchedFiles.length} video...</span>`;
+            let successCount = 0;
+            
+            for (let i = 0; i < matchedFiles.length; i++) {
+                const file = matchedFiles[i];
+                saveVideoToCache(file.name, file);
+                try {
+                    if (statusEl) statusEl.innerHTML = `<span>⏳ Đang tải lên ${i+1}/${matchedFiles.length}: ${file.name}...</span>`;
+                    const res = await fetch('/api/video/upload_raw?filename=' + encodeURIComponent(file.name), {
+                        method: 'POST',
+                        headers: { 'Content-Type': file.type || 'video/mp4' },
+                        body: file
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        successCount++;
+                        saveVideoToCache(data.url.split('/').pop(), file);
+                        const baseName = file.name.toLowerCase();
+                        ['10', '20', '40'].forEach(pts => {
+                            if (questionBank[pts]) {
+                                questionBank[pts].forEach(q => {
+                                    if (isLocal(q.vid)) {
+                                        let qBaseName = q.vid.split(/[\/\\]/).pop().toLowerCase();
+                                        if (qBaseName === baseName) q.vid = data.url;
+                                    }
+                                });
+                            }
+                        });
+                    }
+                } catch (err) {
+                    console.error('Lỗi upload video:', file.name, err);
+                }
+            }
+            
+            if (statusEl) statusEl.innerHTML = `<span style="color:#10ac84">✅ Đã đồng bộ thành công ${successCount}/${matchedFiles.length} video!</span>`;
+            saveQuestionBankToLocalStorage(localStorage.getItem('econova_questionBankName'), localStorage.getItem('econova_activeBankSlot'));
+            checkLocalVideosNeeded();
+            event.target.value = '';
+        }
+
         function saveQuestionBankToLocalStorage(displayName, slotId) {
             try {
                 localStorage.setItem('econova_questionBank', JSON.stringify(questionBank));
@@ -878,6 +984,8 @@
                     if (slotId && slotId !== 'excel') {
                         socket.emit('setActiveBankSlot', slotId);
                     }
+                    
+                    checkLocalVideosNeeded();
                     
                     const savedSelected = localStorage.getItem('econova_adminSelectedQuestions');
                     if (savedSelected) {
@@ -944,6 +1052,7 @@
                     validateQuestionsPerTeam();
                     socket.emit('setQuestionCount', { "10": questionBank[10].length, "20": questionBank[20].length, "40": questionBank[40].length });
                     saveQuestionBankToLocalStorage(file.name, 'excel');
+                    checkLocalVideosNeeded();
                 } catch (err) {
                     alert(t("adm_excel_err", currentGlobalLang) + err.message);
                 }
@@ -994,6 +1103,7 @@
                 socket.emit('setQuestionCount', { "10": questionBank[10] ? questionBank[10].length : 0, "20": questionBank[20] ? questionBank[20].length : 0, "40": questionBank[40] ? questionBank[40].length : 0 });
                 socket.emit('setActiveBankSlot', slotId);
                 saveQuestionBankToLocalStorage(displayName, slotId);
+                checkLocalVideosNeeded();
             })
             .catch(e => alert(t("adm_load_err", currentGlobalLang) + e.message));
         }
