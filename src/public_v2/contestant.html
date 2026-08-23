@@ -513,8 +513,7 @@
         const statusText = document.getElementById('statusText');
         
         const videoOverlay = document.getElementById('videoOverlay');
-        const mainVideo = document.getElementById('mainVideo');
-        const volumeSlider = document.getElementById('volumeSlider');
+
         const qBox = document.getElementById('qBox');
         const qPoints = document.getElementById('qPoints');
         const qText = document.getElementById('qText');
@@ -531,9 +530,7 @@
             }
         }
 
-        volumeSlider.addEventListener('input', (e) => {
-            mainVideo.volume = e.target.value;
-        });
+
 
         function resolveVideoUrl(url) {
             if (!url) return '';
