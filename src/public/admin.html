@@ -2656,7 +2656,7 @@
                 
                 let rules = '';
                 if (globalEnabled) {
-                    rules += '@font-face { font-family: \'CustomFontGlobal\'; src: url(\'/font/' + encodeURIComponent(fGlobal) + '\') format(\'truetype\'); }\n';
+                    rules += '@font-face { font-family: \'CustomFontGlobal\'; src: url(\'/font/' + encodeURIComponent(fGlobal) + '\'); }\n';
                     rules += ':root { ' +
                         '--font-general: \'CustomFontGlobal\', \'SF Pro Display Bold\', \'Segoe UI\', sans-serif;' +
                         '--font-team-name: \'CustomFontGlobal\', \'SF Pro Display Bold\', \'Segoe UI\', sans-serif;' +
@@ -2664,10 +2664,10 @@
                         '--font-question: \'CustomFontGlobal\', \'SF Pro Display Bold\', \'Segoe UI\', sans-serif;' +
                     '}';
                 } else {
-                    rules += '@font-face { font-family: \'CustomFontGeneral\'; src: url(\'/font/' + encodeURIComponent(fGeneral) + '\') format(\'truetype\'); }\n';
-                    rules += '@font-face { font-family: \'CustomFontQuestion\'; src: url(\'/font/' + encodeURIComponent(fQuestion) + '\') format(\'truetype\'); }\n';
-                    rules += '@font-face { font-family: \'CustomFontTeamName\'; src: url(\'/font/' + encodeURIComponent(fTeam) + '\') format(\'truetype\'); }\n';
-                    rules += '@font-face { font-family: \'CustomFontScore\'; src: url(\'/font/' + encodeURIComponent(fScore) + '\') format(\'truetype\'); }\n';
+                    rules += '@font-face { font-family: \'CustomFontGeneral\'; src: url(\'/font/' + encodeURIComponent(fGeneral) + '\'); }\n';
+                    rules += '@font-face { font-family: \'CustomFontQuestion\'; src: url(\'/font/' + encodeURIComponent(fQuestion) + '\'); }\n';
+                    rules += '@font-face { font-family: \'CustomFontTeamName\'; src: url(\'/font/' + encodeURIComponent(fTeam) + '\'); }\n';
+                    rules += '@font-face { font-family: \'CustomFontScore\'; src: url(\'/font/' + encodeURIComponent(fScore) + '\'); }\n';
                     
                     rules += ':root { ' +
                         '--font-general: \'CustomFontGeneral\', \'SF Pro Display Bold\', \'Segoe UI\', sans-serif;' +
@@ -3402,8 +3402,8 @@
                 document.head.appendChild(styleEl);
             }
             let newStyles = `
-                @font-face { font-family: 'CustomTeamFont'; src: url('/font/${encodeURIComponent(fontTeamName)}?t=${Date.now()}') format('truetype'); }
-                @font-face { font-family: 'CustomScoreFont'; src: url('/font/${encodeURIComponent(fontScore)}?t=${Date.now()}') format('truetype'); }
+                @font-face { font-family: 'CustomTeamFont'; src: url('/font/${encodeURIComponent(fontTeamName)}?t=${Date.now()}'); }
+                @font-face { font-family: 'CustomScoreFont'; src: url('/font/${encodeURIComponent(fontScore)}?t=${Date.now()}'); }
             `;
             if (styleEl.innerHTML !== newStyles) {
                 styleEl.innerHTML = newStyles;
