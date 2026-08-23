@@ -1605,4 +1605,11 @@ body.v3 .v3-pt-box-new.active { background: #e84118; color: #ffcc00; }
 
 /* HIDE V3 WHEN NOT V3 THEME */
 body:not(.v3) #v3-wrapper, body:not(.v3) #v3-wrapper-overlay { display: none !important; }
-\n/* V3 CUSTOM FONT SYNC */\n.v3-new-root { font-family: var(--font-general); }\n.v3-new-root .player-poly { font-family: var(--font-team-name); }\n.v3-new-root .v3-player-inner { font-family: var(--font-team-name); }\n.v3-new-root .ov-score-main, .v3-new-root .ov-score-pack, .v3-new-root .team-score-text { font-family: var(--font-score); }\n.v3-new-root .ov-question { font-family: var(--font-question); }\n.v3-new-root .v3-cell { font-family: var(--font-general); }\n
+
+/* V3 CUSTOM FONT SYNC */
+.v3-new-root { font-family: var(--font-general); }
+.v3-new-root .player-poly { font-family: var(--font-team-name); }
+.v3-new-root .v3-player-inner { font-family: var(--font-team-name); }
+.v3-new-root .ov-score-main, .v3-new-root .ov-score-pack, .v3-new-root .team-score-text { font-family: var(--font-score); }
+.v3-new-root .ov-question { font-family: var(--font-question); }
+.v3-new-root .v3-cell { font-family: var(--font-general); }
