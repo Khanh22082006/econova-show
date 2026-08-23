@@ -1739,20 +1739,15 @@
                 
                 const cleanKey = keyName.toLowerCase().replace(/[^a-z0-9]/g, '');
                 const rawName = keyName.split('/').pop().split('\\').pop();
-                const prefixMatch = rawName.split('_')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
                 
                 const record = {
                     key: cleanKey,
                     rawKey: keyName,
                     baseName: rawName,
-                    prefix: prefixMatch,
                     blob: fileBlob,
                     savedAt: Date.now()
                 };
                 store.put(record);
-                if (prefixMatch && prefixMatch.length >= 2) {
-                    store.put({ ...record, key: 'prefix_' + prefixMatch });
-                }
             } catch(e) {
                 console.warn('Lỗi lưu cache video:', e);
             }

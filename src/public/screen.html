@@ -772,20 +772,15 @@
                 
                 const cleanKey = keyName.toLowerCase().replace(/[^a-z0-9]/g, '');
                 const rawName = keyName.split('/').pop().split('\\').pop();
-                const prefixMatch = rawName.split('_')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
                 
                 const record = {
                     key: cleanKey,
                     rawKey: keyName,
                     baseName: rawName,
-                    prefix: prefixMatch,
                     blob: fileBlob,
                     savedAt: Date.now()
                 };
                 store.put(record);
-                if (prefixMatch && prefixMatch.length >= 2) {
-                    store.put({ ...record, key: 'prefix_' + prefixMatch });
-                }
             } catch(e) {}
         }
 
@@ -828,7 +823,6 @@
                 if (!rawName || !window.indexedDB) return null;
                 
                 const cleanKey = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
-                const prefixMatch = rawName.split('_')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
 
                 const blob = await new Promise((resolve) => {
                     const req = indexedDB.open('EconovaVideoCache_v1', 1);
@@ -841,28 +835,7 @@
                         const getReq = store.get(cleanKey);
                         getReq.onsuccess = () => {
                             if (getReq.result && getReq.result.blob) return resolve(getReq.result.blob);
-                            
-                            if (prefixMatch && prefixMatch.length >= 2) {
-                                const pReq = store.get('prefix_' + prefixMatch);
-                                pReq.onsuccess = () => {
-                                    if (pReq.result && pReq.result.blob) return resolve(pReq.result.blob);
-                                    
-                                    const allReq = store.getAll();
-                                    allReq.onsuccess = () => {
-                                        const all = allReq.result || [];
-                                        const found = all.find(item => 
-                                            (item.rawKey && item.rawKey.includes(rawName)) ||
-                                            (item.baseName && item.baseName.includes(prefixMatch)) ||
-                                            (item.key && item.key.includes(cleanKey))
-                                        );
-                                        resolve(found ? found.blob : null);
-                                    };
-                                    allReq.onerror = () => resolve(null);
-                                };
-                                pReq.onerror = () => resolve(null);
-                            } else {
-                                resolve(null);
-                            }
+                            resolve(null);
                         };
                         getReq.onerror = () => resolve(null);
                     };
