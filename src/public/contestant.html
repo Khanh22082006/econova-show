@@ -1040,9 +1040,9 @@
                     statusText.style.borderColor = '#ff6b81';
                 } else {
                     if (window.myBuzzPending && state.buzzedTeam == null) {
-                        buzzBtn.classList.add('locked');
-                        buzzBtn.classList.remove('unlocked', 'success');
-                        buzzRing.classList.remove('animating');
+                        buzzBtn.classList.remove('locked', 'success');
+                        buzzBtn.classList.add('unlocked');
+                        buzzRing.classList.add('animating');
                         btnIcon.innerHTML = `<span style="font-size: 38px; display:block; margin-bottom: 2px;">⚡</span><span style="font-size: 15px; font-weight: 700; display:block;">ĐÃ BẤM CHUÔNG!</span>`;
                         statusText.textContent = '⚡ ĐANG GỬI TÍN HIỆU...';
                         statusText.style.color = '#feca57';
