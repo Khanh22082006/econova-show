@@ -111,6 +111,11 @@
             background-size: 50px 50px;
             animation: grid-drift 20s linear infinite;
         }
+
+        body.v3-new-root {
+            background-image: none !important;
+            background: linear-gradient(135deg, #0a1936, #00cfff) !important;
+        }
         @keyframes grid-drift { 0% { transform: translate(0, 0); } 100% { transform: translate(50px, 50px); } }
         
         body.default .ascend-only { display: none !important; }
@@ -1366,34 +1371,34 @@
 
                 var teamHtml = '';
                 state.teams.forEach(team => {
-                    var avatarUrl = \`/Themes/Avatars/\${team.id}.png\`;
+                    var avatarUrl = `/Themes/Avatars/${team.id}.png`;
                     if (state.avatarTimestamps && state.avatarTimestamps[team.id]) {
-                        avatarUrl += \`?t=\${state.avatarTimestamps[team.id]}\`;
+                        avatarUrl += `?t=${state.avatarTimestamps[team.id]}`;
                     }
                     
                     var tSize = team.avatarSize !== undefined ? team.avatarSize : 100;
                     var tOverlap = team.avatarOverlap !== undefined ? team.avatarOverlap : 10;
                     var tOffsetX = team.avatarOffsetX !== undefined ? team.avatarOffsetX : 0;
 
-                    teamHtml += \`
+                    teamHtml += `
                         <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; min-width: 0;">
-                            <img src="\${avatarUrl}" style="width: \${tSize}%; height: auto; max-height: 65vh; object-fit: contain; z-index: 1; transform: translateX(\${tOffsetX}%);" onerror="this.style.visibility='hidden'">
-                            <div style="width: \${Math.min(tSize, 100)}%; margin-top: -\${tOverlap}%; z-index: 2; display: flex; flex-direction: column; border: 3px solid rgba(255, 255, 255, 0.9); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden;">
+                            <img src="${avatarUrl}" style="width: ${tSize}%; height: auto; max-height: 65vh; object-fit: contain; z-index: 1; transform: translateX(${tOffsetX}%);" onerror="this.style.visibility='hidden'">
+                            <div style="width: ${Math.min(tSize, 100)}%; margin-top: -${tOverlap}%; z-index: 2; display: flex; flex-direction: column; border: 3px solid rgba(255, 255, 255, 0.9); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden;">
                                 <div class="overall-team-name-container" style="background: linear-gradient(180deg, #d2e4f6, #9bc2ea); padding: 8px 10px; text-align: center; border-bottom: 2px solid rgba(255,255,255,0.5); overflow: hidden; display: flex; justify-content: center;">
-                                    <div class="overall-team-name-inner" style="font-family: 'CustomTeamFont', '\${fontTeamName}', sans-serif; font-size: 26px; font-weight: \${fontTeamNameBold}; font-style: \${fontTeamNameItalic}; color: #012a5e; margin: 0; text-transform: uppercase; white-space: nowrap; transform-origin: center;">\${team.name}</div>
+                                    <div class="overall-team-name-inner" style="font-family: 'CustomTeamFont', '${fontTeamName}', sans-serif; font-size: 26px; font-weight: ${fontTeamNameBold}; font-style: ${fontTeamNameItalic}; color: #012a5e; margin: 0; text-transform: uppercase; white-space: nowrap; transform-origin: center;">${team.name}</div>
                                 </div>
                                 <div style="background: linear-gradient(180deg, #1059a4, #083466); padding: 12px 10px; text-align: center;">
-                                    <div style="font-family: 'CustomScoreFont', '\${fontScore}', sans-serif; font-size: 50px; font-weight: \${fontScoreBold}; font-style: \${fontScoreItalic}; color: #ffffff; margin: 0; line-height: 1;">\${team.score}</div>
+                                    <div style="font-family: 'CustomScoreFont', '${fontScore}', sans-serif; font-size: 50px; font-weight: ${fontScoreBold}; font-style: ${fontScoreItalic}; color: #ffffff; margin: 0; line-height: 1;">${team.score}</div>
                                 </div>
                             </div>
                         </div>
-                    \`;
+                    `;
                 });
 
                 var yOffset = (state.settings && state.settings.scoreboardY !== undefined) ? state.settings.scoreboardY : 50;
 
                 var titleHtml = title 
-                    ? \`<div style="position:absolute; top: 10%; width: 100%; text-align: center; z-index: 10;"><span style="font-family:'CustomTeamFont', '\${fontTeamName}',sans-serif;font-size:75px;font-weight:\${fontTeamNameBold};font-style:\${fontTeamNameItalic};color:#fff;text-shadow:0 4px 15px rgba(0,0,0,0.8),0 2px 5px rgba(0,0,0,0.5);letter-spacing:4px;text-transform:uppercase;">\${title}</span></div>\`
+                    ? `<div style="position:absolute; top: 10%; width: 100%; text-align: center; z-index: 10;"><span style="font-family:'CustomTeamFont', '${fontTeamName}',sans-serif;font-size:75px;font-weight:${fontTeamNameBold};font-style:${fontTeamNameItalic};color:#fff;text-shadow:0 4px 15px rgba(0,0,0,0.8),0 2px 5px rgba(0,0,0,0.5);letter-spacing:4px;text-transform:uppercase;">${title}</span></div>`
                     : '';
 
                 var overallHtml = `
