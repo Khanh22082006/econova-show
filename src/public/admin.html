@@ -350,11 +350,42 @@
                     
                     <div id="adminVideoSection" style="display: none; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
                         <strong style="color:#ff9f43; display:block; margin-bottom: 10px;"><span data-i18n="adm_video">🎥 Đường dẫn Video (URL/File Cục bộ/Youtube):</span></strong>
-                        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
-                            <input type="text" id="adminVideoUrlInput" style="flex: 1; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid #576574; border-radius: 6px; color: #fff; font-size: 13px;" placeholder="Nhập đường dẫn URL hoặc tải file lên..." oninput="updateCustomVideoUrl(this.value)">
-                            <button type="button" class="btn-green" onclick="document.getElementById('videoUploadInput').click()" style="width:auto; padding: 8px 12px; font-size: 12px; background: #10ac84; border: none; border-radius: 4px; color: #fff; cursor: pointer; font-weight: bold; white-space: nowrap;">📤 Tải video (.mp4)</button>
+                        <div style="margin-bottom: 15px; font-size: 14px; color: #fff; background: rgba(0,0,0,0.4); padding: 10px; border-radius: 6px; border: 1px solid #576574;">
+                            <span>Trạng thái: </span>
+                            <strong id="adminVideoStatusText" style="color: #e74c3c;">Chưa có video</strong>
+                            <!-- We keep the hidden input to avoid breaking existing JS that reads from adminVideoUrlInput -->
+                            <input type="hidden" id="adminVideoUrlInput" oninput="updateCustomVideoUrl(this.value)">
                             <input type="file" id="videoUploadInput" accept="video/mp4,video/webm,video/ogg" style="display:none;" onchange="handleUploadVideoFile(event)">
                         </div>
+                        <script>
+                            (function() {
+                                const vi = document.getElementById('adminVideoUrlInput');
+                                if (vi) {
+                                    const originalSet = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                                    Object.defineProperty(vi, 'value', {
+                                        set(val) {
+                                            originalSet.call(this, val);
+                                            const st = document.getElementById('adminVideoStatusText');
+                                            if (st) {
+                                                if (!val || val.trim() === '') {
+                                                    st.textContent = 'Chưa có video';
+                                                    st.style.color = '#e74c3c';
+                                                } else if (val.includes('⏳') || val.includes('Đang')) {
+                                                    st.textContent = val;
+                                                    st.style.color = '#f39c12';
+                                                } else {
+                                                    st.textContent = 'Đã đính kèm video (' + val.split('/').pop() + ')';
+                                                    st.style.color = '#2ecc71';
+                                                }
+                                            }
+                                        },
+                                        get() {
+                                            return Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').get.call(this);
+                                        }
+                                    });
+                                }
+                            })();
+                        </script>
                         <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
                             <button class="btn-purple" style="width:auto; padding: 8px 16px; font-size: 14px;" onclick="playVideo()" data-i18n="adm_play">▶️ PHÁT VIDEO</button>
                             <button class="btn-red" style="width:auto; padding: 8px 16px; font-size: 14px;" onclick="closeVideo()" data-i18n="adm_close">❌ ĐÓNG VIDEO</button>
