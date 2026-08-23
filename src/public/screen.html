@@ -1934,22 +1934,26 @@
                     if (defQArea) defQArea.style.setProperty('display', 'none', 'important');
                     if (defQBox) defQBox.style.setProperty('display', 'none', 'important');
                     
-                    var showAscendGraphic = (displayState === 2) || (state.lockedPackage != null && displayState === 0);
-                    if (showAscendGraphic) {
+                    if (state.lockedPackage != null) {
                         if (ascendFrame) ascendFrame.style.setProperty('display', 'flex', 'important');
-                        if (ascendQArea) ascendQArea.style.setProperty('display', 'flex', 'important');  
-                        if (ascendQBox) ascendQBox.style.setProperty('display', 'flex', 'important');
-                        if (qGridNode) qGridNode.style.setProperty('display', 'none', 'important');  
-                    } else if (displayState === 1) {
+                        if (displayState === 1) {
+                            if (ascendQArea) ascendQArea.style.setProperty('display', 'none', 'important');  
+                            if (ascendQBox) ascendQBox.style.setProperty('display', 'none', 'important');
+                            if (qGridNode) qGridNode.style.setProperty('display', 'flex', 'important');  
+                        } else {
+                            if (ascendQArea) ascendQArea.style.setProperty('display', 'flex', 'important');  
+                            if (ascendQBox) ascendQBox.style.setProperty('display', 'flex', 'important');
+                            if (qGridNode) qGridNode.style.setProperty('display', 'none', 'important');  
+                        }
+                    } else {
                         if (ascendFrame) ascendFrame.style.setProperty('display', 'none', 'important');
                         if (ascendQArea) ascendQArea.style.setProperty('display', 'none', 'important');  
                         if (ascendQBox) ascendQBox.style.setProperty('display', 'none', 'important');
-                        if (qGridNode) qGridNode.style.setProperty('display', 'flex', 'important');  
-                    } else {
-                        if (ascendFrame) ascendFrame.style.setProperty('display', 'flex', 'important');
-                        if (ascendQArea) ascendQArea.style.setProperty('display', 'none', 'important');
-                        if (ascendQBox) ascendQBox.style.setProperty('display', 'none', 'important');
-                        if (qGridNode) qGridNode.style.setProperty('display', 'none', 'important');
+                        if (displayState === 1) {
+                            if (qGridNode) qGridNode.style.setProperty('display', 'flex', 'important');  
+                        } else {
+                            if (qGridNode) qGridNode.style.setProperty('display', 'none', 'important');
+                        }
                     }
                     return;
                 }
@@ -1960,24 +1964,27 @@
                 if (ascendQArea) ascendQArea.style.setProperty('display', 'none', 'important');
                 if (ascendQBox) ascendQBox.style.setProperty('display', 'none', 'important');
                 
-                var showClassicGraphic = (displayState === 2) || (state.lockedPackage != null && displayState === 0);
-                if (showClassicGraphic) {
+                if (state.lockedPackage != null) {
                     if (defScoreboard) defScoreboard.style.setProperty('display', 'flex', 'important');
-                    if (defQArea) defQArea.style.setProperty('display', 'flex', 'important');
-                    if (defQBox) defQBox.style.setProperty('display', 'flex', 'important');
-                    if (qGridNode) qGridNode.style.setProperty('display', 'none', 'important');
-                } else if (displayState === 1) {
+                    if (displayState === 1) {
+                        if (defQArea) defQArea.style.setProperty('display', 'none', 'important');
+                        if (defQBox) defQBox.style.setProperty('display', 'none', 'important');
+                        if (qGridNode) qGridNode.style.setProperty('display', 'flex', 'important');
+                    } else {
+                        if (defQArea) defQArea.style.setProperty('display', 'flex', 'important');
+                        if (defQBox) defQBox.style.setProperty('display', 'flex', 'important');
+                        if (qGridNode) qGridNode.style.setProperty('display', 'none', 'important');
+                    }
+                } else {
                     if (defScoreboard) defScoreboard.style.setProperty('display', 'none', 'important');
                     if (defQArea) defQArea.style.setProperty('display', 'none', 'important');
                     if (defQBox) defQBox.style.setProperty('display', 'none', 'important');
-                    if (qGridNode) qGridNode.style.setProperty('display', 'flex', 'important');
-                } else {
-                    if (defScoreboard) defScoreboard.style.setProperty('display', 'flex', 'important');
-                    if (defQArea) defQArea.style.setProperty('display', 'none', 'important');
-                    if (defQBox) defQBox.style.setProperty('display', 'none', 'important');
-                    if (qGridNode) qGridNode.style.setProperty('display', 'none', 'important');
+                    if (displayState === 1) {
+                        if (qGridNode) qGridNode.style.setProperty('display', 'flex', 'important');
+                    } else {
+                        if (qGridNode) qGridNode.style.setProperty('display', 'none', 'important');
+                    }
                 }
-            }
 
             var hsbDef = document.getElementById('defaultHopeStarBadge');
             var hsbAsc = document.getElementById('ascendHopeStarBadge');
@@ -2696,8 +2703,6 @@ document.addEventListener('DOMContentLoaded', () => {
             computedMachineState = 2;
             clearTimeout(window.v3TransitionTimeout);
             window.v3TransitionTimeout = null;
-        } else if (isMode1 && q.active) {
-            computedMachineState = 2;
         } else if (state.isGridVisibleOnOverlay) {
             computedMachineState = 1;
             clearTimeout(window.v3TransitionTimeout); window.v3TransitionTimeout = null;
