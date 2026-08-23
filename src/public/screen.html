@@ -1934,26 +1934,22 @@
                     if (defQArea) defQArea.style.setProperty('display', 'none', 'important');
                     if (defQBox) defQBox.style.setProperty('display', 'none', 'important');
                     
-                    if (state.lockedPackage != null) {
+                    var showAscendGraphic = (displayState === 2) || (state.lockedPackage != null && displayState === 0);
+                    if (showAscendGraphic) {
                         if (ascendFrame) ascendFrame.style.setProperty('display', 'flex', 'important');
-                        if (displayState === 1) {
-                            if (ascendQArea) ascendQArea.style.setProperty('display', 'none', 'important');  
-                            if (ascendQBox) ascendQBox.style.setProperty('display', 'none', 'important');
-                            if (qGridNode) qGridNode.style.setProperty('display', 'flex', 'important');  
-                        } else {
-                            if (ascendQArea) ascendQArea.style.setProperty('display', 'flex', 'important');  
-                            if (ascendQBox) ascendQBox.style.setProperty('display', 'flex', 'important');
-                            if (qGridNode) qGridNode.style.setProperty('display', 'none', 'important');  
-                        }
-                    } else {
+                        if (ascendQArea) ascendQArea.style.setProperty('display', 'flex', 'important');  
+                        if (ascendQBox) ascendQBox.style.setProperty('display', 'flex', 'important');
+                        if (qGridNode) qGridNode.style.setProperty('display', 'none', 'important');  
+                    } else if (displayState === 1) {
                         if (ascendFrame) ascendFrame.style.setProperty('display', 'none', 'important');
                         if (ascendQArea) ascendQArea.style.setProperty('display', 'none', 'important');  
                         if (ascendQBox) ascendQBox.style.setProperty('display', 'none', 'important');
-                        if (displayState === 1) {
-                            if (qGridNode) qGridNode.style.setProperty('display', 'flex', 'important');  
-                        } else {
-                            if (qGridNode) qGridNode.style.setProperty('display', 'none', 'important');
-                        }
+                        if (qGridNode) qGridNode.style.setProperty('display', 'flex', 'important');  
+                    } else {
+                        if (ascendFrame) ascendFrame.style.setProperty('display', 'none', 'important');
+                        if (ascendQArea) ascendQArea.style.setProperty('display', 'none', 'important');
+                        if (ascendQBox) ascendQBox.style.setProperty('display', 'none', 'important');
+                        if (qGridNode) qGridNode.style.setProperty('display', 'none', 'important');
                     }
                     return;
                 }
