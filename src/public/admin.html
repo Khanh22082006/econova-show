@@ -335,13 +335,15 @@
                     <div id="adminAText" style="margin-bottom: 15px;"></div>
                     
                     <div id="adminVideoSection" style="display: none; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
-                        <strong style="color:#ff9f43; display:block; margin-bottom: 10px;"><span data-i18n="adm_video">🎥 Video đính kèm:</span> <span id="adminVText"></span></strong>
-                        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
-                            <button class="btn-purple" style="width:auto; padding: 6px 14px;" onclick="playVideo()" data-i18n="adm_play">▶️ PHÁT VIDEO</button>
-                            <button class="btn-red" style="width:auto; padding: 6px 14px;" onclick="closeVideo()" data-i18n="adm_close">❌ ĐÓNG VIDEO</button>
+                        <strong style="color:#ff9f43; display:block; margin-bottom: 10px;"><span data-i18n="adm_video">🎥 Đường dẫn Video (URL/File Cục bộ/Youtube):</span></strong>
+                        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
+                            <input type="text" id="adminVideoUrlInput" style="flex: 1; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid #576574; border-radius: 6px; color: #fff; font-size: 13px;" placeholder="Nhập đường dẫn URL hoặc tải file lên..." oninput="updateCustomVideoUrl(this.value)">
+                            <button type="button" class="btn-green" onclick="document.getElementById('videoUploadInput').click()" style="width:auto; padding: 8px 12px; font-size: 12px; background: #10ac84; border: none; border-radius: 4px; color: #fff; cursor: pointer; font-weight: bold; white-space: nowrap;">📤 Tải video (.mp4)</button>
                             <input type="file" id="videoUploadInput" accept="video/mp4,video/webm,video/ogg" style="display:none;" onchange="handleUploadVideoFile(event)">
-                            <button type="button" class="btn-green" onclick="document.getElementById('videoUploadInput').click()" style="width:auto; padding: 6px 12px; font-size: 12px; background: #10ac84; border: none; border-radius: 4px; color: #fff; cursor: pointer; font-weight: bold;">📤 Tải video mới (.mp4)</button>
-                            <button type="button" class="btn-secondary" onclick="promptCustomVideoUrl()" style="width:auto; padding: 6px 12px; font-size: 12px; background: #2f3542; border: 1px solid #576574; border-radius: 4px; color: #ffd700; cursor: pointer; font-weight: bold;">🔗 Đổi link Video</button>
+                        </div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+                            <button class="btn-purple" style="width:auto; padding: 8px 16px; font-size: 14px;" onclick="playVideo()" data-i18n="adm_play">▶️ PHÁT VIDEO</button>
+                            <button class="btn-red" style="width:auto; padding: 8px 16px; font-size: 14px;" onclick="closeVideo()" data-i18n="adm_close">❌ ĐÓNG VIDEO</button>
                         </div>
                     </div>
 
@@ -1527,14 +1529,10 @@
                 socket.emit('setQuestion', { mainTeamId: teamId, points, text, answer, vid, idx });
                 
                 const vidSection = document.getElementById('adminVideoSection');
-                const vText = document.getElementById('adminVText');
-                if (vidSection && vText) {
-                    if (vid) {
-                        vidSection.style.display = 'block';
-                        vText.innerText = vid;
-                    } else {
-                        vidSection.style.display = 'none';
-                    }
+                const vInput = document.getElementById('adminVideoUrlInput');
+                if (vidSection) {
+                    vidSection.style.display = 'block';
+                    if (vInput) vInput.value = vid || '';
                 }
             } catch (err) {
                 alert(t("adm_err_q", currentGlobalLang) + err.message);
@@ -1666,16 +1664,16 @@
             }
             
             const isCloudWeb = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-            const isLocalDiskPath = (/^[a-zA-Z]:[\\\/]/.test(url) || url.includes('\\')) && !url.startsWith('/videos/');
+            const vInput = document.getElementById('adminVideoUrlInput');
             
-            if (isCloudWeb) {
-                if (isLocalDiskPath) {
-                    const baseName = url.split(/[\\\/]/).pop();
-                    const cachedBlob = await getVideoFromCache(baseName);
-                    if (cachedBlob) {
-                        const vText = document.getElementById('adminVText');
-                        if (vText) vText.innerText = `⏳ Đang tự động khôi phục video ${baseName} lên máy chủ...`;
-                        try {
+            if (isCloudWeb && url.startsWith('/videos/')) {
+                try {
+                    const check = await fetch(url, { method: 'HEAD' });
+                    if (!check.ok) {
+                        const baseName = url.split('/').pop().split('?')[0];
+                        const cachedBlob = await getVideoFromCache(baseName);
+                        if (cachedBlob) {
+                            if (vInput) vInput.value = `⏳ Đang tự động khôi phục video ${baseName} sau khởi động lại...`;
                             const res = await fetch('/api/video/upload_raw?filename=' + encodeURIComponent(baseName), {
                                 method: 'POST',
                                 headers: { 'Content-Type': cachedBlob.type || 'video/mp4' },
@@ -1684,48 +1682,18 @@
                             const data = await res.json();
                             if (data.success) {
                                 currentVideoUrl = data.url;
-                                if (vText) vText.innerText = data.url;
+                                if (vInput) vInput.value = data.url;
                                 socket.emit('updateCurrentQuestionVideo', { vid: data.url });
                                 socket.emit('playVideo', data.url);
                                 return;
                             }
-                        } catch(e) {}
-                    }
-                    document.getElementById('videoUploadInput').click();
-                    return;
-                }
-
-                // If URL is /videos/... check if it still exists or if Render restarted
-                if (url.startsWith('/videos/')) {
-                    try {
-                        const check = await fetch(url, { method: 'HEAD' });
-                        if (!check.ok) {
-                            const baseName = url.split('/').pop().split('?')[0];
-                            const cachedBlob = await getVideoFromCache(baseName);
-                            if (cachedBlob) {
-                                const vText = document.getElementById('adminVText');
-                                if (vText) vText.innerText = `⏳ Đang tự động khôi phục video ${baseName} sau khởi động lại...`;
-                                const res = await fetch('/api/video/upload_raw?filename=' + encodeURIComponent(baseName), {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': cachedBlob.type || 'video/mp4' },
-                                    body: cachedBlob
-                                });
-                                const data = await res.json();
-                                if (data.success) {
-                                    currentVideoUrl = data.url;
-                                    if (vText) vText.innerText = data.url;
-                                    socket.emit('updateCurrentQuestionVideo', { vid: data.url });
-                                    socket.emit('playVideo', data.url);
-                                    return;
-                                }
-                            }
-                            const vText = document.getElementById('adminVText');
-                            if (vText) vText.innerText = url;
-                            document.getElementById('videoUploadInput').click();
-                            return;
                         }
-                    } catch(e) {}
-                }
+                        // If no cache or restore failed
+                        if (vInput) vInput.value = url;
+                        document.getElementById('videoUploadInput').click();
+                        return;
+                    }
+                } catch(e) {}
             }
             
             socket.emit('playVideo', url);
@@ -1739,8 +1707,8 @@
             
             saveVideoToCache(file.name, file);
             
-            const vText = document.getElementById('adminVText');
-            if (vText) vText.innerText = `⏳ Đang tải lên video ${file.name} (${(file.size / (1024*1024)).toFixed(1)}MB)...`;
+            const vInput = document.getElementById('adminVideoUrlInput');
+            if (vInput) vInput.value = `⏳ Đang tải lên video ${file.name} (${(file.size / (1024*1024)).toFixed(1)}MB)...`;
             
             const xhr = new XMLHttpRequest();
             xhr.open('POST', '/api/video/upload_raw?filename=' + encodeURIComponent(file.name), true);
@@ -1749,7 +1717,7 @@
             xhr.upload.onprogress = function(e) {
                 if (e.lengthComputable) {
                     const pct = Math.round((e.loaded / e.total) * 100);
-                    if (vText) vText.innerText = `⏳ Đang tải lên: ${pct}% (${file.name})`;
+                    if (vInput) vInput.value = `⏳ Đang tải lên: ${pct}% (${file.name})`;
                 }
             };
             
@@ -1759,7 +1727,7 @@
                         const data = JSON.parse(xhr.responseText);
                         if (data.success) {
                             currentVideoUrl = data.url;
-                            if (vText) vText.innerText = data.url;
+                            if (vInput) vInput.value = data.url;
                             saveVideoToCache(data.url.split('/').pop(), file);
                             socket.emit('updateCurrentQuestionVideo', { vid: data.url });
                             socket.emit('playVideo', data.url);
@@ -1830,14 +1798,9 @@
             event.target.value = '';
         }
 
-        function promptCustomVideoUrl() {
-            const url = prompt('Nhập link video (URL web, YouTube, Google Drive, hoặc file mp4):', currentVideoUrl || '');
-            if (url !== null && url.trim()) {
-                currentVideoUrl = url.trim();
-                const vText = document.getElementById('adminVText');
-                if (vText) vText.innerText = currentVideoUrl;
-                socket.emit('updateCurrentQuestionVideo', { vid: currentVideoUrl });
-            }
+        function updateCustomVideoUrl(url) {
+            currentVideoUrl = (url || '').trim();
+            socket.emit('updateCurrentQuestionVideo', { vid: currentVideoUrl });
         }
         
         
@@ -2871,16 +2834,11 @@
             
             // Restore Video UI
             const vidSection = document.getElementById('adminVideoSection');
-            const vText = document.getElementById('adminVText');
-            if (vidSection && vText) {
-                if (q.vid) {
-                    currentVideoUrl = q.vid;
-                    vidSection.style.display = 'block';
-                    vText.innerText = q.vid;
-                } else {
-                    currentVideoUrl = "";
-                    vidSection.style.display = 'none';
-                }
+            const vInput = document.getElementById('adminVideoUrlInput');
+            if (vidSection) {
+                currentVideoUrl = q.vid || "";
+                vidSection.style.display = 'block';
+                if (vInput) vInput.value = currentVideoUrl;
             }
             
             // 4. Status UI
