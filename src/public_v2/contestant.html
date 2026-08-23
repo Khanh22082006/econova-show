@@ -225,11 +225,11 @@
         #qBox {
             background: rgba(10, 25, 54, 0.8); backdrop-filter: blur(10px);
             border: 1px solid rgba(0, 210, 211, 0.3); border-radius: 12px;
-            width: 95%; max-width: 1200px; padding: 15px;
+            width: 100%; max-width: 800px; padding: 15px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.5);
             display: none; flex-direction: column; align-items: center; text-align: center; justify-content: center;
-            height: 300px; overflow: hidden; z-index: 100;
-            margin-top: 20px; flex-shrink: 0;
+            height: clamp(150px, 40vh, 300px); overflow: hidden; z-index: 100;
+            flex-shrink: 1; margin: 10px;
         }
         #qPoints {
             font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif); font-size: 26px; font-weight: 700; color: #ff9f43; margin-bottom: 15px; flex-shrink: 0;
@@ -238,7 +238,30 @@
             width: 100%; flex: 1; display: flex; align-items: flex-start; justify-content: flex-start; overflow: hidden;
         }
         #qText {
-            font-size: 60px; font-weight: 700; color: #fff; text-shadow: 0 2px 5px rgba(0,0,0,0.8); word-break: break-word; line-height: 1.4; text-align: left;
+            font-size: clamp(20px, 4vw, 50px); font-weight: 700; color: #fff; text-shadow: 0 2px 5px rgba(0,0,0,0.8); word-break: break-word; line-height: 1.4; text-align: left; width: 100%;
+        }
+
+        .split-layout {
+            display: flex; flex-direction: row; width: 100%; max-width: 1200px;
+            align-items: center; justify-content: center; gap: 20px;
+            flex: 1; padding: 10px; box-sizing: border-box;
+        }
+
+        @media (max-width: 768px) {
+            .split-layout {
+                flex-direction: column;
+                justify-content: flex-start;
+                gap: 10px;
+            }
+            #qBox {
+                width: 95%; height: 20vh; min-height: 120px; max-width: 100%;
+            }
+            .buzzer-wrapper {
+                width: 250px; height: 250px;
+            }
+        }
+        #qText {
+            font-size: clamp(24px, 4vw, 50px); font-weight: 700; color: #fff; text-shadow: 0 2px 5px rgba(0,0,0,0.8); word-break: break-word; line-height: 1.4; text-align: left; width: 100%;
         }
         
         body { user-select: none; -webkit-user-select: none; }
@@ -312,22 +335,24 @@
                 </div>
             </div>
             
-            <!-- Hộp câu hỏi -->
-            <div id="qBox">
-                <div id="qPoints"></div>
-                <div id="qTextContainer">
-                    <div id="qText"></div>
+            <div class="split-layout">
+                <!-- Hộp câu hỏi -->
+                <div id="qBox">
+                    <div id="qPoints"></div>
+                    <div id="qTextContainer">
+                        <div id="qText"></div>
+                    </div>
                 </div>
-            </div>
-            
-            <!-- Chuông -->
-            <div id="buzzerContainer" style="display: none;">
-                <div class="status-text" id="statusText">CHUÔNG KHÓA</div>
-                <div class="buzzer-wrapper">
-                    <div class="ring" id="buzzRing"></div>
-                    <button class="buzz-btn locked" id="buzzBtn">
-                        <span id="btnIcon">🔔 BẤM CHUÔNG</span>
-                    </button>
+                
+                <!-- Chuông -->
+                <div id="buzzerContainer" style="display: none;">
+                    <div class="status-text" id="statusText">CHUÔNG KHÓA</div>
+                    <div class="buzzer-wrapper">
+                        <div class="ring" id="buzzRing"></div>
+                        <button class="buzz-btn locked" id="buzzBtn">
+                            <span id="btnIcon">🔔 BẤM CHUÔNG</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
