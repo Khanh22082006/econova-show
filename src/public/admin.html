@@ -2841,8 +2841,6 @@
                         <div><label>${window.t('adm_team', currentGlobalLang)} ${team.id}</label>
                             <input type="text" id="teamName${team.id}" placeholder="${window.t('adm_placeholder_tname', currentGlobalLang).replace('{id}', team.id)}" value="${team.name}" oninput="saveTeamNames()">
                             <input type="text" id="teamSchool${team.id}" placeholder="${window.t('adm_placeholder_tschool', currentGlobalLang).replace('{id}', team.id)}" value="${team.school || ''}" oninput="saveTeamNames()">
-                            <label style="font-size: 12px; color: #a4b0be; margin-top: 5px;">${window.t('adm_label_tavatar', currentGlobalLang).replace('{id}', team.id)}</label>
-                            <input type="file" id="teamAvatar${team.id}" accept="image/png, image/jpeg" style="font-size: 12px;" onchange="uploadTeamAvatar(event, ${team.id})">
                         </div>
                     `;
                 });
