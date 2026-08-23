@@ -441,35 +441,61 @@ app.post('/api/room/buzz', async (req, res) => {
         const tid = parseInt(teamId);
         if (isNaN(tid)) return res.json({ success: false, message: 'TeamId không hợp lệ' });
 
-        if (state.isBuzzerLocked || state.buzzedTeam !== null) {
-            return res.json({ success: false, message: 'Chuông đang khóa hoặc đã có đội bấm', buzzedTeam: state.buzzedTeam });
-        }
-
         if (state.currentQuestion && state.currentQuestion.active && state.currentQuestion.mainTeamId != null && Number(state.currentQuestion.mainTeamId) === Number(tid)) {
             return res.json({ success: false, message: 'Đội chính không thể bấm chuông' });
         }
 
-        let elapsed = state.buzzerUnlockTime ? Math.max(0, Date.now() - state.buzzerUnlockTime) : 0;
-        if (!state.buzzTimes) state.buzzTimes = {};
-        state.buzzTimes[tid] = elapsed;
+        let isNewBuzz = false;
+        if (state.buzzerUnlockTime && state.buzzTimes && typeof state.buzzTimes[tid] !== 'number') {
+            let elapsed = Date.now() - state.buzzerUnlockTime;
+            if (elapsed <= 5000) {
+                state.buzzTimes[tid] = elapsed;
+                isNewBuzz = true;
+            }
+        }
 
-        state.isBuzzerLocked = true;
-        clearBuzzerTimeout(state);
-        state.buzzedTeam = tid;
-
-        const buzzedPayload = {
-            buzzedTeam: tid,
-            buzzTimes: state.buzzTimes,
-            pin: normalizedPin
-        };
-        io.to(normalizedPin).emit('buzzed', buzzedPayload);
-        io.sockets.sockets.forEach(s => {
-            if (s.currentRoomPin === normalizedPin) s.emit('buzzed', buzzedPayload);
-        });
-        playSoundInRoom(null, 'buzzed', normalizedPin);
-        broadcastState(null, 'updateState', state);
-
-        res.json({ success: true, buzzedTeam: tid, timeMs: elapsed });
+        if (!state.isBuzzerLocked && state.buzzedTeam === null && !state.pendingBuzzerTeam) {
+            playSoundInRoom(null, 'buzzed', normalizedPin);
+            
+            let delay = state.settings && state.settings.buzzerDelayMs !== undefined ? state.settings.buzzerDelayMs : 500;
+            if (delay > 0) {
+                state.pendingBuzzerTeam = tid;
+                setRoomBuzzerDelayTimer(normalizedPin, setTimeout(() => {
+                    if (state.pendingBuzzerTeam === tid) {
+                        state.buzzedTeam = tid;
+                        state.pendingBuzzerTeam = null;
+                        const buzzedPayload = {
+                            buzzedTeam: tid,
+                            buzzTimes: state.buzzTimes,
+                            pin: normalizedPin
+                        };
+                        io.to(normalizedPin).emit('buzzed', buzzedPayload);
+                        io.sockets.sockets.forEach(s => {
+                            if (s.currentRoomPin === normalizedPin) s.emit('buzzed', buzzedPayload);
+                        });
+                        broadcastState(null, 'updateState', state);
+                    }
+                }, delay));
+            } else {
+                state.buzzedTeam = tid;
+                const buzzedPayload = {
+                    buzzedTeam: tid,
+                    buzzTimes: state.buzzTimes,
+                    pin: normalizedPin
+                };
+                io.to(normalizedPin).emit('buzzed', buzzedPayload);
+                io.sockets.sockets.forEach(s => {
+                    if (s.currentRoomPin === normalizedPin) s.emit('buzzed', buzzedPayload);
+                });
+                broadcastState(null, 'updateState', state);
+            }
+            res.json({ success: true, buzzedTeam: null, timeMs: state.buzzTimes[tid] });
+        } else if (isNewBuzz) {
+            broadcastState(null, 'updateState', state);
+            res.json({ success: true, buzzedTeam: null, timeMs: state.buzzTimes[tid] });
+        } else {
+            res.json({ success: false, message: 'Chuông đang khóa hoặc đã có đội bấm', buzzedTeam: state.buzzedTeam });
+        }
     } catch(err) {
         console.error('Lỗi khi xử lý HTTP buzz:', err);
         res.status(500).json({ success: false, message: err.message });
@@ -2770,9 +2796,7 @@ if (newCount < 2 || newCount > 6) return;
             }
         }
 
-        if (!state.isBuzzerLocked && state.buzzedTeam === null) {
-            state.isBuzzerLocked = true;
-            clearBuzzerTimeout(state);
+        if (!state.isBuzzerLocked && state.buzzedTeam === null && !state.pendingBuzzerTeam) {
             playSoundInRoom(socket, 'buzzed');
             
             let delay = state.settings && state.settings.buzzerDelayMs !== undefined ? state.settings.buzzerDelayMs : 500;
