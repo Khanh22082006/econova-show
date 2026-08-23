@@ -971,9 +971,7 @@
 
                 // 3. Phản hồi xúc giác tức thì trên UI
                 if (buzzBtn && !buzzBtn.classList.contains('locked') && !buzzBtn.classList.contains('success')) {
-                    window.myBuzzPending = true;
-                    btnIcon.innerHTML = `<span style="font-size: 38px; display:block; margin-bottom: 2px;">⚡</span><span style="font-size: 15px; font-weight: 700; display:block;">ĐÃ BẤM CHUÔNG!</span>`;
-                    if (statusText) statusText.textContent = '⚡ ĐANG GỬI TÍN HIỆU...';
+                    // Do not change UI immediately per user request. Wait for server confirmation.
                 }
             }
         }
@@ -1039,23 +1037,13 @@
                     statusText.style.color = '#ff6b81';
                     statusText.style.borderColor = '#ff6b81';
                 } else {
-                    if (window.myBuzzPending && state.buzzedTeam == null) {
-                        buzzBtn.classList.remove('locked', 'success');
-                        buzzBtn.classList.add('unlocked');
-                        buzzRing.classList.add('animating');
-                        btnIcon.innerHTML = `<span style="font-size: 38px; display:block; margin-bottom: 2px;">⚡</span><span style="font-size: 15px; font-weight: 700; display:block;">ĐÃ BẤM CHUÔNG!</span>`;
-                        statusText.textContent = '⚡ ĐANG GỬI TÍN HIỆU...';
-                        statusText.style.color = '#feca57';
-                        statusText.style.borderColor = '#feca57';
-                    } else {
-                        buzzBtn.classList.remove('locked', 'success');
-                        buzzBtn.classList.add('unlocked');
-                        buzzRing.classList.add('animating');
-                        btnIcon.innerHTML = `<span style="font-size: 46px; display:block; margin-bottom: 2px;">🔔</span><span style="font-size: 18px; font-weight: 800; display:block; letter-spacing: 1px;">BẤM CHUÔNG!</span>`;
-                        statusText.textContent = typeof t === 'function' ? t('con_buzz_open', (state.settings && state.settings.language) || currentGlobalLang) : '🚨 CHUÔNG ĐANG MỞ (5S)!';
-                        statusText.style.color = '#2ed573';
-                        statusText.style.borderColor = '#2ed573';
-                    }
+                    buzzBtn.classList.remove('locked', 'success');
+                    buzzBtn.classList.add('unlocked');
+                    buzzRing.classList.add('animating');
+                    btnIcon.innerHTML = `<span style="font-size: 46px; display:block; margin-bottom: 2px;">🔔</span><span style="font-size: 18px; font-weight: 800; display:block; letter-spacing: 1px;">BẤM CHUÔNG!</span>`;
+                    statusText.textContent = typeof t === 'function' ? t('con_buzz_open', (state.settings && state.settings.language) || currentGlobalLang) : '🚨 CHUÔNG ĐANG MỞ (5S)!';
+                    statusText.style.color = '#2ed573';
+                    statusText.style.borderColor = '#2ed573';
                 }
             }
             // 3. NẾU CHUÔNG KHÓA
