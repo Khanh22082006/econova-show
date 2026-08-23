@@ -1235,10 +1235,10 @@
                 if (globalEnabled) {
                     rules += `@font-face { font-family: 'CustomFontGlobal'; src: url('/font/${encodeURIComponent(fGlobal)}') format('truetype'); }\n`;
                     rules += `:root { 
-                        --font-general: 'CustomFontGlobal', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
-                        --font-team-name: 'CustomFontGlobal', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
-                        --font-score: 'CustomFontGlobal', 'Orbitron', sans-serif;
-                        --font-question: 'CustomFontGlobal', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-general: 'CustomFontGlobal', '${fGlobal}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-team-name: 'CustomFontGlobal', '${fGlobal}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-score: 'CustomFontGlobal', '${fGlobal}', 'Orbitron', sans-serif;
+                        --font-question: 'CustomFontGlobal', '${fGlobal}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
                     }`;
                 } else {
                     rules += `@font-face { font-family: 'CustomFontGeneral'; src: url('/font/${encodeURIComponent(fGeneral)}') format('truetype'); }\n`;
@@ -1247,10 +1247,10 @@
                     rules += `@font-face { font-family: 'CustomFontScore'; src: url('/font/${encodeURIComponent(fScore)}') format('truetype'); }\n`;
                     
                     rules += `:root { 
-                        --font-general: 'CustomFontGeneral', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
-                        --font-team-name: 'CustomFontTeamName', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
-                        --font-score: 'CustomFontScore', 'Orbitron', sans-serif;
-                        --font-question: 'CustomFontQuestion', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-general: 'CustomFontGeneral', '${fGeneral}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-team-name: 'CustomFontTeamName', '${fTeam}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-score: 'CustomFontScore', '${fScore}', 'Orbitron', sans-serif;
+                        --font-question: 'CustomFontQuestion', '${fQuestion}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
                     }`;
                 }
                 
@@ -1385,10 +1385,10 @@
                             <img src="${avatarUrl}" style="width: ${tSize}%; height: auto; max-height: 65vh; object-fit: contain; z-index: 1; transform: translateX(${tOffsetX}%);" onerror="this.style.visibility='hidden'">
                             <div style="width: ${Math.min(tSize, 100)}%; margin-top: -${tOverlap}%; z-index: 2; display: flex; flex-direction: column; border: 3px solid rgba(255, 255, 255, 0.9); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden;">
                                 <div class="overall-team-name-container" style="background: linear-gradient(180deg, #d2e4f6, #9bc2ea); padding: 8px 10px; text-align: center; border-bottom: 2px solid rgba(255,255,255,0.5); overflow: hidden; display: flex; justify-content: center;">
-                                    <div class="overall-team-name-inner" style="font-family: 'CustomTeamFont', '${fontTeamName}', sans-serif; font-size: 26px; font-weight: ${fontTeamNameBold}; font-style: ${fontTeamNameItalic}; color: #012a5e; margin: 0; text-transform: uppercase; white-space: nowrap; transform-origin: center;">${team.name}</div>
+                                    <div class="overall-team-name-inner" style="font-family: 'CustomFontTeamName', '${fontTeamName}', sans-serif; font-size: 26px; font-weight: ${fontTeamNameBold}; font-style: ${fontTeamNameItalic}; color: #012a5e; margin: 0; text-transform: uppercase; white-space: nowrap; transform-origin: center;">${team.name}</div>
                                 </div>
                                 <div style="background: linear-gradient(180deg, #1059a4, #083466); padding: 12px 10px; text-align: center;">
-                                    <div style="font-family: 'CustomScoreFont', '${fontScore}', sans-serif; font-size: 50px; font-weight: ${fontScoreBold}; font-style: ${fontScoreItalic}; color: #ffffff; margin: 0; line-height: 1;">${team.score}</div>
+                                    <div style="font-family: 'CustomFontScore', '${fontScore}', sans-serif; font-size: 50px; font-weight: ${fontScoreBold}; font-style: ${fontScoreItalic}; color: #ffffff; margin: 0; line-height: 1;">${team.score}</div>
                                 </div>
                             </div>
                         </div>
@@ -1398,7 +1398,7 @@
                 var yOffset = (state.settings && state.settings.scoreboardY !== undefined) ? state.settings.scoreboardY : 50;
 
                 var titleHtml = title 
-                    ? `<div style="position:absolute; top: 10%; width: 100%; text-align: center; z-index: 10;"><span style="font-family:'CustomTeamFont', '${fontTeamName}',sans-serif;font-size:75px;font-weight:${fontTeamNameBold};font-style:${fontTeamNameItalic};color:#fff;text-shadow:0 4px 15px rgba(0,0,0,0.8),0 2px 5px rgba(0,0,0,0.5);letter-spacing:4px;text-transform:uppercase;">${title}</span></div>`
+                    ? `<div style="position:absolute; top: 10%; width: 100%; text-align: center; z-index: 10;"><span style="font-family:'CustomFontTeamName', '${fontTeamName}',sans-serif;font-size:75px;font-weight:${fontTeamNameBold};font-style:${fontTeamNameItalic};color:#fff;text-shadow:0 4px 15px rgba(0,0,0,0.8),0 2px 5px rgba(0,0,0,0.5);letter-spacing:4px;text-transform:uppercase;">${title}</span></div>`
                     : '';
 
                 var overallHtml = `
