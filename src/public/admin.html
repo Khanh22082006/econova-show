@@ -264,9 +264,15 @@
                     
                     <div id="localVideoSyncAlert" style="display: none; margin-top: 15px; padding: 15px; background: rgba(255, 71, 87, 0.2); border: 2px dashed #ff4757; border-radius: 8px;">
                         <strong style="color: #ff6b81; font-size: 15px; display: block; margin-bottom: 8px;">⚠️ Phát hiện <span id="localVideoCountText"></span> Video đang sử dụng đường dẫn Local (Ổ đĩa máy tính)!</strong>
-                        <span style="color: #dfe4ea; font-size: 13px; display: block; margin-bottom: 12px;">Do phần mềm đang chạy trên máy chủ đám mây, bạn phải ĐỒNG BỘ các video này lên Server trước khi bắt đầu chơi để tránh lỗi không phát được hình ảnh.</span>
+                        <div style="color: #dfe4ea; font-size: 13px; margin-bottom: 12px; line-height: 1.5;">
+                            <ul style="margin: 0; padding-left: 20px;">
+                                <li>Vì lý do <b>bảo mật của trình duyệt web</b>, trang web không thể tự động chép file từ máy tính của bạn nếu không được cấp quyền.</li>
+                                <li>Vui lòng cấp quyền bằng cách <b>bấm nút bên dưới để mở hộp thoại và chọn thư mục</b> chứa các video này để hệ thống đồng bộ lên Cloud.</li>
+                                <li><b style="color: #00d2d3;">💡 BẠN CÓ BIẾT:</b> Thao tác chọn hộp thoại này chỉ cần làm <b>1 lần duy nhất</b> trên mỗi máy tính! Những lần tải lại sau, hệ thống sẽ tự động khôi phục ngầm không cần hỏi lại.</li>
+                            </ul>
+                        </div>
                         <input type="file" id="localVideoFolderInput" webkitdirectory directory multiple style="display:none;" onchange="handleSyncLocalVideosFolder(event)">
-                        <button class="btn-red" onclick="document.getElementById('localVideoFolderInput').click()" style="padding: 10px 15px; font-size: 14px; font-weight: bold; background: #ff4757; color: white; border: none; border-radius: 6px; cursor: pointer; box-shadow: 0 0 15px rgba(255,71,87,0.4);">🔄 BẤM VÀO ĐÂY ĐỂ CHỌN THƯ MỤC CHỨA VIDEO VÀ ĐỒNG BỘ TỰ ĐỘNG</button>
+                        <button class="btn-red" onclick="document.getElementById('localVideoFolderInput').click()" style="padding: 10px 15px; font-size: 14px; font-weight: bold; background: #ff4757; color: white; border: none; border-radius: 6px; cursor: pointer; box-shadow: 0 0 15px rgba(255,71,87,0.4);">🔄 BẤM VÀO ĐÂY ĐỂ CHỌN THƯ MỤC CHỨA VIDEO VÀ ĐỒNG BỘ</button>
                         <div id="localVideoSyncStatus" style="margin-top: 10px; font-size: 13px; font-weight: bold; color: #feca57;"></div>
                     </div>
                 </div>
