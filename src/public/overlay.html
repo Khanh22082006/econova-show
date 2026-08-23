@@ -893,6 +893,23 @@
                 
                 if (styleEl.innerHTML !== rules) {
                     styleEl.innerHTML = rules;
+                    let loadGF = (fName) => {
+                        if (!fName) return;
+                        let sName = fName.replace(/['"]/g, '').trim();
+                        let lId = 'gf-' + sName.replace(/\s+/g, '-').toLowerCase();
+                        if (!document.getElementById(lId)) {
+                            let l = document.createElement('link'); l.id = lId; l.rel = 'stylesheet';
+                            l.href = 'https://fonts.googleapis.com/css2?family=' + sName.replace(/\s+/g, '+') + ':ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&display=swap';
+                            document.head.appendChild(l);
+                        }
+                    };
+                    if (typeof globalEnabled !== 'undefined' && globalEnabled) { loadGF(typeof fGlobal !== 'undefined' ? fGlobal : null); }
+                    else {
+                        if (typeof fGeneral !== 'undefined') loadGF(fGeneral);
+                        if (typeof fQuestion !== 'undefined') loadGF(fQuestion);
+                        if (typeof fTeam !== 'undefined') loadGF(fTeam);
+                        if (typeof fScore !== 'undefined') loadGF(fScore);
+                    }
                 }
             }
 
