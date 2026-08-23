@@ -501,7 +501,17 @@ app.get('/ping', (req, res) => res.send('ok'));
 
 function verifyAdminHeader(req) {
     const pin = req.headers['x-admin-pin'];
-    return (pin === ADMIN_PIN || pin === process.env.MASTER_ADMIN_PASSWORD || pin === 'superadmin');
+    const roomPin = req.headers['x-room-pin'];
+    
+    if (pin === ADMIN_PIN || pin === process.env.MASTER_ADMIN_PASSWORD || pin === 'superadmin') return true;
+    
+    if (roomPin && pin) {
+        if (roomManager.rooms && roomManager.rooms.has(roomPin)) {
+            const verified = roomManager.verifyAdmin(roomPin, pin);
+            if (verified && verified.success) return true;
+        }
+    }
+    return false;
 }
 const ADMIN_PIN = Math.floor(100000 + Math.random() * 900000).toString();
 app.get('/api/admin_pin', (req, res) => {

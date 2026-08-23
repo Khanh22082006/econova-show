@@ -1074,7 +1074,7 @@
             const total = questionBank[10].length + questionBank[20].length + questionBank[40].length;
             if (total === 0) { alert(t("adm_save_empty", currentGlobalLang)); return; }
 
-            fetch(`/api/questions/${slotId}`, { headers: { 'x-admin-pin': sessionStorage.getItem('adminAuth') || '' },
+            fetch(`/api/questions/${slotId}`, { headers: { 'x-admin-pin': sessionStorage.getItem('adminAuth') || '', 'x-room-pin': sessionStorage.getItem('currentRoomPin') || new URLSearchParams(window.location.search).get('pin') || '' },
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -1092,7 +1092,7 @@
         }
 
         function loadFromSlot(slotId) {
-            fetch(`/api/questions/${slotId}`, { headers: { 'x-admin-pin': sessionStorage.getItem('adminAuth') || '' } })
+            fetch(`/api/questions/${slotId}`, { headers: { 'x-admin-pin': sessionStorage.getItem('adminAuth') || '', 'x-room-pin': sessionStorage.getItem('currentRoomPin') || new URLSearchParams(window.location.search).get('pin') || '' } })
             .then(r => { if (!r.ok) throw new Error(t("adm_load_empty", currentGlobalLang)); return r.json(); })
             .then(data => {
                 questionBank = data.questions || { 10: [], 20: [], 40: [] };
@@ -1115,7 +1115,7 @@
         }
 
         function loadSlots() {
-            fetch('/api/questions', { headers: { 'x-admin-pin': sessionStorage.getItem('adminAuth') || '' } })
+            fetch('/api/questions', { headers: { 'x-admin-pin': sessionStorage.getItem('adminAuth') || '', 'x-room-pin': sessionStorage.getItem('currentRoomPin') || new URLSearchParams(window.location.search).get('pin') || '' } })
             .then(r => r.json())
             .then(sets => {
                 const grid = document.getElementById('slotGrid');
