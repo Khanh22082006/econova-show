@@ -944,7 +944,12 @@
         }
 
         function tryBuzz() {
+            if (window.currentState && (window.currentState.isBuzzerLocked || window.currentState.buzzedTeam != null)) {
+                return;
+            }
             if (myTeamId !== null && !isBanned) {
+                if (window.currentState) window.currentState.isBuzzerLocked = true;
+                
                 try { if (navigator.vibrate) navigator.vibrate([60]); } catch(e) {}
                 const token = window.currentState ? window.currentState.buzzToken : null;
 
