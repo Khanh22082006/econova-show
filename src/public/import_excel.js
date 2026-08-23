@@ -84,7 +84,7 @@ function overrideAdminExcelLogic() {
     };
 
     window.loadSlots = function() {
-        fetch('/api/questions')
+        fetch('/api/questions', { headers: { 'x-admin-pin': sessionStorage.getItem('adminAuth') || '' } })
         .then(r => r.json())
         .then(sets => {
             const grid = document.getElementById('slotGrid');
@@ -116,7 +116,7 @@ function overrideAdminExcelLogic() {
 
     window.deleteSet = function(setId) {
         if (!confirm("Bạn có chắc chắn muốn xóa bộ đề này? (Không thể hoàn tác)")) return;
-        fetch(`/api/questions/${setId}`, {
+        fetch(`/api/questions/${setId}`, { headers: { 'x-admin-pin': sessionStorage.getItem('adminAuth') || '' },
             method: 'DELETE',
             headers: { 'X-Admin-Pin': sessionStorage.getItem('adminAuth') }
         }).then(r => r.json()).then(d => {
@@ -182,11 +182,11 @@ function parseExcelJson(json) {
 }
 
 function checkConflictsBeforePreview() {
-    fetch('/api/questions')
+    fetch('/api/questions', { headers: { 'x-admin-pin': sessionStorage.getItem('adminAuth') || '' } })
     .then(r => r.json())
     .then(sets => {
         let fetchPromises = sets.filter(s => s.hasData).map(s => 
-            fetch(`/api/questions/${s.id}`).then(r => r.json()).then(data => { return {id: s.id, name: s.name, data: data.questions}; })
+            fetch(`/api/questions/${s.id}`, { headers: { 'x-admin-pin': sessionStorage.getItem('adminAuth') || '' } }).then(r => r.json()).then(data => { return {id: s.id, name: s.name, data: data.questions}; })
         );
         Promise.all(fetchPromises).then(results => {
             let conflictName = null;
@@ -352,7 +352,7 @@ window.saveParsedData = function(type) {
     
     let cleanedData = cleanParsedData(parsedExcelData);
     
-    fetch(`/api/questions/${setIdStr}`, {
+    fetch(`/api/questions/${setIdStr}`, { headers: { 'x-admin-pin': sessionStorage.getItem('adminAuth') || '' },
         method: 'POST',
         headers: { 
             'Content-Type': 'application/json',

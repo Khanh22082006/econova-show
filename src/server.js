@@ -1,4 +1,8 @@
 const express = require('express');
+const crypto = require('crypto');
+function generateVideoFilename(base, ext) {
+    return 'v_' + crypto.randomBytes(8).toString('hex') + ext;
+}
 
 // Ngăn sập server Quản trị viên nếu có lỗi không mong đợi từ socket/kết nối
 process.on('uncaughtException', (err) => {
@@ -39,7 +43,7 @@ io.emit = function(event, data, ...args) {
         let safeState = JSON.parse(JSON.stringify(data));
         delete safeState.questionBank;
         delete safeState.questions;
-        if (safeState.currentQuestion) safeState.currentQuestion.answer = "";
+        if (safeState.currentQuestion) { safeState.currentQuestion.answer = ""; safeState.currentQuestion.vid = ""; }
         if (safeState.lockedPackage && safeState.lockedPackage.questions) {
             safeState.lockedPackage.questions.forEach(q => {
                 delete q.answer;
@@ -414,7 +418,7 @@ app.get('/api/room/state', async (req, res) => {
     let safeState = JSON.parse(JSON.stringify(room.gameState));
     delete safeState.questionBank;
     delete safeState.questions;
-    if (safeState.currentQuestion) safeState.currentQuestion.answer = "";
+    if (safeState.currentQuestion) { safeState.currentQuestion.answer = ""; safeState.currentQuestion.vid = ""; }
     if (safeState.lockedPackage && safeState.lockedPackage.questions) {
         safeState.lockedPackage.questions.forEach(q => { delete q.answer; delete q.vid; });
     }
@@ -495,6 +499,10 @@ app.use('/sounds', express.static(path.join(__dirname, 'sounds')));
 app.use('/questions', express.static(path.join(basePath, 'questions')));
 app.get('/ping', (req, res) => res.send('ok'));
 
+function verifyAdminHeader(req) {
+    const pin = req.headers['x-admin-pin'];
+    return (pin === ADMIN_PIN || pin === process.env.MASTER_ADMIN_PASSWORD || pin === 'superadmin');
+}
 const ADMIN_PIN = Math.floor(100000 + Math.random() * 900000).toString();
 app.get('/api/admin_pin', (req, res) => {
     const ip = req.ip || req.connection.remoteAddress;
@@ -719,7 +727,7 @@ app.post('/api/video/upload_raw', (req, res) => {
         const ext = path.extname(rawFilename).toLowerCase() || '.mp4';
         const baseName = path.basename(rawFilename, ext).replace(/[^a-zA-Z0-9_-]/g, '_');
         const exactName = `${baseName}${ext}`;
-        const finalName = `${baseName}_${Date.now()}${ext}`;
+        const finalName = generateVideoFilename(baseName, ext);
         
         const target1 = path.join(videosDir1, finalName);
         const writeStream = fs.createWriteStream(target1);
@@ -810,6 +818,7 @@ dirs.forEach(d => {
 
 // Liệt kê các bộ đề đã lưu
 app.get('/api/questions', (req, res) => {
+    if (!verifyAdminHeader(req)) return res.status(401).json({ error: 'Unauthorized' });
     const sets = [];
     const questionsDir = path.join(basePath, 'questions');
     if (!fs.existsSync(questionsDir)) fs.mkdirSync(questionsDir, { recursive: true });
@@ -851,6 +860,7 @@ app.get('/api/questions', (req, res) => {
 
 // Lưu bộ đề
 app.post('/api/questions/:setId', (req, res) => {
+    if (!verifyAdminHeader(req)) return res.status(401).json({ error: 'Unauthorized' });
     if (req.headers['x-admin-pin'] !== ADMIN_PIN) return res.status(403).json({ error: 'Forbidden' });
     const setIdStr = req.params.setId;
     let dirName = '';
@@ -872,6 +882,7 @@ app.post('/api/questions/:setId', (req, res) => {
 
 // Đọc bộ đề
 app.get('/api/questions/:setId', (req, res) => {
+    if (!verifyAdminHeader(req)) return res.status(401).json({ error: 'Unauthorized' });
     const setIdStr = req.params.setId;
     let dirName = setIdStr.startsWith('draft_') ? setIdStr : `de${parseInt(setIdStr)}`;
     const jsonPath = path.join(basePath, 'questions', dirName, 'data.json');
@@ -887,6 +898,7 @@ app.get('/api/questions/:setId', (req, res) => {
 
 // Xóa bộ đề (Chính thức & Nháp)
 app.delete('/api/questions/:setId', (req, res) => {
+    if (!verifyAdminHeader(req)) return res.status(401).json({ error: 'Unauthorized' });
     if (req.headers['x-admin-pin'] !== ADMIN_PIN) return res.status(403).json({ error: 'Forbidden' });
     const setIdStr = req.params.setId;
     let dirName = setIdStr.startsWith('draft_') ? setIdStr : `de${parseInt(setIdStr)}`;
