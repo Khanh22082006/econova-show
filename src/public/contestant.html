@@ -970,7 +970,7 @@
                 }
 
                 // 3. Phản hồi xúc giác tức thì trên UI
-                if (buzzBtn && !buzzBtn.classList.contains('locked')) {
+                if (buzzBtn && !buzzBtn.classList.contains('locked') && !buzzBtn.classList.contains('success')) {
                     window.myBuzzPending = true;
                     btnIcon.innerHTML = `<span style="font-size: 38px; display:block; margin-bottom: 2px;">⚡</span><span style="font-size: 15px; font-weight: 700; display:block;">ĐÃ BẤM CHUÔNG!</span>`;
                     if (statusText) statusText.textContent = '⚡ ĐANG GỬI TÍN HIỆU...';
