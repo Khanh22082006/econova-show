@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Econova Show - Cổng Thi Đấu Trực Tuyến 2026</title>
+    <title>ECONOVA 2026: ASCEND | EEC - NEU</title>
     
     <!-- GOOGLE FONTS: BE VIETNAM PRO & MONTSERRAT CHUẨN 100% TIẾNG VIỆT -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -363,8 +363,8 @@
 <body>
 
     <div class="portal-header">
-        <h1 class="portal-title">🎮 ECONOVA SHOW 2026</h1>
-        <p class="portal-subtitle">Nền Tảng Game Show Đám Mây Đa Phòng (Hỗ Trợ 1.000.000 Phòng Thi Độc Lập)</p>
+        <h1 class="portal-title">✨ ECONOVA 2026: ASCEND</h1>
+        <p class="portal-subtitle">Cuộc thi tiếng Anh Kinh tế của CLB Tiếng Anh Kinh tế (EEC - NEU)</p>
     </div>
 
     <!-- TAB SWITCHER -->
@@ -388,31 +388,31 @@
             <div class="role-grid">
                 <div class="role-card" onclick="joinAsRole('contestant')">
                     <div class="role-icon">📱</div>
-                    <div class="role-title">Thí Sinh Bấm Chuông</div>
+                    <div class="role-title">Thí Sinh</div>
                     <div class="role-desc">Dành cho các đội thi trả lời câu hỏi và bấm chuông giành quyền.</div>
                 </div>
 
                 <div class="role-card" onclick="joinAsRole('screen')">
                     <div class="role-icon">📺</div>
-                    <div class="role-title">Màn Hình LED Lớn</div>
+                    <div class="role-title">Màn Hình Lớn</div>
                     <div class="role-desc">Hiển thị câu hỏi, gói điểm, đồng hồ và hiệu ứng cho khán giả.</div>
                 </div>
 
                 <div class="role-card" onclick="joinAsRole('overlay')">
                     <div class="role-icon">🎥</div>
-                    <div class="role-title">OBS Livestream</div>
+                    <div class="role-title">Overlay</div>
                     <div class="role-desc">Đồ họa trong suốt tích hợp luồng phát sóng trực tiếp vMix / OBS.</div>
                 </div>
 
                 <div class="role-card" onclick="joinAsRole('scoreboard')">
                     <div class="role-icon">🏆</div>
-                    <div class="role-title">Bảng Điểm Tổng</div>
+                    <div class="role-title">Bảng Điểm</div>
                     <div class="role-desc">Bảng tổng kết điểm số 4 đội thi đấu theo thời gian thực.</div>
                 </div>
 
                 <div class="role-card" onclick="joinAsRole('mc')">
                     <div class="role-icon">🎙️</div>
-                    <div class="role-title">Màn Hình MC</div>
+                    <div class="role-title">Màn MC</div>
                     <div class="role-desc">Kịch bản, câu hỏi đang mở, đáp án và gợi ý dẫn chương trình.</div>
                 </div>
 
@@ -446,7 +446,7 @@
 
                     <div class="form-row">
                         <label class="form-label">TÊN CUỘC THI / PHÒNG ĐẤU</label>
-                        <input type="text" id="createNameInput" class="form-input" placeholder="VD: Chung Kết Econova Show 2026" value="Chung Kết Econova Show 2026">
+                        <input type="text" id="createNameInput" class="form-input" placeholder="VD: ECONOVA 2026: ASCEND" value="ECONOVA 2026: ASCEND">
                         <div class="input-hint">Tên hiển thị trên đầu bảng điều khiển và màn hình trận đấu.</div>
                     </div>
 
@@ -849,7 +849,7 @@
         }
 
         async function handleCreateRoom() {
-            const name = document.getElementById('createNameInput').value.trim() || 'Chung Kết Econova Show 2026';
+            const name = document.getElementById('createNameInput').value.trim() || 'ECONOVA 2026: ASCEND';
             let pinInput = document.getElementById('createPinInput').value.trim().replace(/\D/g, '');
             const password = document.getElementById('createPassInput').value.trim() || 'admin123';
             const mcPassword = document.getElementById('createMcPassInput').value.trim() || 'mc123';
@@ -937,7 +937,7 @@
 
         function copyRoomDetails() {
             if (!lastCreatedRoom) return;
-            const text = `🏆 ECONOVA SHOW 2026 - THÔNG TIN PHÒNG THI\n\n🏷️ Tên phòng: ${lastCreatedRoom.name}\n🔑 Mã PIN 6 số: ${lastCreatedRoom.pin}\n⚙️ Mật khẩu Admin: ${lastCreatedRoom.password}\n🎙️ Mật khẩu MC: ${lastCreatedRoom.mcPassword}\n\n👉 Link tham gia: ${window.location.origin}`;
+            const text = `🏆 ECONOVA 2026: ASCEND - THÔNG TIN PHÒNG THI\n\n🏷️ Tên phòng: ${lastCreatedRoom.name}\n🔑 Mã PIN 6 số: ${lastCreatedRoom.pin}\n⚙️ Mật khẩu Admin: ${lastCreatedRoom.password}\n🎙️ Mật khẩu MC: ${lastCreatedRoom.mcPassword}\n\n👉 Link tham gia: ${window.location.origin}`;
             navigator.clipboard.writeText(text).then(() => {
                 alert('📋 Đã sao chép toàn bộ thông tin phòng vào bộ nhớ tạm!');
             }).catch(() => {

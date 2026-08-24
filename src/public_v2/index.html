@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Econova Show - Cổng Thi Đấu Trực Tuyến 2026</title>
+    <title>ECONOVA 2026: ASCEND | EEC - NEU</title>
     
     <!-- GOOGLE FONTS: BE VIETNAM PRO & MONTSERRAT CHUẨN 100% TIẾNG VIỆT -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -323,13 +323,48 @@
             font-weight: 800; font-size: 15px; cursor: pointer; margin-top: 10px;
         }
         .error-toast { color: #ff4757; font-size: 13px; font-weight: 700; margin-top: 8px; display: none; }
+    
+        /* 2-COLUMN CREATE ROOM GRID */
+        .create-room-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            width: 100%;
+            max-width: 960px;
+            margin-top: 6px;
+        }
+        @media (max-width: 820px) {
+            .create-room-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+        }
+        .create-col {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 16px 18px;
+        }
+        .col-header {
+            font-size: 13.5px;
+            font-weight: 800;
+            color: #00d2d3;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 8px;
+            margin-bottom: 2px;
+            letter-spacing: 0.5px;
+        }
+
     </style>
 </head>
 <body>
 
     <div class="portal-header">
-        <h1 class="portal-title">🎮 ECONOVA SHOW 2026</h1>
-        <p class="portal-subtitle">Nền Tảng Game Show Đám Mây Đa Phòng (Hỗ Trợ 1.000.000 Phòng Thi Độc Lập)</p>
+        <h1 class="portal-title">✨ ECONOVA 2026: ASCEND</h1>
+        <p class="portal-subtitle">Cuộc thi tiếng Anh Kinh tế của CLB Tiếng Anh Kinh tế (EEC - NEU)</p>
     </div>
 
     <!-- TAB SWITCHER -->
@@ -353,31 +388,31 @@
             <div class="role-grid">
                 <div class="role-card" onclick="joinAsRole('contestant')">
                     <div class="role-icon">📱</div>
-                    <div class="role-title">Thí Sinh Bấm Chuông</div>
+                    <div class="role-title">Thí Sinh</div>
                     <div class="role-desc">Dành cho các đội thi trả lời câu hỏi và bấm chuông giành quyền.</div>
                 </div>
 
                 <div class="role-card" onclick="joinAsRole('screen')">
                     <div class="role-icon">📺</div>
-                    <div class="role-title">Màn Hình LED Lớn</div>
+                    <div class="role-title">Màn Hình Lớn</div>
                     <div class="role-desc">Hiển thị câu hỏi, gói điểm, đồng hồ và hiệu ứng cho khán giả.</div>
                 </div>
 
                 <div class="role-card" onclick="joinAsRole('overlay')">
                     <div class="role-icon">🎥</div>
-                    <div class="role-title">OBS Livestream</div>
+                    <div class="role-title">Overlay</div>
                     <div class="role-desc">Đồ họa trong suốt tích hợp luồng phát sóng trực tiếp vMix / OBS.</div>
                 </div>
 
                 <div class="role-card" onclick="joinAsRole('scoreboard')">
                     <div class="role-icon">🏆</div>
-                    <div class="role-title">Bảng Điểm Tổng</div>
+                    <div class="role-title">Bảng Điểm</div>
                     <div class="role-desc">Bảng tổng kết điểm số 4 đội thi đấu theo thời gian thực.</div>
                 </div>
 
                 <div class="role-card" onclick="joinAsRole('mc')">
                     <div class="role-icon">🎙️</div>
-                    <div class="role-title">Màn Hình MC</div>
+                    <div class="role-title">Màn MC</div>
                     <div class="role-desc">Kịch bản, câu hỏi đang mở, đáp án và gợi ý dẫn chương trình.</div>
                 </div>
 
@@ -401,73 +436,147 @@
 
         <!-- PANEL 2: CREATE ROOM -->
         <div id="panel-create" style="width: 100%; display: none; flex-direction: column; align-items: center;">
-            <div class="form-row">
-                <label class="form-label">TÊN CUỘC THI / PHÒNG ĐẤU</label>
-                <input type="text" id="createNameInput" class="form-input" placeholder="VD: Chung Kết Econova Show 2026" value="Chung Kết Econova Show 2026">
-                <div class="input-hint">Tên hiển thị trên đầu bảng điều khiển và màn hình trận đấu.</div>
-            </div>
+            <div class="create-room-grid">
+                
+                <!-- CỘT 1: THÔNG TIN PHÒNG & BẢO MẬT -->
+                <div class="create-col">
+                    <div class="col-header">
+                        <span>🛡️ CỘT 1: THÔNG TIN PHÒNG & BẢO MẬT</span>
+                    </div>
 
-            <div class="form-row">
-                <label class="form-label">MÃ PIN PHÒNG (000000 - 999999)</label>
-                <div style="display: flex; gap: 8px;">
-                    <input type="tel" id="createPinInput" class="form-input" placeholder="Tự gõ hoặc bấm Ngẫu Nhiên" maxlength="6" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
-                    <button type="button" onclick="generateRandomPin()" style="padding:0 16px; border-radius:12px; background:rgba(0,210,211,0.2); border:1px solid #00d2d3; color:#00d2d3; cursor:pointer; font-weight:bold; white-space:nowrap;">🎲 Ngẫu Nhiên</button>
+                    <div class="form-row">
+                        <label class="form-label">TÊN CUỘC THI / PHÒNG ĐẤU</label>
+                        <input type="text" id="createNameInput" class="form-input" placeholder="VD: ECONOVA 2026: ASCEND" value="ECONOVA 2026: ASCEND">
+                        <div class="input-hint">Tên hiển thị trên đầu bảng điều khiển và màn hình trận đấu.</div>
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label">MÃ PIN PHÒNG (000000 - 999999)</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="tel" id="createPinInput" class="form-input" placeholder="Tự gõ hoặc bấm Ngẫu Nhiên" maxlength="6" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
+                            <button type="button" onclick="generateRandomPin()" style="padding:0 16px; border-radius:12px; background:rgba(0,210,211,0.2); border:1px solid #00d2d3; color:#00d2d3; cursor:pointer; font-weight:bold; white-space:nowrap;">🎲 Ngẫu Nhiên</button>
+                        </div>
+                        <div class="input-hint">Mã PIN gửi cho Thí Sinh & Màn Hình để vào phòng.</div>
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label">MẬT KHẨU QUẢN TRỊ VIÊN (ADMIN)</label>
+                        <div class="password-wrapper">
+                            <input type="password" id="createPassInput" class="form-input" placeholder="Tự đặt mật khẩu Admin..." value="admin123">
+                            <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('createPassInput', this)" title="Hiện/Ẩn mật khẩu">👁️</button>
+                        </div>
+                        <div class="input-hint">💡 Mật khẩu đăng nhập vào bảng điều khiển Admin.</div>
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label">MẬT KHẨU DÀNH CHO MC (TỰ SINH RANDOM)</label>
+                        <div class="password-wrapper">
+                            <input type="text" id="createMcPassInput" class="form-input" placeholder="Mật khẩu MC..." value="mc123">
+                            <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('createMcPassInput', this)" title="Hiện/Ẩn mật khẩu">👁️</button>
+                        </div>
+                        <div class="input-hint">💡 Mật khẩu gửi cho MC đăng nhập vào màn hình MC.</div>
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>⏱️ TỰ HỦY PHÒNG KHI RỜI ĐI</span>
+                            <span id="idleSliderBadge" style="color: #ffd700; font-weight: 800; font-size: 13px;">180 phút (3 giờ)</span>
+                        </label>
+                        <input type="range" id="createIdleSlider" min="5" max="1440" step="5" value="180" class="form-range" style="width: 100%; accent-color: #00d2d3; cursor: pointer; margin-top: 6px;" oninput="updateIdleSliderLabel(this.value)">
+                        <div class="input-hint">💡 Phòng tự đóng khi không có ai kết nối trong khoảng thời gian này (5p - 24h).</div>
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label">GIAO DIỆN THEME KHỞI TẠO</label>
+                        <select id="createThemeInput" class="form-input" style="background:#0a0a1a;">
+                            <option value="v3">✨ Theme Diagonal V3 (Mũi tên xanh & Đồ họa hiện đại nhất)</option>
+                            <option value="v2">🚀 Theme Ascend (Khung điểm ngang nổi bật)</option>
+                            <option value="v1">🏛️ Theme Cổ Điển (Classic Olympia 3 cột)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label">NGÔN NGỮ HIỂN THỊ</label>
+                        <select id="createLangInput" class="form-input" style="background:#0a0a1a;">
+                            <option value="vi">🇻🇳 Tiếng Việt</option>
+                            <option value="en">🇬🇧 English</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label">CHỐNG GIAN LẬN THÍ SINH (ANTI-CHEAT)</label>
+                        <select id="createAntiCheatInput" class="form-input" style="background:#0a0a1a;">
+                            <option value="1">🛡️ BẬT Bảo Vệ (Chống chuyển tab, DevTools, Fullscreen)</option>
+                            <option value="0">⚡ TẮT (Chế độ tập dượt / Test tự do)</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="input-hint">Mã PIN này sẽ gửi cho Thí Sinh & Màn Hình LED để vào phòng.</div>
-            </div>
 
-            <div class="form-row">
-                <label class="form-label">MẬT KHẨU QUẢN TRỊ VIÊN (ADMIN)</label>
-                <div class="password-wrapper">
-                    <input type="password" id="createPassInput" class="form-input" placeholder="Tự đặt mật khẩu Admin..." value="admin123">
-                    <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('createPassInput', this)" title="Hiện/Ẩn mật khẩu">👁️</button>
+                <!-- CỘT 2: LUẬT CHƠI, THÍ SINH & ĐỀ THI -->
+                <div class="create-col">
+                    <div class="col-header">
+                        <span>🎯 CỘT 2: LUẬT CHƠI, THÍ SINH & ĐỀ THI</span>
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label">SỐ LƯỢNG NGƯỜI CHƠI / ĐỘI THI</label>
+                        <select id="createTeamCountInput" class="form-input" style="background:#0a0a1a;" onchange="renderCreateTeamsInputs()">
+                            <option value="2">2 Người chơi / Đội thi</option>
+                            <option value="3">3 Người chơi / Đội thi</option>
+                            <option value="4" selected>4 Người chơi / Đội thi (Chuẩn Olympia)</option>
+                            <option value="5">5 Người chơi / Đội thi</option>
+                            <option value="6">6 Người chơi / Đội thi</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label">CHẾ ĐỘ CHỌN CÂU HỎI MẶC ĐỊNH</label>
+                        <select id="createSelectionModeInput" class="form-input" style="background:#0a0a1a;">
+                            <option value="mode1">🎯 Mode 1: Chọn từng câu đơn lẻ (Bật trực tiếp lên màn hình)</option>
+                            <option value="mode2" selected>🧩 Mode 2: Gói câu hỏi tự chọn từ lưới (Mỗi câu chọn từ ngân hàng)</option>
+                            <option value="mode3">🎲 Mode 3: Gói câu hỏi random theo mức điểm (10đ, 20đ, 40đ)</option>
+                        </select>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div class="form-row">
+                            <label class="form-label">SỐ CÂU MỖI ĐỘI</label>
+                            <input type="number" id="createQuestionsPerTeamInput" class="form-input" value="3" min="1" max="10">
+                        </div>
+                        <div class="form-row">
+                            <label class="form-label">ĐỘ TRỄ CHUÔNG (MS)</label>
+                            <input type="number" id="createBuzzerDelayInput" class="form-input" value="500" min="0" max="3000" step="50">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label">QUY TẮC XẾP THỨ TỰ LƯỢT THI</label>
+                        <select id="createTurnOrderRuleInput" class="form-input" style="background:#0a0a1a;">
+                            <option value="mode_asc">📊 Ưu tiên đội Điểm Thấp Nhất chơi trước (Chuẩn Olympia)</option>
+                            <option value="mode_desc">📈 Ưu tiên đội Điểm Cao Nhất chơi trước</option>
+                            <option value="mode_order">🔢 Theo thứ tự số hiệu (Đội 1 ➔ Đội 2 ➔ ...)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label">NẠP SẴN ĐỀ THI (.JSON) - TÙY CHỌN</label>
+                        <input type="file" id="createQuestionFileInput" accept=".json" class="form-input" style="padding: 8px 12px;" onchange="handleQuestionFileUpload(event)">
+                        <div class="input-hint" id="createQuestionFileHint">💡 Tải file ngân hàng câu hỏi JSON nếu muốn nạp đề ngay.</div>
+                    </div>
+
+                    <div class="form-row" style="margin-bottom: 0;">
+                        <label class="form-label">DANH SÁCH THÍ SINH / ĐỘI THI</label>
+                        <div id="createTeamsContainer" style="display: flex; flex-direction: column; gap: 8px; width: 100%; max-height: 280px; overflow-y: auto; padding-right: 4px;">
+                            <!-- Render động qua renderCreateTeamsInputs() -->
+                        </div>
+                    </div>
                 </div>
-                <div class="input-hint">💡 Bạn tự đặt mật khẩu này để sau đó đăng nhập vào bảng điều khiển Admin.</div>
+
             </div>
 
-            <div class="form-row">
-                <label class="form-label">MẬT KHẨU DÀNH CHO MC</label>
-                <div class="password-wrapper">
-                    <input type="password" id="createMcPassInput" class="form-input" placeholder="Tự đặt mật khẩu MC..." value="mc123">
-                    <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('createMcPassInput', this)" title="Hiện/Ẩn mật khẩu">👁️</button>
-                </div>
-                <div class="input-hint">💡 Bạn tự đặt mật khẩu này để gửi cho MC đăng nhập vào màn hình MC.</div>
-            </div>
-
-            <div class="form-row">
-                <label class="form-label">GIAO DIỆN THEME KHỞI TẠO</label>
-                <select id="createThemeInput" class="form-input" style="background:#0a0a1a;">
-                    <option value="v3">✨ Theme Diagonal V3 (Mũi tên xanh & Đồ họa hiện đại nhất)</option>
-                    <option value="v2">🚀 Theme Ascend (Khung điểm ngang nổi bật)</option>
-                    <option value="v1">🏛️ Theme Cổ Điển (Classic Olympia 3 cột)</option>
-                </select>
-            </div>
-
-            <div class="form-row">
-                <label class="form-label">SỐ LƯỢNG NGƯỜI CHƠI / ĐỘI THI</label>
-                <select id="createTeamCountInput" class="form-input" style="background:#0a0a1a;" onchange="renderCreateTeamsInputs()">
-                    <option value="2">2 Người chơi / Đội thi</option>
-                    <option value="3">3 Người chơi / Đội thi</option>
-                    <option value="4" selected>4 Người chơi / Đội thi (Chuẩn Olympia)</option>
-                    <option value="5">5 Người chơi / Đội thi</option>
-                    <option value="6">6 Người chơi / Đội thi</option>
-                </select>
-                <div class="input-hint">💡 Chọn số lượng thí sinh tham gia trận đấu này (từ 2 đến 6 đội).</div>
-            </div>
-
-            <div class="form-row" style="margin-bottom: 12px;">
-                <label class="form-label">DANH SÁCH THÍ SINH / ĐỘI THI</label>
-                <div class="input-hint" style="margin-top: -2px; margin-bottom: 10px;">Nhập tên và trường học / đơn vị cho từng thí sinh:</div>
-                <div id="createTeamsContainer" style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
-                    <!-- Render động qua renderCreateTeamsInputs() -->
-                </div>
-            </div>
-
-            <button class="btn-create-room" onclick="handleCreateRoom()">🚀 KHỞI TẠO PHÒNG ĐẤU</button>
+            <button class="btn-create-room" style="max-width: 960px; margin-top: 18px;" onclick="handleCreateRoom()">🚀 KHỞI TẠO PHÒNG ĐẤU</button>
             <div class="error-toast" id="createError"></div>
         </div>
-
-    </div>
 
     <!-- MODAL AUTHENTICATION (ADMIN / MC LOGIN) -->
     <div class="modal-overlay" id="authModal">
@@ -519,6 +628,48 @@
 
     <script>
         let currentTargetRole = '';
+
+        let uploadedQuestionBank = null;
+
+        function updateIdleSliderLabel(val) {
+            const minutes = parseInt(val, 10);
+            let text = '';
+            if (minutes < 60) {
+                text = `${minutes} phút`;
+            } else {
+                const hours = Math.floor(minutes / 60);
+                const remainingMin = minutes % 60;
+                text = remainingMin > 0 ? `${minutes} phút (${hours} giờ ${remainingMin}p)` : `${minutes} phút (${hours} giờ)`;
+            }
+            const badge = document.getElementById('idleSliderBadge');
+            if (badge) badge.innerText = text;
+        }
+
+        function handleQuestionFileUpload(e) {
+            const file = e.target.files[0];
+            const hint = document.getElementById('createQuestionFileHint');
+            if (!file) {
+                uploadedQuestionBank = null;
+                if (hint) hint.innerText = '💡 Tải file ngân hàng câu hỏi JSON nếu muốn nạp đề ngay.';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const parsed = JSON.parse(event.target.result);
+                    uploadedQuestionBank = parsed;
+                    if (hint) {
+                        hint.innerText = `✅ Đã nạp file đề: ${file.name}`;
+                        hint.style.color = '#2ecc71';
+                    }
+                } catch(err) {
+                    alert('Lỗi đọc file JSON câu hỏi: ' + err.message);
+                    uploadedQuestionBank = null;
+                }
+            };
+            reader.readAsText(file);
+        }
+
         let lastCreatedRoom = null;
 
         // Auto generate random PIN on first load for convenience
@@ -601,6 +752,10 @@
             // PIN nằm trong 000000 - 999999 có padStart
             const pin = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
             document.getElementById('createPinInput').value = pin;
+            const mcPass = 'mc' + pin.slice(0, 4);
+            if (document.getElementById('createMcPassInput')) {
+                document.getElementById('createMcPassInput').value = mcPass;
+            }
         }
 
         function getCleanPin() {
@@ -694,7 +849,7 @@
         }
 
         async function handleCreateRoom() {
-            const name = document.getElementById('createNameInput').value.trim() || 'Chung Kết Econova Show 2026';
+            const name = document.getElementById('createNameInput').value.trim() || 'ECONOVA 2026: ASCEND';
             let pinInput = document.getElementById('createPinInput').value.trim().replace(/\D/g, '');
             const password = document.getElementById('createPassInput').value.trim() || 'admin123';
             const mcPassword = document.getElementById('createMcPassInput').value.trim() || 'mc123';
@@ -724,11 +879,35 @@
                 });
             }
 
+            const idleTimeoutMinutes = parseInt(document.getElementById('createIdleSlider')?.value || 180, 10);
+            const questionSelectionMode = document.getElementById('createSelectionModeInput')?.value || 'mode1';
+            const questionsPerTeam = parseInt(document.getElementById('createQuestionsPerTeamInput')?.value || 3, 10);
+            const buzzerDelayMs = parseInt(document.getElementById('createBuzzerDelayInput')?.value || 500, 10);
+            const turnOrderRule = document.getElementById('createTurnOrderRuleInput')?.value || 'mode_asc';
+            const antiCheat = document.getElementById('createAntiCheatInput')?.value === '1';
+            const language = document.getElementById('createLangInput')?.value || 'vi';
+
             try {
                 const res = await fetch('/api/room/create', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, pin: finalPin, password, mcPassword, theme, teamCount, teams })
+                    body: JSON.stringify({ 
+                        name, 
+                        pin: finalPin, 
+                        password, 
+                        mcPassword, 
+                        theme, 
+                        teamCount, 
+                        teams,
+                        idleTimeoutMinutes,
+                        questionSelectionMode,
+                        questionsPerTeam,
+                        buzzerDelayMs,
+                        turnOrderRule,
+                        antiCheat,
+                        language,
+                        questions: uploadedQuestionBank
+                    })
                 });
                 const data = await res.json();
                 if (data.success) {
@@ -758,7 +937,7 @@
 
         function copyRoomDetails() {
             if (!lastCreatedRoom) return;
-            const text = `🏆 ECONOVA SHOW 2026 - THÔNG TIN PHÒNG THI\n\n🏷️ Tên phòng: ${lastCreatedRoom.name}\n🔑 Mã PIN 6 số: ${lastCreatedRoom.pin}\n⚙️ Mật khẩu Admin: ${lastCreatedRoom.password}\n🎙️ Mật khẩu MC: ${lastCreatedRoom.mcPassword}\n\n👉 Link tham gia: ${window.location.origin}`;
+            const text = `🏆 ECONOVA 2026: ASCEND - THÔNG TIN PHÒNG THI\n\n🏷️ Tên phòng: ${lastCreatedRoom.name}\n🔑 Mã PIN 6 số: ${lastCreatedRoom.pin}\n⚙️ Mật khẩu Admin: ${lastCreatedRoom.password}\n🎙️ Mật khẩu MC: ${lastCreatedRoom.mcPassword}\n\n👉 Link tham gia: ${window.location.origin}`;
             navigator.clipboard.writeText(text).then(() => {
                 alert('📋 Đã sao chép toàn bộ thông tin phòng vào bộ nhớ tạm!');
             }).catch(() => {
