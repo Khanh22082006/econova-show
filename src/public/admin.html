@@ -1840,7 +1840,12 @@
                         // If no cache or restore failed
                         if (vInput) vInput.value = url;
                         if (isLocalUrl) {
-                            alert(`Bản Web Cloud không thể phát trực tiếp link gốc (C:\\...).\nVui lòng cấp quyền (chọn file ${baseName}) để tải lên!`);
+                            try {
+                                await navigator.clipboard.writeText(url);
+                                alert(`Bản Web Cloud yêu cầu cấp quyền để đọc file.\n\nĐường dẫn video đã được TỰ ĐỘNG COPY!\n\nTrong hộp thoại sắp mở, hãy click vào ô "File name", nhấn Ctrl + V rồi Enter để tải lên nhanh!`);
+                            } catch(err) {
+                                alert(`Bản Web Cloud yêu cầu cấp quyền để tải lên.\nVui lòng chọn file có tên: ${baseName}`);
+                            }
                         }
                         document.getElementById('videoUploadInput').click();
                         return;
