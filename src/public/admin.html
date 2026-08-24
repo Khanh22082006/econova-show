@@ -87,6 +87,16 @@
         .role-badges-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #3d4556; }
         .role-badge-box { background: #2f3542; padding: 8px; border-radius: 6px; text-align: center; font-size: 12px; }
 
+    
+        /* Toast Notification Styling */
+        .admin-toast-container { position: fixed; bottom: 25px; right: 25px; z-index: 999999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .admin-toast { background: rgba(30, 30, 47, 0.95); color: #fff; padding: 12px 20px; border-radius: 8px; border-left: 5px solid #3742fa; box-shadow: 0 8px 25px rgba(0,0,0,0.5); font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 12px; pointer-events: auto; animation: toastIn 0.3s ease-out; transition: all 0.3s ease; max-width: 450px; line-height: 1.4; }
+        .admin-toast.success { border-left-color: #10ac84; }
+        .admin-toast.warning { border-left-color: #feca57; color: #ffeaa7; }
+        .admin-toast.error { border-left-color: #ff4757; color: #ff7675; }
+        .admin-toast.info { border-left-color: #48dbfb; color: #c7ecee; }
+        @keyframes toastIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
     </style>
 </head>
 <body>
@@ -272,7 +282,7 @@
                             </ul>
                         </div>
                         <input type="file" id="localVideoFolderInput" webkitdirectory directory multiple style="display:none;" onchange="handleSyncLocalVideosFolder(event)">
-                        <button class="btn-red" onclick="document.getElementById('localVideoFolderInput').click()" style="padding: 10px 15px; font-size: 14px; font-weight: bold; background: #ff4757; color: white; border: none; border-radius: 6px; cursor: pointer; box-shadow: 0 0 15px rgba(255,71,87,0.4);">🔄 BẤM VÀO ĐÂY ĐỂ CHỌN THƯ MỤC CHỨA VIDEO VÀ ĐỒNG BỘ</button>
+                        <button class="btn-red" onclick="grantVideoDirectoryPermission()" style="padding: 10px 15px; font-size: 14px; font-weight: bold; background: #ff4757; color: white; border: none; border-radius: 6px; cursor: pointer; box-shadow: 0 0 15px rgba(255,71,87,0.4);">📁 CẤP QUYỀN THƯ MỤC VIDEO (CHỌN 1 LẦN DUY NHẤT)</button>
                         <div id="localVideoSyncStatus" style="margin-top: 10px; font-size: 13px; font-weight: bold; color: #feca57;"></div>
                     </div>
                 </div>
@@ -1709,10 +1719,34 @@
         function startCountdown(secs) { socket.emit('startCountdown', secs); }
         
         // ============================================================
-        // INDEXEDDB VIDEO CACHE (Persistent across Render Restarts)
+        // TOAST NOTIFICATIONS (Non-blocking UI Feedback)
+        // ============================================================
+        function showAdminToast(msg, type = 'info', duration = 4000) {
+            const container = document.getElementById('adminToastContainer');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = `admin-toast ${type}`;
+            const iconMap = {
+                success: '✅',
+                warning: '⚠️',
+                error: '❌',
+                info: '💡'
+            };
+            toast.innerHTML = `<span style="font-size:18px;">${iconMap[type] || '💡'}</span> <span>${msg}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
+        // ============================================================
+        // INDEXEDDB VIDEO CACHE & FILE SYSTEM ACCESS API
         // ============================================================
         const VIDEO_DB_NAME = 'EconovaVideoCache_v1';
         const VIDEO_STORE_NAME = 'videos';
+        window.activeVideoDirHandle = null;
 
         function openVideoDB() {
             return new Promise((resolve, reject) => {
@@ -1727,6 +1761,159 @@
                 req.onsuccess = () => resolve(req.result);
                 req.onerror = () => resolve(null);
             });
+        }
+
+        async function saveVideoDirectoryHandle(dirHandle) {
+            try {
+                if (!dirHandle) return;
+                const db = await openVideoDB();
+                if (!db) return;
+                const tx = db.transaction(VIDEO_STORE_NAME, 'readwrite');
+                const store = tx.objectStore(VIDEO_STORE_NAME);
+                store.put({ key: 'saved_directory_handle', handle: dirHandle, name: dirHandle.name, savedAt: Date.now() });
+            } catch(e) {
+                console.warn('Lỗi lưu directory handle:', e);
+            }
+        }
+
+        async function getSavedDirectoryHandle() {
+            if (window.activeVideoDirHandle) return window.activeVideoDirHandle;
+            try {
+                const db = await openVideoDB();
+                if (!db) return null;
+                const handle = await new Promise((resolve) => {
+                    const tx = db.transaction(VIDEO_STORE_NAME, 'readonly');
+                    const store = tx.objectStore(VIDEO_STORE_NAME);
+                    const req = store.get('saved_directory_handle');
+                    req.onsuccess = () => resolve(req.result ? req.result.handle : null);
+                    req.onerror = () => resolve(null);
+                });
+                if (handle) {
+                    // Check / request permission
+                    const opts = { mode: 'read' };
+                    if (await handle.queryPermission(opts) === 'granted') {
+                        window.activeVideoDirHandle = handle;
+                        return handle;
+                    }
+                }
+            } catch(e) {}
+            return null;
+        }
+
+        async function getFileFromDirectoryHandle(dirHandle, targetFileName) {
+            if (!dirHandle || !targetFileName) return null;
+            const targetClean = targetFileName.toLowerCase().trim();
+            try {
+                const opts = { mode: 'read' };
+                if (await dirHandle.queryPermission(opts) !== 'granted') {
+                    const status = await dirHandle.requestPermission(opts);
+                    if (status !== 'granted') return null;
+                }
+                
+                // 1. Direct match
+                try {
+                    const fh = await dirHandle.getFileHandle(targetFileName);
+                    if (fh) return await fh.getFile();
+                } catch(e) {}
+
+                // 2. Iterate directory items
+                for await (const entry of dirHandle.values()) {
+                    if (entry.kind === 'file') {
+                        if (entry.name.toLowerCase() === targetClean) {
+                            return await entry.getFile();
+                        }
+                    } else if (entry.kind === 'directory') {
+                        try {
+                            for await (const subEntry of entry.values()) {
+                                if (subEntry.kind === 'file' && subEntry.name.toLowerCase() === targetClean) {
+                                    return await subEntry.getFile();
+                                }
+                            }
+                        } catch(err) {}
+                    }
+                }
+            } catch(e) {
+                console.warn('Lỗi tìm file trong directory handle:', e);
+            }
+            return null;
+        }
+
+        async function grantVideoDirectoryPermission() {
+            if (window.showDirectoryPicker) {
+                try {
+                    const dirHandle = await window.showDirectoryPicker({ id: 'econova_video_dir', mode: 'read' });
+                    if (dirHandle) {
+                        window.activeVideoDirHandle = dirHandle;
+                        await saveVideoDirectoryHandle(dirHandle);
+                        showAdminToast(`📁 Đã cấp quyền thư mục "${dirHandle.name}". Đang tự động đồng bộ video...`, 'success', 4000);
+                        syncVideosFromDirectoryHandle(dirHandle);
+                        return;
+                    }
+                } catch(e) {
+                    if (e.name === 'AbortError') return;
+                    console.warn('showDirectoryPicker không khả dụng hoặc bị từ chối, fallback sang file input:', e);
+                }
+            }
+            document.getElementById('localVideoFolderInput').click();
+        }
+
+        async function syncVideosFromDirectoryHandle(dirHandle) {
+            if (!dirHandle) return;
+            const statusEl = document.getElementById('localVideoSyncStatus');
+            const isLocal = (url) => url && !url.startsWith('/videos/') && !url.startsWith('http') && !url.startsWith('/');
+            
+            let neededNames = new Set();
+            ['10', '20', '40'].forEach(pts => {
+                if (questionBank[pts]) {
+                    questionBank[pts].forEach(q => {
+                        if (isLocal(q.vid)) {
+                            let baseName = q.vid.split(/[\\/]/).pop();
+                            if (baseName) neededNames.add(baseName);
+                        }
+                    });
+                }
+            });
+            
+            if (neededNames.size === 0) return;
+            if (statusEl) statusEl.innerHTML = `<span>⏳ Đang quét và tải lên video từ thư mục "${dirHandle.name}"...</span>`;
+            
+            let successCount = 0;
+            for (const name of neededNames) {
+                try {
+                    const file = await getFileFromDirectoryHandle(dirHandle, name);
+                    if (file) {
+                        await saveVideoToCache(file.name, file);
+                        const res = await fetch('/api/video/upload_raw?filename=' + encodeURIComponent(file.name), {
+                            method: 'POST',
+                            headers: { 'Content-Type': file.type || 'video/mp4' },
+                            body: file
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            successCount++;
+                            await saveVideoToCache(data.url.split('/').pop(), file);
+                            const baseNameLower = file.name.toLowerCase();
+                            ['10', '20', '40'].forEach(pts => {
+                                if (questionBank[pts]) {
+                                    questionBank[pts].forEach(q => {
+                                        if (isLocal(q.vid)) {
+                                            let qBaseName = q.vid.split(/[\\/]/).pop().toLowerCase();
+                                            if (qBaseName === baseNameLower) q.vid = data.url;
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    }
+                } catch(err) {
+                    console.warn('Lỗi đồng bộ file:', name, err);
+                }
+            }
+            
+            if (statusEl) statusEl.innerHTML = `<span style="color:#10ac84">✅ Đã cấp quyền & đồng bộ thành công ${successCount}/${neededNames.size} video!</span>`;
+            showAdminToast(`✅ Đã đồng bộ thành công ${successCount} video từ thư mục!`, 'success', 3500);
+            saveQuestionBankToLocalStorage(localStorage.getItem('econova_questionBankName'), localStorage.getItem('econova_activeBankSlot'));
+            checkLocalVideosNeeded();
         }
 
         async function saveVideoToCache(keyName, fileBlob) {
@@ -1763,34 +1950,12 @@
                 
                 const rawName = keyName.split('/').pop().split('\\').pop().split('?')[0];
                 const cleanKey = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
-                const prefixMatch = rawName.split('_')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
 
                 return new Promise((resolve) => {
                     const req = store.get(cleanKey);
                     req.onsuccess = () => {
                         if (req.result && req.result.blob) return resolve(req.result.blob);
-                        
-                        if (prefixMatch && prefixMatch.length >= 2) {
-                            const pReq = store.get('prefix_' + prefixMatch);
-                            pReq.onsuccess = () => {
-                                if (pReq.result && pReq.result.blob) return resolve(pReq.result.blob);
-                                
-                                const allReq = store.getAll();
-                                allReq.onsuccess = () => {
-                                    const all = allReq.result || [];
-                                    const found = all.find(item => 
-                                        (item.rawKey && item.rawKey.includes(rawName)) ||
-                                        (item.baseName && item.baseName.includes(prefixMatch)) ||
-                                        (item.key && item.key.includes(cleanKey))
-                                    );
-                                    resolve(found ? found.blob : null);
-                                };
-                                allReq.onerror = () => resolve(null);
-                            };
-                            pReq.onerror = () => resolve(null);
-                        } else {
-                            resolve(null);
-                        }
+                        resolve(null);
                     };
                     req.onerror = () => resolve(null);
                 });
@@ -1820,37 +1985,58 @@
                     }
                     if (!checkOk) {
                         const baseName = url.split(/[\\/]/).pop().split('?')[0];
-                        const cachedBlob = await getVideoFromCache(baseName);
-                        if (cachedBlob) {
-                            if (vInput) vInput.value = `⏳ Đang tự động ${isLocalUrl ? 'tải lên lại' : 'khôi phục'} video ${baseName}...`;
+                        
+                        // 1. Check IndexedDB Cache first
+                        let videoBlob = await getVideoFromCache(baseName);
+                        
+                        // 2. If not in cache, check Saved Directory Handle
+                        if (!videoBlob) {
+                            const dirHandle = await getSavedDirectoryHandle();
+                            if (dirHandle) {
+                                if (vInput) vInput.value = `⏳ Đang tự động đọc "${baseName}" từ thư mục đã cấp quyền...`;
+                                videoBlob = await getFileFromDirectoryHandle(dirHandle, baseName);
+                                if (videoBlob) {
+                                    await saveVideoToCache(baseName, videoBlob);
+                                }
+                            }
+                        }
+
+                        // 3. If found from cache or directory handle, upload & play seamlessly
+                        if (videoBlob) {
+                            if (vInput) vInput.value = `⏳ Đang tự động ${isLocalUrl ? 'tải lên' : 'khôi phục'} video ${baseName}...`;
                             const res = await fetch('/api/video/upload_raw?filename=' + encodeURIComponent(baseName), {
                                 method: 'POST',
-                                headers: { 'Content-Type': cachedBlob.type || 'video/mp4' },
-                                body: cachedBlob
+                                headers: { 'Content-Type': videoBlob.type || 'video/mp4' },
+                                body: videoBlob
                             });
                             const data = await res.json();
                             if (data.success) {
                                 currentVideoUrl = data.url;
                                 if (vInput) vInput.value = data.url;
+                                saveVideoToCache(data.url.split('/').pop(), videoBlob);
                                 socket.emit('updateCurrentQuestionVideo', { vid: data.url });
                                 socket.emit('playVideo', data.url);
+                                showAdminToast(`🎬 Đang phát video: ${baseName}`, 'success', 3000);
                                 return;
                             }
                         }
-                        // If no cache or restore failed
+
+                        // 4. Fallback: Copy path to clipboard, show non-blocking Toast, and open file picker
                         if (vInput) vInput.value = url;
                         if (isLocalUrl) {
                             try {
                                 await navigator.clipboard.writeText(url);
-                                alert(`Bản Web Cloud yêu cầu cấp quyền để đọc file.\n\nĐường dẫn video đã được TỰ ĐỘNG COPY!\n\nTrong hộp thoại sắp mở, hãy click vào ô "File name", nhấn Ctrl + V rồi Enter để tải lên nhanh!`);
+                                showAdminToast(`📋 Đã copy đường dẫn. Hãy chọn file "${baseName}" (hoặc dùng "Cấp quyền thư mục" để tự động)`, 'info', 5000);
                             } catch(err) {
-                                alert(`Bản Web Cloud yêu cầu cấp quyền để tải lên.\nVui lòng chọn file có tên: ${baseName}`);
+                                showAdminToast(`📁 Vui lòng chọn file video "${baseName}"`, 'warning', 4000);
                             }
                         }
                         document.getElementById('videoUploadInput').click();
                         return;
                     }
-                } catch(e) {}
+                } catch(e) {
+                    console.warn('Lỗi xử lý phát video:', e);
+                }
             }
             
             socket.emit('playVideo', url);
@@ -3838,5 +4024,6 @@
             </div>
         </div>
     </div>
+<div id="adminToastContainer" class="admin-toast-container"></div>
 </body>
 </html>
