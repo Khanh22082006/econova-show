@@ -36,7 +36,7 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif);
+            font-family: var(--font-general, 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif);
             background: var(--bg-primary);
             color: #fff;
         }
@@ -76,7 +76,7 @@
         #selectScreen h1 {
             font-size: 80px; font-weight: 700; color: #fff; margin-bottom: 60px;
             text-transform: uppercase; letter-spacing: 3px; text-align: center;
-            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif);
+            font-family: var(--font-general, 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif);
             text-shadow: 0 0 15px rgba(0,210,211,0.5);
         }
         #teamBtns {
@@ -87,7 +87,7 @@
             font-size: 40px; font-weight: 700; color: #fff; cursor: pointer;
             transition: transform 0.15s, opacity 0.3s; letter-spacing: 1px; text-transform: uppercase;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif);
+            font-family: var(--font-general, 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif);
         }
         .team-btn span.school { font-size: 26px; color: rgba(255,255,255,0.7); font-weight: 400; text-transform: none; letter-spacing: 0; margin-top: 10px;}
         .team-btn:active:not(:disabled) { transform: scale(0.96); }
@@ -103,14 +103,14 @@
         }
         .title-area { display: none; }
         .title-text {
-            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif); font-size: 42px; font-weight: 900;
+            font-family: var(--font-general, 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif); font-size: 42px; font-weight: 900;
             letter-spacing: 10px; text-transform: uppercase;
             background: linear-gradient(135deg, #00d2d3, #ffffff, #00d2d3); background-size: 300% auto;
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             animation: title-shimmer 5s ease-in-out infinite; position: relative;
         }
         .title-sub {
-            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif); font-size: 16px; color: rgba(200, 214, 229, 0.4);
+            font-family: var(--font-general, 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif); font-size: 16px; color: rgba(200, 214, 229, 0.4);
             letter-spacing: 6px; margin-top: 10px; text-transform: uppercase;
         }
 
@@ -144,14 +144,14 @@
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .team-school {
-            font-family: var(--font-general, 'SF Pro Display Bold', 'Segoe UI', sans-serif); font-size: 40px; color: rgba(255, 255, 255, 0.8);
+            font-family: var(--font-general, 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif); font-size: 40px; color: rgba(255, 255, 255, 0.8);
             margin-bottom: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
 
         .score-container {
             padding: 50px 20px; flex: 1; display: flex; align-items: center; justify-content: center;
         }
-        .team-score { font-family: var(--font-score, 'Orbitron', sans-serif); font-size: 400px; font-weight: 900; line-height: 1;
+        .team-score { font-family: var(--font-score, 'Montserrat', sans-serif); font-size: 400px; font-weight: 900; line-height: 1;
             transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.3s;
         }
         .team-card[data-team="1"] .team-score { color: #fff; text-shadow: 0 0 30px rgba(16, 172, 132, 0.4); }
@@ -179,6 +179,58 @@
 
         body { user-select: none; -webkit-user-select: none; }
         input, textarea { user-select: text; -webkit-user-select: text; }
+    
+    /* Apple SF Fonts Cross-Platform Web Support */
+    @font-face {
+        font-family: 'SF Pro Display';
+        src: local('-apple-system'), local('BlinkMacSystemFont'), local('SF Pro Display'), local('SF Pro'),
+             url('https://cdn.jsdelivr.net/npm/@native-elements/core@0.4.0/src/fonts/SFProDisplay-Regular.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'SF Pro Display';
+        src: local('SF Pro Display Bold'), local('SF Pro Bold'),
+             url('https://cdn.jsdelivr.net/npm/@native-elements/core@0.4.0/src/fonts/SFProDisplay-Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'SF Pro Display Bold';
+        src: local('SF Pro Display Bold'), local('SF Pro Bold'), local('SF Pro Display'),
+             url('https://cdn.jsdelivr.net/npm/@native-elements/core@0.4.0/src/fonts/SFProDisplay-Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'SF Pro';
+        src: local('-apple-system'), local('BlinkMacSystemFont'), local('SF Pro'), local('SF Pro Display'),
+             url('https://cdn.jsdelivr.net/npm/@native-elements/core@0.4.0/src/fonts/SFProDisplay-Regular.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'SF Pro';
+        src: local('SF Pro Bold'), local('SF Pro Display Bold'),
+             url('https://cdn.jsdelivr.net/npm/@native-elements/core@0.4.0/src/fonts/SFProDisplay-Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'SF Pro Text';
+        src: local('-apple-system'), local('BlinkMacSystemFont'), local('SF Pro Text'), local('SF Pro'),
+             url('https://cdn.jsdelivr.net/npm/@native-elements/core@0.4.0/src/fonts/SFProText-Regular.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'SF Pro Text';
+        src: local('SF Pro Text Bold'), local('SF Pro Bold'),
+             url('https://cdn.jsdelivr.net/npm/@native-elements/core@0.4.0/src/fonts/SFProText-Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+
     </style>
 </head>
 <body>
@@ -290,11 +342,11 @@
             if (state.settings) {
                 let s = state.settings;
                 let globalEnabled = s.globalFontEnabled || false;
-                let fGlobal = s.fontGlobal || 'SF Pro Display Bold';
-                let fGeneral = s.fontGeneral || 'SF Pro Display Bold';
-                let fQuestion = s.fontQuestion || 'SF Pro Display Bold';
-                let fTeam = s.fontTeamName || 'SF Pro Display Bold';
-                let fScore = s.fontScore || 'Orbitron';
+                let fGlobal = s.fontGlobal || 'Be Vietnam Pro';
+                let fGeneral = s.fontGeneral || 'Be Vietnam Pro';
+                let fQuestion = s.fontQuestion || 'Be Vietnam Pro';
+                let fTeam = s.fontTeamName || 'Be Vietnam Pro';
+                let fScore = s.fontScore || 'Montserrat';
                 
                 let styleEl = document.getElementById('dynamic-font-styles-global');
                 if (!styleEl) {
@@ -307,10 +359,10 @@
                 if (globalEnabled) {
                     rules += `@font-face { font-family: 'CustomFontGlobal'; src: url('/font/${encodeURIComponent(fGlobal)}'); }\n`;
                     rules += `:root { 
-                        --font-general: 'CustomFontGlobal', '${fGlobal}', '${fGlobal.replace(/\s+/g, '')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
-                        --font-team-name: 'CustomFontGlobal', '${fGlobal}', '${fGlobal.replace(/\s+/g, '')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
-                        --font-score: 'CustomFontGlobal', '${fGlobal}', 'Orbitron', sans-serif;
-                        --font-question: 'CustomFontGlobal', '${fGlobal}', '${fGlobal.replace(/\s+/g, '')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-general: 'CustomFontGlobal', '${fGlobal}', '${fGlobal.replace(/\s+/g, '')}', 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+                        --font-team-name: 'CustomFontGlobal', '${fGlobal}', '${fGlobal.replace(/\s+/g, '')}', 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+                        --font-score: 'CustomFontGlobal', '${fGlobal}', 'Montserrat', 'Be Vietnam Pro', 'Segoe UI', sans-serif;
+                        --font-question: 'CustomFontGlobal', '${fGlobal}', '${fGlobal.replace(/\s+/g, '')}', 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
                     }`;
                 } else {
                     rules += `@font-face { font-family: 'CustomFontGeneral'; src: url('/font/${encodeURIComponent(fGeneral)}'); }\n`;
@@ -319,10 +371,10 @@
                     rules += `@font-face { font-family: 'CustomFontScore'; src: url('/font/${encodeURIComponent(fScore)}'); }\n`;
                     
                     rules += `:root { 
-                        --font-general: 'CustomFontGeneral', '${fGeneral}', '${fGeneral.replace(/\s+/g, '')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
-                        --font-team-name: 'CustomFontTeamName', '${fTeam}', '${fTeam.replace(/\s+/g, '')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
-                        --font-score: 'CustomFontScore', '${fScore}', '${fScore.replace(/\s+/g, '')}', 'Orbitron', sans-serif;
-                        --font-question: 'CustomFontQuestion', '${fQuestion}', '${fQuestion.replace(/\s+/g, '')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-general: 'CustomFontGeneral', '${fGeneral}', '${fGeneral.replace(/\s+/g, '')}', 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+                        --font-team-name: 'CustomFontTeamName', '${fTeam}', '${fTeam.replace(/\s+/g, '')}', 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+                        --font-score: 'CustomFontScore', '${fScore}', '${fScore.replace(/\s+/g, '')}', 'Montserrat', 'Be Vietnam Pro', 'Segoe UI', sans-serif;
+                        --font-question: 'CustomFontQuestion', '${fQuestion}', '${fQuestion.replace(/\s+/g, '')}', 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
                     }`;
                 }
                 

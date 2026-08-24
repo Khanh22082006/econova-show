@@ -124,7 +124,7 @@
 }
 
 [data-theme="ascend_2026"] .team-score {
-    font-family: var(--font-score, 'Orbitron', sans-serif);
+    font-family: var(--font-score, 'Montserrat', sans-serif);
     font-size: 32px;
     font-weight: 900;
     color: #fff;

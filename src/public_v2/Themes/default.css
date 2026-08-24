@@ -70,7 +70,7 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 @keyframes highlight-buzz { from { transform: scale(1) translateY(-10px); filter: brightness(1.1); } to { transform: scale(1.1) translateY(-10px); filter: brightness(1.6); } }
 [data-theme="default"] .team-name { font-family: var(--font-team-name, 'SF Pro Display Bold', sans-serif); font-size: 24px; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
 [data-theme="default"] .team-school { font-size: 16px; color: rgba(255,255,255,0.7); margin-bottom: 10px; }
-[data-theme="default"] .team-score { font-family: var(--font-score, 'Orbitron', sans-serif); font-size: 46px; font-weight: 900; color: #fff; }
+[data-theme="default"] .team-score { font-family: var(--font-score, 'Montserrat', sans-serif); font-size: 46px; font-weight: 900; color: #fff; }
 
 [data-theme="default"] #timerContainerDefault.timer-olympia-style { display: none; width: 100%; position: absolute; top: 100%; left: 0; justify-content: center; z-index: 100; }
 [data-theme="default"] .timer-olympia-style .timer-trap {

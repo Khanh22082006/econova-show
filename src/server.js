@@ -555,10 +555,8 @@ app.get('/api/admin_pin', (req, res) => {
 const STANDARD_FONTS = [
     'Be Vietnam Pro',
     'Montserrat',
-    'Orbitron',
-    'Myriad Pro',
-    'SF Pro Display Bold',
     'Roboto',
+    'Inter',
     'Oswald',
     'Anton',
     'Kanit',
@@ -567,12 +565,11 @@ const STANDARD_FONTS = [
     'Barlow Condensed',
     'Arial',
     'Segoe UI',
-    'Impact',
     'Tahoma',
     'Verdana',
-    'Helvetica Neue',
-    'Trebuchet MS',
-    'Times New Roman'
+    'Times New Roman',
+    'Calibri',
+    'Bahnschrift'
 ];
 let fontDictionary = {};
 let fontScanPromise = null;

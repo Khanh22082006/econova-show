@@ -78,7 +78,7 @@
             min-width: 0 !important; min-height: 0 !important;
             max-width: 100vw !important; max-height: 100vh !important;
             margin: 0 !important; padding: 0 !important; overflow: hidden !important;
-            font-family: 'SF Pro Display Bold', 'Segoe UI', sans-serif; font-family: var(--font-general);
+            font-family: 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; font-family: var(--font-general);
             background: var(--bg-primary); color: #fff;
         }
 
@@ -122,7 +122,7 @@
         body.default .ascend-frame { flex: 1; display: flex; flex-direction: column; } 
         body.default .header { text-align: center; padding: 50px 0 10px; z-index: 10; position: relative; }
         body.default .round-title {
-            font-family: 'SF Pro Display Bold', 'Segoe UI', sans-serif; font-family: var(--font-general); font-size: 40px; font-weight: 900;
+            font-family: 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; font-family: var(--font-general); font-size: 40px; font-weight: 900;
             letter-spacing: 6px; text-transform: uppercase; background: linear-gradient(90deg, #00d2d3, #ffffff, #00d2d3);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 0 20px rgba(0, 210, 211, 0.3);
         }
@@ -162,7 +162,7 @@
         @keyframes highlight-buzz { from { transform: scale(1) translateY(-10px); filter: brightness(1.1); } to { transform: scale(1.1) translateY(-10px); filter: brightness(1.6); } }
         body.default .team-name { font-family: 'SF Pro Display Bold', sans-serif; font-family: var(--font-team-name); font-size: 24px; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
         body.default .team-school { font-size: 16px; color: rgba(255,255,255,0.7); margin-bottom: 10px; }
-        body.default .team-score { font-family: 'Orbitron', sans-serif; font-family: var(--font-score); font-size: 46px; font-weight: 900; color: #fff; }
+        body.default .team-score { font-family: var(--font-score, 'Montserrat', sans-serif); font-family: var(--font-score); font-size: 46px; font-weight: 900; color: #fff; }
 
         @keyframes pulse { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.05); filter: brightness(1.2); } 100% { transform: scale(1); filter: brightness(1); } }
         @keyframes blink-star { 0% { opacity: 0.5; } 50% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0.5; } }
@@ -197,7 +197,7 @@
         body.ascend_2026 .ascend-top-bar { display: flex; height: 90px; min-height: 90px; border-bottom: 1px solid rgba(84, 160, 255, 0.5); border-radius: 12px 12px 0 0; align-items: stretch; overflow: hidden; }
         body.ascend_2026 .ascend-pts-box .ascend-pts-chip { height: 100%; display: flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: 50px; }
         body.ascend_2026 .ascend-pts-box {
-            flex: 0 0 auto; width: auto; min-width: 160px; height: 100%; background: linear-gradient(135deg, #f5f6fa, #dcdde1); color: #2f3640; font-family: 'SF Pro Display Bold', 'Segoe UI', sans-serif; font-family: var(--font-general); font-weight: 900; font-size: 30px; display: flex; align-items: stretch; justify-content: center; box-shadow: inset 0 0 20px rgba(255,255,255,1); border-right: 2px solid rgba(84, 160, 255, 0.8); border-radius: 12px 0 0 0; text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            flex: 0 0 auto; width: auto; min-width: 160px; height: 100%; background: linear-gradient(135deg, #f5f6fa, #dcdde1); color: #2f3640; font-family: 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; font-family: var(--font-general); font-weight: 900; font-size: 30px; display: flex; align-items: stretch; justify-content: center; box-shadow: inset 0 0 20px rgba(255,255,255,1); border-right: 2px solid rgba(84, 160, 255, 0.8); border-radius: 12px 0 0 0; text-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
         @keyframes starSpinScale { 0% { transform: scale(0) rotate(-180deg); opacity: 0; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
@@ -210,7 +210,7 @@
         body.ascend_2026 .team-school { display: none; }
         body.ascend_2026 .team-name { font-family: var(--font-team-name); font-size: 26px; font-weight: 700; color: #fff; margin:0; text-shadow: 0 2px 5px rgba(0,0,0,0.8); white-space: nowrap; flex: 1; min-width: 0; display: flex; align-items: center; overflow: hidden; line-height: 1.5; margin-top: 0px; }
         body.ascend_2026 .name-inner { display: inline-block; white-space: nowrap; transform-origin: left center; }
-        body.ascend_2026 .team-score { font-family: 'Orbitron', sans-serif; font-family: var(--font-score); font-size: 32px; font-weight: 900; color: #fff; text-shadow: 0 0 15px rgba(255,255,255,0.5); }
+        body.ascend_2026 .team-score { font-family: var(--font-score, 'Montserrat', sans-serif); font-family: var(--font-score); font-size: 32px; font-weight: 900; color: #fff; text-shadow: 0 0 15px rgba(255,255,255,0.5); }
         body.ascend_2026 .team-card.is-main { background: rgba(255, 255, 255, 0.85); box-shadow: inset 0 0 30px rgba(255,255,255,1), 0 0 20px rgba(255,255,255,0.8); }
         body.ascend_2026 .team-card.is-main .team-name, body.ascend_2026 .team-card.is-main .team-score { color: #012a5e; text-shadow: none; font-weight: 900; }
         body.ascend_2026 .team-card.buzzed { background: rgba(0, 255, 170, 0.7); animation: highlight-buzz-ascend 0.4s infinite alternate; }
@@ -246,12 +246,12 @@
         body.default .grid-container { margin: auto; }
         .grid-col { flex: 1; max-width: 550px; background: rgba(10, 25, 54, 0.8); border: 1px solid rgba(0, 210, 211, 0.3); border-radius: 20px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
         body.ascend_2026 .grid-col { background: transparent; border: none; box-shadow: none; }
-        .grid-header { font-family: 'SF Pro Display Bold', 'Segoe UI', sans-serif; font-family: var(--font-general); font-size: 38px; font-weight: 900; text-align: center; margin-bottom: 0; padding-bottom: 20px; text-transform: uppercase; text-shadow: 0 4px 10px rgba(0,0,0,0.8); border-bottom: 1px solid rgba(0, 210, 211, 0.3); }
+        .grid-header { font-family: 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; font-family: var(--font-general); font-size: 38px; font-weight: 900; text-align: center; margin-bottom: 0; padding-bottom: 20px; text-transform: uppercase; text-shadow: 0 4px 10px rgba(0,0,0,0.8); border-bottom: 1px solid rgba(0, 210, 211, 0.3); }
         .grid-cells { display: flex; flex-direction: row; width: 100%; justify-content: center; align-items: flex-start; margin-top: 20px; gap: 15px; flex-wrap: wrap; }
         .grid-cells.mode1-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; width: 98%; max-width: 1600px; margin-left: auto; margin-right: auto; }
         .grid-cells.mode1-grid .q-cell { height: 80px; font-size: 36px; padding: 0; font-weight: bold; max-width: none !important; width: 100% !important; }
         .grid-cells:not(.mode1-grid) .q-cell { flex: 1 1 calc(33.333% - 10px); min-width: 100px; max-width: 300px; height: 70px; font-size: 28px; padding: 0; font-weight: bold; }
-        .q-cell { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 15px 0; text-align: center; display: flex; align-items: center; justify-content: center; font-family: 'SF Pro Display Bold', 'Segoe UI', sans-serif; font-family: var(--font-general); font-size: 32px; font-weight: 700; transition: all 0.3s; }
+        .q-cell { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 15px 0; text-align: center; display: flex; align-items: center; justify-content: center; font-family: 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; font-family: var(--font-general); font-size: 32px; font-weight: 700; transition: all 0.3s; }
         .q-cell.inactive-tab { color: rgba(0, 210, 211, 0.6); background: transparent; border-color: rgba(0, 210, 211, 0.3); box-shadow: none; }
         .q-cell.active-tab { background: rgba(255,255,255,0.9); color: #000; border-color: #fff; text-shadow: none; }
         body.ascend_2026 .q-cell { border-color: rgba(84, 160, 255, 0.6); }
@@ -269,7 +269,7 @@
         body.ascend_2026 .question-box { background: transparent; border: none; box-shadow: none; backdrop-filter: none; flex: 1; width: 100%; max-width: none; min-height: 180px; padding: 20px 40px; align-items: flex-start; justify-content: flex-start; text-align: left; }
         .question-box::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, transparent, var(--accent), transparent); }
         body.ascend_2026 .question-box::before { display: none; }
-        .q-meta { position: absolute; top: 20px; font-family: 'SF Pro Display Bold', 'Segoe UI', sans-serif; font-family: var(--font-general); font-size: 20px; font-weight: 700; color: #ff9f43; letter-spacing: 2px; text-transform: uppercase; }
+        .q-meta { position: absolute; top: 20px; font-family: 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; font-family: var(--font-general); font-size: 20px; font-weight: 700; color: #ff9f43; letter-spacing: 2px; text-transform: uppercase; }
         body.ascend_2026 .q-meta { display: none; } 
         .hope-star-badge { position: absolute; top: -110px; right: -120px; width: 350px; height: 350px; background: url('/Star_1.gif') no-repeat center center; background-size: contain; z-index: 20; animation: star-pulse 2s infinite; }
         @keyframes star-pulse { 0%, 100% { transform: scale(1) rotate(0deg); } 50% { transform: scale(1.1) rotate(15deg); } }
@@ -280,7 +280,7 @@
 
         #videoOverlay { position: fixed; inset: 0; background: #000; z-index: 9000; display: none; flex-direction: column; align-items: center; justify-content: center; transform: translateZ(0); will-change: transform; backface-visibility: hidden; }
         #mainVideo { width: 100%; height: 100%; object-fit: contain; transform: translateZ(0); will-change: transform; backface-visibility: hidden; }
-        body { user-select: none; -webkit-user-select: none; font-family: 'SF Pro Display Bold', 'Segoe UI', sans-serif; font-family: var(--font-general); }
+        body { user-select: none; -webkit-user-select: none; font-family: 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; font-family: var(--font-general); }
         input, textarea { user-select: text; -webkit-user-select: text; }
         #qrCodeOverlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 9999; display: none; flex-direction: column; justify-content: center; align-items: center; }
         .scoreboard { position: absolute; top: 0; left: 0; right: 0; display: none; justify-content: center; align-items: stretch; padding: 20px 40px; gap: 20px; z-index: 10; }
@@ -357,6 +357,58 @@
         .v3-new-root .mini-cell.played { opacity: 0.4; background: #374151; pointer-events: none; }
         .v3-new-root .mini-cell.active-red { background: linear-gradient(135deg, #cc0000 0%, #880000 100%) !important; border-color: #ffcccc; box-shadow: 0 0 10px rgba(255,0,0,0.8); z-index: 10; }
         .v3-new-root .v3-q-order-badge { position: absolute; transform: translate(-50%, -50%); left: 50%; z-index: 20; padding: 4px 10px; border-radius: 6px; font-size: 18px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 3px 8px rgba(0,0,0,0.3); border: 1.5px solid; pointer-events: none; white-space: nowrap; }
+    
+    /* Apple SF Fonts Cross-Platform Web Support */
+    @font-face {
+        font-family: 'SF Pro Display';
+        src: local('-apple-system'), local('BlinkMacSystemFont'), local('SF Pro Display'), local('SF Pro'),
+             url('https://cdn.jsdelivr.net/npm/@native-elements/core@0.4.0/src/fonts/SFProDisplay-Regular.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'SF Pro Display';
+        src: local('SF Pro Display Bold'), local('SF Pro Bold'),
+             url('https://cdn.jsdelivr.net/npm/@native-elements/core@0.4.0/src/fonts/SFProDisplay-Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'SF Pro Display Bold';
+        src: local('SF Pro Display Bold'), local('SF Pro Bold'), local('SF Pro Display'),
+             url('https://cdn.jsdelivr.net/npm/@native-elements/core@0.4.0/src/fonts/SFProDisplay-Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'SF Pro';
+        src: local('-apple-system'), local('BlinkMacSystemFont'), local('SF Pro'), local('SF Pro Display'),
+             url('https://cdn.jsdelivr.net/npm/@native-elements/core@0.4.0/src/fonts/SFProDisplay-Regular.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'SF Pro';
+        src: local('SF Pro Bold'), local('SF Pro Display Bold'),
+             url('https://cdn.jsdelivr.net/npm/@native-elements/core@0.4.0/src/fonts/SFProDisplay-Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'SF Pro Text';
+        src: local('-apple-system'), local('BlinkMacSystemFont'), local('SF Pro Text'), local('SF Pro'),
+             url('https://cdn.jsdelivr.net/npm/@native-elements/core@0.4.0/src/fonts/SFProText-Regular.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'SF Pro Text';
+        src: local('SF Pro Text Bold'), local('SF Pro Bold'),
+             url('https://cdn.jsdelivr.net/npm/@native-elements/core@0.4.0/src/fonts/SFProText-Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+
     </style>
     <script src="qrcode.min.js"></script>
     <script src="/shared.js"></script>
@@ -1191,11 +1243,11 @@
             if (state.settings) {
                 var s = state.settings;
                 var globalEnabled = s.globalFontEnabled || false;
-                var fGlobal = s.fontGlobal || 'SF Pro Display Bold';
-                var fGeneral = s.fontGeneral || 'SF Pro Display Bold';
-                var fQuestion = s.fontQuestion || 'SF Pro Display Bold';
-                var fTeam = s.fontTeamName || 'SF Pro Display Bold';
-                var fScore = s.fontScore || 'Orbitron';
+                var fGlobal = s.fontGlobal || 'Be Vietnam Pro';
+                var fGeneral = s.fontGeneral || 'Be Vietnam Pro';
+                var fQuestion = s.fontQuestion || 'Be Vietnam Pro';
+                var fTeam = s.fontTeamName || 'Be Vietnam Pro';
+                var fScore = s.fontScore || 'Montserrat';
                 
                 var styleEl = document.getElementById('dynamic-font-styles-global');
                 if (!styleEl) {
@@ -1208,10 +1260,10 @@
                 if (globalEnabled) {
                     rules += `@font-face { font-family: 'CustomFontGlobal'; src: url('/font/${encodeURIComponent(fGlobal)}'); }\n`;
                     rules += `:root { 
-                        --font-general: 'CustomFontGlobal', '${fGlobal}', '${fGlobal.replace(/\s+/g, '')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
-                        --font-team-name: 'CustomFontGlobal', '${fGlobal}', '${fGlobal.replace(/\s+/g, '')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
-                        --font-score: 'CustomFontGlobal', '${fGlobal}', 'Orbitron', sans-serif;
-                        --font-question: 'CustomFontGlobal', '${fGlobal}', '${fGlobal.replace(/\s+/g, '')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-general: 'CustomFontGlobal', '${fGlobal}', '${fGlobal.replace(/\s+/g, '')}', 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+                        --font-team-name: 'CustomFontGlobal', '${fGlobal}', '${fGlobal.replace(/\s+/g, '')}', 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+                        --font-score: 'CustomFontGlobal', '${fGlobal}', 'Montserrat', 'Be Vietnam Pro', 'Segoe UI', sans-serif;
+                        --font-question: 'CustomFontGlobal', '${fGlobal}', '${fGlobal.replace(/\s+/g, '')}', 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
                     }`;
                 } else {
                     rules += `@font-face { font-family: 'CustomFontGeneral'; src: url('/font/${encodeURIComponent(fGeneral)}'); }\n`;
@@ -1220,10 +1272,10 @@
                     rules += `@font-face { font-family: 'CustomFontScore'; src: url('/font/${encodeURIComponent(fScore)}'); }\n`;
                     
                     rules += `:root { 
-                        --font-general: 'CustomFontGeneral', '${fGeneral}', '${fGeneral.replace(/\s+/g, '')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
-                        --font-team-name: 'CustomFontTeamName', '${fTeam}', '${fTeam.replace(/\s+/g, '')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
-                        --font-score: 'CustomFontScore', '${fScore}', '${fScore.replace(/\s+/g, '')}', 'Orbitron', sans-serif;
-                        --font-question: 'CustomFontQuestion', '${fQuestion}', '${fQuestion.replace(/\s+/g, '')}', 'SF Pro Display Bold', 'Segoe UI', sans-serif;
+                        --font-general: 'CustomFontGeneral', '${fGeneral}', '${fGeneral.replace(/\s+/g, '')}', 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+                        --font-team-name: 'CustomFontTeamName', '${fTeam}', '${fTeam.replace(/\s+/g, '')}', 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+                        --font-score: 'CustomFontScore', '${fScore}', '${fScore.replace(/\s+/g, '')}', 'Montserrat', 'Be Vietnam Pro', 'Segoe UI', sans-serif;
+                        --font-question: 'CustomFontQuestion', '${fQuestion}', '${fQuestion.replace(/\s+/g, '')}', 'Be Vietnam Pro', 'Montserrat', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
                     }`;
                 }
                 

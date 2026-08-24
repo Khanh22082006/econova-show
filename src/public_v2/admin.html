@@ -87,6 +87,58 @@
         .role-badges-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #3d4556; }
         .role-badge-box { background: #2f3542; padding: 8px; border-radius: 6px; text-align: center; font-size: 12px; }
 
+    
+    /* Apple SF Fonts Cross-Platform Web Support */
+    @font-face {
+        font-family: 'SF Pro Display';
+        src: local('-apple-system'), local('BlinkMacSystemFont'), local('SF Pro Display'), local('SF Pro'),
+             url('https://cdn.jsdelivr.net/npm/@native-elements/core@0.4.0/src/fonts/SFProDisplay-Regular.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'SF Pro Display';
+        src: local('SF Pro Display Bold'), local('SF Pro Bold'),
+             url('https://cdn.jsdelivr.net/npm/@native-elements/core@0.4.0/src/fonts/SFProDisplay-Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'SF Pro Display Bold';
+        src: local('SF Pro Display Bold'), local('SF Pro Bold'), local('SF Pro Display'),
+             url('https://cdn.jsdelivr.net/npm/@native-elements/core@0.4.0/src/fonts/SFProDisplay-Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'SF Pro';
+        src: local('-apple-system'), local('BlinkMacSystemFont'), local('SF Pro'), local('SF Pro Display'),
+             url('https://cdn.jsdelivr.net/npm/@native-elements/core@0.4.0/src/fonts/SFProDisplay-Regular.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'SF Pro';
+        src: local('SF Pro Bold'), local('SF Pro Display Bold'),
+             url('https://cdn.jsdelivr.net/npm/@native-elements/core@0.4.0/src/fonts/SFProDisplay-Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'SF Pro Text';
+        src: local('-apple-system'), local('BlinkMacSystemFont'), local('SF Pro Text'), local('SF Pro'),
+             url('https://cdn.jsdelivr.net/npm/@native-elements/core@0.4.0/src/fonts/SFProText-Regular.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'SF Pro Text';
+        src: local('SF Pro Text Bold'), local('SF Pro Bold'),
+             url('https://cdn.jsdelivr.net/npm/@native-elements/core@0.4.0/src/fonts/SFProText-Bold.woff2') format('woff2');
+        font-weight: 700;
+        font-display: swap;
+    }
+
     </style>
 </head>
 <body>
@@ -177,12 +229,13 @@
                         <div>
                             <label>Font chữ</label>
                             <select id="timerFontFamily" class="config-input" style="width: 100%; padding: 8px; border-radius: 5px; background: #2f3542; color: white;">
-                                <option value="Arial" selected>Arial</option>
-                                <option value="Orbitron">Orbitron</option>
-                                <option value="Myriad Pro">Myriad Pro</option>
-                                <option value="Impact">Impact</option>
+                                <option value="Be Vietnam Pro" selected>Be Vietnam Pro</option>
+                                <option value="Montserrat">Montserrat</option>
+                                <option value="Roboto">Roboto</option>
+                                <option value="Inter">Inter</option>
+                                <option value="Arial">Arial</option>
+                                <option value="Segoe UI">Segoe UI</option>
                                 <option value="Verdana">Verdana</option>
-                                <option value="Courier New">Courier New</option>
                             </select>
                         </div>
                         <div style="grid-column: span 2; display: flex; gap: 15px; align-items: center; margin-top: 10px;">
@@ -1848,10 +1901,8 @@
         const DEFAULT_FONTS = [
             "Be Vietnam Pro",
             "Montserrat",
-            "Orbitron",
-            "Myriad Pro",
-            "SF Pro Display Bold",
             "Roboto",
+            "Inter",
             "Oswald",
             "Anton",
             "Kanit",
@@ -1860,7 +1911,6 @@
             "Barlow Condensed",
             "Arial",
             "Segoe UI",
-            "Impact",
             "Tahoma",
             "Verdana",
             "Times New Roman",
@@ -1878,13 +1928,13 @@
             
             // Map each select ID to its settings key + fallback
             const fontMap = {
-                'settingFontGlobal':       { key: 'fontGlobal',   fallback: 'SF Pro Display Bold' },
-                'settingFontGeneral':      { key: 'fontGeneral',  fallback: 'SF Pro Display Bold' },
-                'settingFontTeamName':     { key: 'fontTeamName', fallback: 'Orbitron' },
-                'settingFontScore':        { key: 'fontScore',    fallback: 'Myriad Pro' },
-                'settingFontQuestion':     { key: 'fontQuestion', fallback: 'SF Pro Display Bold' },
-                'settingFontTeamNameGlobal': { key: 'fontTeamName', fallback: 'Orbitron' },
-                'settingFontScoreGlobal':  { key: 'fontScore',   fallback: 'Myriad Pro' }
+                'settingFontGlobal':       { key: 'fontGlobal',   fallback: 'Be Vietnam Pro' },
+                'settingFontGeneral':      { key: 'fontGeneral',  fallback: 'Be Vietnam Pro' },
+                'settingFontTeamName':     { key: 'fontTeamName', fallback: 'Be Vietnam Pro' },
+                'settingFontScore':        { key: 'fontScore',    fallback: 'Montserrat' },
+                'settingFontQuestion':     { key: 'fontQuestion', fallback: 'Be Vietnam Pro' },
+                'settingFontTeamNameGlobal': { key: 'fontTeamName', fallback: 'Be Vietnam Pro' },
+                'settingFontScoreGlobal':  { key: 'fontScore',   fallback: 'Montserrat' }
             };
 
             const s = settings || (window.currentState && window.currentState.settings) || null;
@@ -2397,12 +2447,12 @@
             let scale = parseInt(document.getElementById('settingScale').value);
             let antiCheat = parseInt(document.getElementById('settingAntiCheat').value) === 1;
             
-            let fontGlobal = document.getElementById('settingFontGlobal')?.value || 'SF Pro Display Bold';
-            let fontGeneral = document.getElementById('settingFontGeneral')?.value || 'SF Pro Display Bold';
-            let fontQuestion = document.getElementById('settingFontQuestion')?.value || 'SF Pro Display Bold';
+            let fontGlobal = document.getElementById('settingFontGlobal')?.value || 'Be Vietnam Pro';
+            let fontGeneral = document.getElementById('settingFontGeneral')?.value || 'Be Vietnam Pro';
+            let fontQuestion = document.getElementById('settingFontQuestion')?.value || 'Be Vietnam Pro';
             let globalFontEnabled = document.getElementById('settingGlobalFontEnabled')?.checked || false;
-            let fontTeamName = document.getElementById('settingFontTeamName')?.value || 'Orbitron';
-            let fontScore = document.getElementById('settingFontScore')?.value || 'Myriad Pro';
+            let fontTeamName = document.getElementById('settingFontTeamName')?.value || 'Be Vietnam Pro';
+            let fontScore = document.getElementById('settingFontScore')?.value || 'Montserrat';
             let scoreboardY = parseInt(document.getElementById('settingScoreboardY')?.value || 50);
             let scoreboardTitle = (document.getElementById('settingScoreboardTitle')?.value || '').trim();
             let questionsPerTeam = parseInt(document.getElementById('settingQuestionsPerTeam')?.value || 3);
@@ -3173,8 +3223,8 @@
             preview.style.display = 'flex';
             if (hint) hint.style.display = 'none';
 
-            let fontTeamName = (state.settings && state.settings.fontTeamName) || 'Orbitron';
-            let fontScore = (state.settings && state.settings.fontScore) || 'Myriad Pro';
+            let fontTeamName = (state.settings && state.settings.fontTeamName) || 'Be Vietnam Pro';
+            let fontScore = (state.settings && state.settings.fontScore) || 'Montserrat';
             let avatarSize = (state.settings && state.settings.avatarSize !== undefined) ? state.settings.avatarSize : 100;
             let avatarOverlap = (state.settings && state.settings.avatarOverlap !== undefined) ? state.settings.avatarOverlap : 10;
             let yOffset = (state.settings && state.settings.scoreboardY !== undefined) ? state.settings.scoreboardY : 50;
