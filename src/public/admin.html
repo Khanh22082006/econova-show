@@ -1808,15 +1808,21 @@
             
             const isCloudWeb = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
             const vInput = document.getElementById('adminVideoUrlInput');
+            const isLocal = (u) => u && !u.startsWith('/videos/') && !u.startsWith('http') && !u.startsWith('/');
             
-            if (isCloudWeb && url.startsWith('/videos/')) {
+            if (isCloudWeb && (url.startsWith('/videos/') || isLocal(url))) {
+                const isLocalUrl = isLocal(url);
                 try {
-                    const check = await fetch(url, { method: 'HEAD' });
-                    if (!check.ok) {
-                        const baseName = url.split('/').pop().split('?')[0];
+                    let checkOk = false;
+                    if (!isLocalUrl) {
+                        const check = await fetch(url, { method: 'HEAD' });
+                        checkOk = check.ok;
+                    }
+                    if (!checkOk) {
+                        const baseName = url.split(/[\\/]/).pop().split('?')[0];
                         const cachedBlob = await getVideoFromCache(baseName);
                         if (cachedBlob) {
-                            if (vInput) vInput.value = `⏳ Đang tự động khôi phục video ${baseName} sau khởi động lại...`;
+                            if (vInput) vInput.value = `⏳ Đang tự động ${isLocalUrl ? 'tải lên lại' : 'khôi phục'} video ${baseName}...`;
                             const res = await fetch('/api/video/upload_raw?filename=' + encodeURIComponent(baseName), {
                                 method: 'POST',
                                 headers: { 'Content-Type': cachedBlob.type || 'video/mp4' },
@@ -1833,6 +1839,9 @@
                         }
                         // If no cache or restore failed
                         if (vInput) vInput.value = url;
+                        if (isLocalUrl) {
+                            alert(`Bản Web Cloud không thể phát trực tiếp link gốc (C:\\...).\nVui lòng cấp quyền (chọn file ${baseName}) để tải lên!`);
+                        }
                         document.getElementById('videoUploadInput').click();
                         return;
                     }
