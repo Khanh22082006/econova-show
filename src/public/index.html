@@ -44,23 +44,23 @@
 
         .portal-header {
             text-align: center;
-            margin-bottom: 25px;
+            margin-bottom: 14px;
         }
 
         .portal-title {
             font-family: 'Montserrat', 'Be Vietnam Pro', sans-serif !important;
-            font-size: clamp(28px, 4.5vw, 44px);
+            font-size: clamp(24px, 3.8vw, 36px);
             font-weight: 900;
             background: linear-gradient(135deg, #ffffff, #00d2d3, #ffd700);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             text-shadow: 0 0 30px rgba(0, 210, 211, 0.3);
-            margin-bottom: 8px;
-            letter-spacing: 1px;
+            margin-bottom: 4px;
+            letter-spacing: 0.8px;
         }
 
         .portal-subtitle {
-            font-size: 14.5px;
+            font-size: 13.5px;
             color: #a4b0be;
             font-weight: 500;
             letter-spacing: 0.3px;
@@ -72,8 +72,8 @@
             background: rgba(0, 0, 0, 0.4);
             border: 1px solid var(--card-border);
             border-radius: 30px;
-            padding: 4px;
-            margin-bottom: 25px;
+            padding: 3px;
+            margin-bottom: 16px;
             gap: 6px;
         }
 
@@ -81,9 +81,9 @@
             background: transparent;
             border: none;
             color: #a4b0be;
-            font-size: 14px;
+            font-size: 13.5px;
             font-weight: 700;
-            padding: 10px 24px;
+            padding: 8px 20px;
             border-radius: 25px;
             cursor: pointer;
             transition: all 0.25s ease;
@@ -98,262 +98,87 @@
         /* MAIN CONTAINER */
         .portal-panel {
             width: 100%;
-            max-width: 880px;
+            max-width: 1160px;
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             backdrop-filter: blur(15px);
-            border-radius: 24px;
-            padding: 30px;
+            border-radius: 20px;
+            padding: 20px 24px;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
             display: flex;
             flex-direction: column;
             align-items: center;
+            transition: max-width 0.25s ease;
         }
 
-        /* TAB CONTENT 1: JOIN ROOM */
-        .pin-box-wrapper {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 100%;
-            max-width: 440px;
-            margin-bottom: 16px;
-        }
-
-        .pin-input {
-            width: 100%;
-            padding: 16px 20px;
-            background: rgba(0, 0, 0, 0.4);
-            border: 2px solid #576574;
-            border-radius: 16px;
-            color: #ffd700;
-            font-family: 'Montserrat', 'Be Vietnam Pro', monospace;
-            font-size: 28px;
-            font-weight: 800;
-            letter-spacing: 6px;
-            text-align: center;
-            outline: none;
-            transition: all 0.2s;
-            margin-bottom: 8px;
-        }
-
-        .pin-input::placeholder {
-            letter-spacing: normal !important;
-            font-size: 16px !important;
-            font-weight: 500 !important;
-            font-family: 'Be Vietnam Pro', sans-serif !important;
-            color: rgba(255, 255, 255, 0.35) !important;
-        }
-
-        .pin-input:focus {
-            border-color: #00d2d3;
-            box-shadow: 0 0 20px rgba(0, 210, 211, 0.3);
-        }
-
-        /* ROLE TILES GRID */
-        .role-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            width: 100%;
-            margin-top: 10px;
-        }
-
-        .role-card {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid var(--card-border);
-            border-radius: 16px;
-            padding: 20px 16px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-
-        .role-card:hover {
-            transform: translateY(-5px);
-            background: rgba(255, 255, 255, 0.08);
-            border-color: var(--primary);
-            box-shadow: 0 10px 25px rgba(0, 210, 211, 0.25);
-        }
-
-        .role-card.admin:hover {
-            border-color: #ff4757;
-            box-shadow: 0 10px 25px rgba(255, 71, 87, 0.25);
-        }
-
-        .role-icon { font-size: 34px; margin-bottom: 10px; }
-        .role-title { font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 4px; }
-        .role-desc { font-size: 12px; color: #a4b0be; line-height: 1.4; }
-
-        /* OBS TRANSPARENCY NOTICE BANNER */
-        .obs-notice-banner {
-            width: 100%;
-            background: rgba(0, 210, 211, 0.08);
-            border: 1px solid rgba(0, 210, 211, 0.3);
-            border-radius: 14px;
-            padding: 12px 16px;
-            margin-top: 20px;
-            font-size: 12px;
-            color: #dcdde1;
-            line-height: 1.5;
-            text-align: left;
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-        }
-
-        .obs-notice-banner .n-icon { font-size: 18px; flex-shrink: 0; }
-
-        /* TAB CONTENT 2: CREATE ROOM */
         .form-row {
             display: flex;
             flex-direction: column;
             width: 100%;
-            max-width: 520px;
-            margin-bottom: 16px;
+            margin-bottom: 8px;
             text-align: left;
         }
 
         .form-label {
-            font-size: 13px;
+            font-size: 11.5px;
             font-weight: 700;
-            color: #00d2d3;
-            margin-bottom: 6px;
-            letter-spacing: 0.3px;
+            color: #dcdde1;
+            margin-bottom: 4px;
+            letter-spacing: 0.4px;
         }
 
         .form-input {
             width: 100%;
-            padding: 12px 16px;
-            background: rgba(0, 0, 0, 0.4);
-            border: 1.5px solid rgba(255, 255, 255, 0.15);
-            border-radius: 12px;
-            color: white;
-            font-size: 15px;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid #576574;
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 13px;
             outline: none;
             transition: border-color 0.2s;
         }
-        .form-input:focus { border-color: var(--primary); }
 
-                /* PASSWORD INPUT WITH EYE TOGGLE */
-        .password-wrapper {
-            position: relative;
-            display: flex;
-            align-items: center;
-            width: 100%;
+        .form-input:focus {
+            border-color: #00d2d3;
+            box-shadow: 0 0 8px rgba(0, 210, 211, 0.3);
         }
 
-        .password-wrapper .form-input {
-            padding-right: 46px;
-        }
-
-        .btn-toggle-eye {
-            position: absolute;
-            right: 12px;
-            background: transparent;
-            border: none;
-            color: #a4b0be;
-            cursor: pointer;
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 4px;
-            transition: color 0.2s;
-            user-select: none;
-        }
-
-        .btn-toggle-eye:hover {
-            color: #00d2d3;
-        }
-
-        .input-hint {
-            font-size: 11.5px;
-            color: #a4b0be;
-            margin-top: 4px;
-            line-height: 1.3;
-        }
-
-        .btn-create-room {
-            width: 100%;
-            max-width: 520px;
-            padding: 14px 20px;
-            background: var(--gold-gradient);
-            color: #05020c;
-            border: none;
-            border-radius: 14px;
-            font-size: 16px;
-            font-weight: 900;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: all 0.2s;
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
-        }
-        .btn-create-room:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
-        }
-
-        /* MODAL */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
-            display: none; justify-content: center; align-items: center; z-index: 1000;
-        }
-        .modal-overlay.active { display: flex; }
-        .modal-card {
-            background: #141024;
-            border: 1.5px solid var(--card-border);
-            border-radius: 20px;
-            padding: 28px 24px;
-            width: 90%;
-            max-width: 440px;
-            text-align: center;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
-        }
-        .modal-title { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 8px; }
-        .modal-desc { font-size: 13px; color: #a4b0be; margin-bottom: 18px; }
-        .btn-modal {
-            width: 100%; padding: 12px; border-radius: 12px; border: none;
-            font-weight: 800; font-size: 15px; cursor: pointer; margin-top: 10px;
-        }
-        .error-toast { color: #ff4757; font-size: 13px; font-weight: 700; margin-top: 8px; display: none; }
-    
-        /* 2-COLUMN CREATE ROOM GRID */
         .create-room-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            gap: 18px;
             width: 100%;
-            max-width: 960px;
-            margin-top: 6px;
+            margin-top: 2px;
         }
-        @media (max-width: 820px) {
+
+        @media (max-width: 900px) {
             .create-room-grid {
                 grid-template-columns: 1fr;
-                gap: 16px;
+                gap: 14px;
+            }
+            .portal-panel {
+                max-width: 100%;
+                padding: 16px;
             }
         }
+
         .create-col {
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            background: rgba(255, 255, 255, 0.03);
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.025);
             border: 1px solid var(--card-border);
-            border-radius: 16px;
-            padding: 16px 18px;
+            border-radius: 14px;
+            padding: 14px 16px;
         }
+
         .col-header {
-            font-size: 13.5px;
+            font-size: 13px;
             font-weight: 800;
             color: #00d2d3;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 6px;
             margin-bottom: 2px;
             letter-spacing: 0.5px;
         }
@@ -444,71 +269,74 @@
                         <span>🛡️ CỘT 1: THÔNG TIN PHÒNG & BẢO MẬT</span>
                     </div>
 
+                    <!-- Tên cuộc thi -->
                     <div class="form-row">
                         <label class="form-label">TÊN CUỘC THI / PHÒNG ĐẤU</label>
                         <input type="text" id="createNameInput" class="form-input" placeholder="VD: ECONOVA 2026: ASCEND" value="ECONOVA 2026: ASCEND">
-                        <div class="input-hint">Tên hiển thị trên đầu bảng điều khiển và màn hình trận đấu.</div>
                     </div>
 
-                    <div class="form-row">
-                        <label class="form-label">MÃ PIN PHÒNG (000000 - 999999)</label>
-                        <div style="display: flex; gap: 8px;">
-                            <input type="tel" id="createPinInput" class="form-input" placeholder="Tự gõ hoặc bấm Ngẫu Nhiên" maxlength="6" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
-                            <button type="button" onclick="generateRandomPin()" style="padding:0 16px; border-radius:12px; background:rgba(0,210,211,0.2); border:1px solid #00d2d3; color:#00d2d3; cursor:pointer; font-weight:bold; white-space:nowrap;">🎲 Ngẫu Nhiên</button>
+                    <!-- Mã PIN + Theme -->
+                    <div style="display: grid; grid-template-columns: 1.1fr 1.2fr; gap: 8px;">
+                        <div class="form-row">
+                            <label class="form-label">MÃ PIN (000000 - 999999)</label>
+                            <div style="display: flex; gap: 4px;">
+                                <input type="tel" id="createPinInput" class="form-input" placeholder="PIN 6 số..." maxlength="6" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')">
+                                <button type="button" onclick="generateRandomPin()" style="padding: 0 10px; border-radius: 8px; background: rgba(0,210,211,0.2); border: 1px solid #00d2d3; color: #00d2d3; cursor: pointer; font-weight: bold; font-size: 12px; white-space: nowrap;" title="Tạo mã PIN & MK MC ngẫu nhiên">🎲 Random</button>
+                            </div>
                         </div>
-                        <div class="input-hint">Mã PIN gửi cho Thí Sinh & Màn Hình để vào phòng.</div>
-                    </div>
-
-                    <div class="form-row">
-                        <label class="form-label">MẬT KHẨU QUẢN TRỊ VIÊN (ADMIN)</label>
-                        <div class="password-wrapper">
-                            <input type="password" id="createPassInput" class="form-input" placeholder="Tự đặt mật khẩu Admin..." value="admin123">
-                            <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('createPassInput', this)" title="Hiện/Ẩn mật khẩu">👁️</button>
+                        <div class="form-row">
+                            <label class="form-label">GIAO DIỆN THEME</label>
+                            <select id="createThemeInput" class="form-input" style="background:#0a0a1a;">
+                                <option value="v3">✨ Theme Diagonal V3 (Mũi tên xanh)</option>
+                                <option value="v2">🚀 Theme Ascend (Khung điểm ngang)</option>
+                                <option value="v1">🏛️ Theme Cổ Điển (Classic 3 cột)</option>
+                            </select>
                         </div>
-                        <div class="input-hint">💡 Mật khẩu đăng nhập vào bảng điều khiển Admin.</div>
                     </div>
 
-                    <div class="form-row">
-                        <label class="form-label">MẬT KHẨU DÀNH CHO MC (TỰ SINH RANDOM)</label>
-                        <div class="password-wrapper">
-                            <input type="text" id="createMcPassInput" class="form-input" placeholder="Mật khẩu MC..." value="mc123">
-                            <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('createMcPassInput', this)" title="Hiện/Ẩn mật khẩu">👁️</button>
+                    <!-- Mật khẩu Admin + MC -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <div class="form-row">
+                            <label class="form-label">MẬT KHẨU ADMIN</label>
+                            <div class="password-wrapper">
+                                <input type="password" id="createPassInput" class="form-input" placeholder="Mật khẩu Admin..." value="admin123">
+                                <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('createPassInput', this)" title="Hiện/Ẩn">👁️</button>
+                            </div>
                         </div>
-                        <div class="input-hint">💡 Mật khẩu gửi cho MC đăng nhập vào màn hình MC.</div>
+                        <div class="form-row">
+                            <label class="form-label">MẬT KHẨU MC (RANDOM)</label>
+                            <div class="password-wrapper">
+                                <input type="text" id="createMcPassInput" class="form-input" placeholder="Mật khẩu MC..." value="mc123">
+                                <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('createMcPassInput', this)" title="Hiện/Ẩn">👁️</button>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="form-row">
+                    <!-- Ngôn ngữ + Anti-Cheat -->
+                    <div style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 8px;">
+                        <div class="form-row">
+                            <label class="form-label">NGÔN NGỮ</label>
+                            <select id="createLangInput" class="form-input" style="background:#0a0a1a;">
+                                <option value="vi">🇻🇳 Tiếng Việt</option>
+                                <option value="en">🇬🇧 English</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <label class="form-label">CHỐNG GIAN LẬN (ANTI-CHEAT)</label>
+                            <select id="createAntiCheatInput" class="form-input" style="background:#0a0a1a;">
+                                <option value="1">🛡️ BẬT Bảo Vệ Toàn Diện</option>
+                                <option value="0">⚡ TẮT (Chế độ test tự do)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Slider thời gian tự hủy phòng -->
+                    <div class="form-row" style="margin-bottom: 0;">
                         <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
-                            <span>⏱️ TỰ HỦY PHÒNG KHI RỜI ĐI</span>
-                            <span id="idleSliderBadge" style="color: #ffd700; font-weight: 800; font-size: 13px;">180 phút (3 giờ)</span>
+                            <span>⏱️ TỰ HỦY PHÒNG KHI KHÔNG CÓ AI</span>
+                            <span id="idleSliderBadge" style="color: #ffd700; font-weight: 800; font-size: 12px;">180 phút (3 giờ)</span>
                         </label>
-                        <input type="range" id="createIdleSlider" min="5" max="1440" step="5" value="180" class="form-range" style="width: 100%; accent-color: #00d2d3; cursor: pointer; margin-top: 6px;" oninput="updateIdleSliderLabel(this.value)">
-                        <div class="input-hint">💡 Phòng tự đóng khi không có ai kết nối trong khoảng thời gian này (5p - 24h).</div>
-                    </div>
-
-                    <div class="form-row">
-                        <label class="form-label">GIAO DIỆN THEME KHỞI TẠO</label>
-                        <select id="createThemeInput" class="form-input" style="background:#0a0a1a;">
-                            <option value="v3">✨ Theme Diagonal V3 (Mũi tên xanh & Đồ họa hiện đại nhất)</option>
-                            <option value="v2">🚀 Theme Ascend (Khung điểm ngang nổi bật)</option>
-                            <option value="v1">🏛️ Theme Cổ Điển (Classic Olympia 3 cột)</option>
-                        </select>
-                    </div>
-
-                    <div class="form-row">
-                        <label class="form-label">NGÔN NGỮ HIỂN THỊ</label>
-                        <select id="createLangInput" class="form-input" style="background:#0a0a1a;">
-                            <option value="vi">🇻🇳 Tiếng Việt</option>
-                            <option value="en">🇬🇧 English</option>
-                        </select>
-                    </div>
-
-                    <div class="form-row">
-                        <label class="form-label">CHỐNG GIAN LẬN THÍ SINH (ANTI-CHEAT)</label>
-                        <select id="createAntiCheatInput" class="form-input" style="background:#0a0a1a;">
-                            <option value="1">🛡️ BẬT Bảo Vệ (Chống chuyển tab, DevTools, Fullscreen)</option>
-                            <option value="0">⚡ TẮT (Chế độ tập dượt / Test tự do)</option>
-                        </select>
+                        <input type="range" id="createIdleSlider" min="5" max="1440" step="5" value="180" class="form-range" style="width: 100%; accent-color: #00d2d3; cursor: pointer; margin-top: 4px;" oninput="updateIdleSliderLabel(this.value)">
                     </div>
                 </div>
 
@@ -518,55 +346,58 @@
                         <span>🎯 CỘT 2: LUẬT CHƠI, THÍ SINH & ĐỀ THI</span>
                     </div>
 
-                    <div class="form-row">
-                        <label class="form-label">SỐ LƯỢNG NGƯỜI CHƠI / ĐỘI THI</label>
-                        <select id="createTeamCountInput" class="form-input" style="background:#0a0a1a;" onchange="renderCreateTeamsInputs()">
-                            <option value="2">2 Người chơi / Đội thi</option>
-                            <option value="3">3 Người chơi / Đội thi</option>
-                            <option value="4" selected>4 Người chơi / Đội thi (Chuẩn Olympia)</option>
-                            <option value="5">5 Người chơi / Đội thi</option>
-                            <option value="6">6 Người chơi / Đội thi</option>
-                        </select>
-                    </div>
-
-                    <div class="form-row">
-                        <label class="form-label">CHẾ ĐỘ CHỌN CÂU HỎI MẶC ĐỊNH</label>
-                        <select id="createSelectionModeInput" class="form-input" style="background:#0a0a1a;">
-                            <option value="mode1">🎯 Mode 1: Chọn từng câu đơn lẻ (Bật trực tiếp lên màn hình)</option>
-                            <option value="mode2" selected>🧩 Mode 2: Gói câu hỏi tự chọn từ lưới (Mỗi câu chọn từ ngân hàng)</option>
-                            <option value="mode3">🎲 Mode 3: Gói câu hỏi random theo mức điểm (10đ, 20đ, 40đ)</option>
-                        </select>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <!-- Số đội + Chế độ chọn câu -->
+                    <div style="display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px;">
                         <div class="form-row">
-                            <label class="form-label">SỐ CÂU MỖI ĐỘI</label>
+                            <label class="form-label">SỐ LƯỢNG ĐỘI</label>
+                            <select id="createTeamCountInput" class="form-input" style="background:#0a0a1a;" onchange="renderCreateTeamsInputs()">
+                                <option value="2">2 Đội thi</option>
+                                <option value="3">3 Đội thi</option>
+                                <option value="4" selected>4 Đội thi (Olympia)</option>
+                                <option value="5">5 Đội thi</option>
+                                <option value="6">6 Đội thi</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <label class="form-label">CHẾ ĐỘ CHỌN CÂU HỎI</label>
+                            <select id="createSelectionModeInput" class="form-input" style="background:#0a0a1a;">
+                                <option value="mode1">🎯 Mode 1: Chọn từng câu đơn lẻ</option>
+                                <option value="mode2" selected>🧩 Mode 2: Gói tự chọn từ lưới</option>
+                                <option value="mode3">🎲 Mode 3: Gói random theo điểm</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Số câu/đội + Trễ chuông + Quy tắc lượt -->
+                    <div style="display: grid; grid-template-columns: 80px 100px 1fr; gap: 8px;">
+                        <div class="form-row">
+                            <label class="form-label">SỐ CÂU</label>
                             <input type="number" id="createQuestionsPerTeamInput" class="form-input" value="3" min="1" max="10">
                         </div>
                         <div class="form-row">
-                            <label class="form-label">ĐỘ TRỄ CHUÔNG (MS)</label>
-                            <input type="number" id="createBuzzerDelayInput" class="form-input" value="500" min="0" max="3000" step="50">
+                            <label class="form-label">TRỄ CHUÔNG</label>
+                            <input type="number" id="createBuzzerDelayInput" class="form-input" value="500" min="0" max="3000" step="50" placeholder="ms">
+                        </div>
+                        <div class="form-row">
+                            <label class="form-label">QUY TẮC LƯỢT CHƠI</label>
+                            <select id="createTurnOrderRuleInput" class="form-input" style="background:#0a0a1a;">
+                                <option value="mode_asc">📊 Điểm thấp nhất trước</option>
+                                <option value="mode_desc">📈 Điểm cao nhất trước</option>
+                                <option value="mode_order">🔢 Theo thứ tự STT</option>
+                            </select>
                         </div>
                     </div>
 
-                    <div class="form-row">
-                        <label class="form-label">QUY TẮC XẾP THỨ TỰ LƯỢT THI</label>
-                        <select id="createTurnOrderRuleInput" class="form-input" style="background:#0a0a1a;">
-                            <option value="mode_asc">📊 Ưu tiên đội Điểm Thấp Nhất chơi trước (Chuẩn Olympia)</option>
-                            <option value="mode_desc">📈 Ưu tiên đội Điểm Cao Nhất chơi trước</option>
-                            <option value="mode_order">🔢 Theo thứ tự số hiệu (Đội 1 ➔ Đội 2 ➔ ...)</option>
-                        </select>
-                    </div>
-
+                    <!-- Nạp sẵn file đề thi -->
                     <div class="form-row">
                         <label class="form-label">NẠP SẴN ĐỀ THI (.JSON) - TÙY CHỌN</label>
-                        <input type="file" id="createQuestionFileInput" accept=".json" class="form-input" style="padding: 8px 12px;" onchange="handleQuestionFileUpload(event)">
-                        <div class="input-hint" id="createQuestionFileHint">💡 Tải file ngân hàng câu hỏi JSON nếu muốn nạp đề ngay.</div>
+                        <input type="file" id="createQuestionFileInput" accept=".json" class="form-input" style="padding: 5px 10px;" onchange="handleQuestionFileUpload(event)">
+                        <div class="input-hint" id="createQuestionFileHint" style="font-size: 11px; margin-top: 2px;">💡 Tải file JSON ngân hàng đề thi nếu muốn nạp trước.</div>
                     </div>
 
+                    <!-- Danh sách thí sinh -->
                     <div class="form-row" style="margin-bottom: 0;">
-                        <label class="form-label">DANH SÁCH THÍ SINH / ĐỘI THI</label>
-                        <div id="createTeamsContainer" style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
+                        <div id="createTeamsContainer" style="display: flex; flex-direction: column; gap: 5px; width: 100%;">
                             <!-- Render động qua renderCreateTeamsInputs() -->
                         </div>
                     </div>
@@ -574,7 +405,7 @@
 
             </div>
 
-            <button class="btn-create-room" style="max-width: 960px; margin-top: 18px;" onclick="handleCreateRoom()">🚀 KHỞI TẠO PHÒNG ĐẤU</button>
+            <button class="btn-create-room" style="width: 100%; max-width: 1160px; margin-top: 14px; padding: 13px; font-size: 15px; font-weight: 800; border-radius: 12px;" onclick="handleCreateRoom()">🚀 KHỞI TẠO PHÒNG ĐẤU</button>
             <div class="error-toast" id="createError"></div>
         </div>
 
