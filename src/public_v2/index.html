@@ -605,18 +605,18 @@
                         </div>
                     </div>
 
-                    <!-- Số câu/đội + Trễ chuông + Quy tắc lượt -->
-                    <div style="display: grid; grid-template-columns: 80px 100px 1fr; gap: 8px;">
+                    <!-- Số câu/đội + Trễ chuông (MS) + Quy tắc lượt -->
+                    <div style="display: grid; grid-template-columns: 70px 130px 1fr; gap: 8px;">
                         <div class="form-row">
-                            <label class="form-label">SỐ CÂU</label>
+                            <label class="form-label" style="white-space: nowrap;">SỐ CÂU</label>
                             <input type="number" id="createQuestionsPerTeamInput" class="form-input" value="3" min="1" max="10">
                         </div>
                         <div class="form-row">
-                            <label class="form-label">TRỄ CHUÔNG</label>
+                            <label class="form-label" style="white-space: nowrap;">TRỄ CHUÔNG (MS)</label>
                             <input type="number" id="createBuzzerDelayInput" class="form-input" value="500" min="0" max="3000" step="50" placeholder="ms">
                         </div>
                         <div class="form-row">
-                            <label class="form-label">QUY TẮC LƯỢT CHƠI</label>
+                            <label class="form-label" style="white-space: nowrap;">QUY TẮC LƯỢT CHƠI</label>
                             <select id="createTurnOrderRuleInput" class="form-input" style="background:#0a0a1a;">
                                 <option value="mode_asc">📊 Điểm thấp nhất trước</option>
                                 <option value="mode_desc">📈 Điểm cao nhất trước</option>
