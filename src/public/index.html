@@ -38,14 +38,14 @@
             justify-content: center;
             background: radial-gradient(circle at top, #1a1a3a, #0a0a1a 80%);
             color: #ffffff;
-            padding: 20px 15px;
+            padding: 15px 15px;
             user-select: none;
             overflow-x: hidden;
         }
 
         .portal-header {
             text-align: center;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
         }
 
         .portal-title {
@@ -74,7 +74,7 @@
             border: 1px solid var(--card-border);
             border-radius: 30px;
             padding: 3px;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
             gap: 6px;
         }
 
@@ -112,11 +112,150 @@
             transition: max-width 0.25s ease;
         }
 
+        /* TAB CONTENT 1: JOIN ROOM */
+        .pin-box-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 440px;
+            margin-bottom: 14px;
+        }
+
+        .pin-input {
+            width: 100%;
+            padding: 14px 20px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px solid #576574;
+            border-radius: 14px;
+            color: #ffd700;
+            font-family: 'Montserrat', 'Be Vietnam Pro', monospace;
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: 6px;
+            text-align: center;
+            outline: none;
+            transition: all 0.2s;
+            margin-bottom: 6px;
+        }
+
+        .pin-input::placeholder {
+            letter-spacing: normal !important;
+            font-size: 15px !important;
+            font-weight: 500 !important;
+            font-family: 'Be Vietnam Pro', sans-serif !important;
+            color: rgba(255, 255, 255, 0.35) !important;
+        }
+
+        .pin-input:focus {
+            border-color: #00d2d3;
+            box-shadow: 0 0 20px rgba(0, 210, 211, 0.3);
+        }
+
+        /* ROLE TILES GRID */
+        .role-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+            width: 100%;
+            margin-top: 6px;
+        }
+
+        .role-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 16px 14px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .role-card:hover {
+            transform: translateY(-4px);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--primary);
+            box-shadow: 0 10px 25px rgba(0, 210, 211, 0.25);
+        }
+
+        .role-card.admin:hover {
+            border-color: #ff4757;
+            box-shadow: 0 10px 25px rgba(255, 71, 87, 0.25);
+        }
+
+        .role-icon { font-size: 30px; margin-bottom: 8px; }
+        .role-title { font-size: 15px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+        .role-desc { font-size: 11.5px; color: #a4b0be; line-height: 1.35; }
+
+        /* OBS TRANSPARENCY NOTICE BANNER */
+        .obs-notice-banner {
+            width: 100%;
+            background: rgba(0, 210, 211, 0.08);
+            border: 1px solid rgba(0, 210, 211, 0.3);
+            border-radius: 12px;
+            padding: 10px 14px;
+            margin-top: 16px;
+            font-size: 11.5px;
+            color: #dcdde1;
+            line-height: 1.45;
+            text-align: left;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .obs-notice-banner .n-icon { font-size: 16px; flex-shrink: 0; }
+
+        /* TAB CONTENT 2: CREATE ROOM (2-COLUMN GRID) */
+        .create-room-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            width: 100%;
+            margin-top: 2px;
+        }
+
+        @media (max-width: 900px) {
+            .create-room-grid {
+                grid-template-columns: 1fr;
+                gap: 14px;
+            }
+            .portal-panel {
+                max-width: 100%;
+                padding: 16px;
+            }
+        }
+
+        .create-col {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 14px 16px;
+        }
+
+        .col-header {
+            font-size: 13px;
+            font-weight: 800;
+            color: #00d2d3;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 6px;
+            margin-bottom: 2px;
+            letter-spacing: 0.5px;
+        }
+
         .form-row {
             display: flex;
             flex-direction: column;
             width: 100%;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             text-align: left;
         }
 
@@ -145,35 +284,7 @@
             box-shadow: 0 0 8px rgba(0, 210, 211, 0.3);
         }
 
-        .create-room-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 18px;
-            width: 100%;
-            margin-top: 2px;
-        }
-
-        @media (max-width: 900px) {
-            .create-room-grid {
-                grid-template-columns: 1fr;
-                gap: 14px;
-            }
-            .portal-panel {
-                max-width: 100%;
-                padding: 16px;
-            }
-        }
-
-        .create-col {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            background: rgba(255, 255, 255, 0.025);
-            border: 1px solid var(--card-border);
-            border-radius: 14px;
-            padding: 14px 16px;
-        }
-
+        /* PASSWORD INPUT WITH MINIMALIST OUTLINE SVG EYE */
         .password-wrapper {
             position: relative;
             display: flex;
@@ -222,15 +333,51 @@
             pointer-events: none;
         }
 
-        .col-header {
-            font-size: 13px;
-            font-weight: 800;
-            color: #00d2d3;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            padding-bottom: 6px;
-            margin-bottom: 2px;
-            letter-spacing: 0.5px;
+        .btn-create-room {
+            width: 100%;
+            max-width: 1160px;
+            padding: 13px 20px;
+            background: var(--gold-gradient);
+            color: #05020c;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 900;
+            cursor: pointer;
+            margin-top: 14px;
+            transition: all 0.2s;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
         }
+
+        .btn-create-room:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+        }
+
+        /* MODAL */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
+            display: none; justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-card {
+            background: #141024;
+            border: 1.5px solid var(--card-border);
+            border-radius: 20px;
+            padding: 28px 24px;
+            width: 90%;
+            max-width: 440px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+        }
+        .modal-title { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 8px; }
+        .modal-desc { font-size: 13px; color: #a4b0be; margin-bottom: 18px; }
+        .btn-modal {
+            width: 100%; padding: 12px; border-radius: 12px; border: none;
+            font-weight: 800; font-size: 15px; cursor: pointer; margin-top: 10px;
+        }
+        .error-toast { color: #ff4757; font-size: 13px; font-weight: 700; margin-top: 8px; display: none; }
 
     </style>
 </head>
@@ -281,7 +428,7 @@
                 <div class="role-card" onclick="joinAsRole('scoreboard')">
                     <div class="role-icon">🏆</div>
                     <div class="role-title">Bảng Điểm</div>
-                    <div class="role-desc">Bảng tổng kết điểm số 4 đội thi đấu theo thời gian thực.</div>
+                    <div class="role-desc">Bảng tổng kết điểm số các đội thi đấu theo thời gian thực.</div>
                 </div>
 
                 <div class="role-card" onclick="joinAsRole('mc')">
@@ -349,14 +496,18 @@
                             <label class="form-label">MẬT KHẨU ADMIN</label>
                             <div class="password-wrapper">
                                 <input type="password" id="createPassInput" class="form-input" placeholder="Mật khẩu Admin..." value="admin123">
-                                <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('createPassInput', this)" title="Hiện/Ẩn"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+                                <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('createPassInput', this)" title="Hiện/Ẩn">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                </button>
                             </div>
                         </div>
                         <div class="form-row">
                             <label class="form-label">MẬT KHẨU MC (RANDOM)</label>
                             <div class="password-wrapper">
                                 <input type="text" id="createMcPassInput" class="form-input" placeholder="Mật khẩu MC..." value="mc123">
-                                <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('createMcPassInput', this)" title="Hiện/Ẩn"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg></button>
+                                <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('createMcPassInput', this)" title="Hiện/Ẩn">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -457,62 +608,95 @@
 
             </div>
 
-            <button class="btn-create-room" style="width: 100%; max-width: 1160px; margin-top: 14px; padding: 13px; font-size: 15px; font-weight: 800; border-radius: 12px;" onclick="handleCreateRoom()">🚀 KHỞI TẠO PHÒNG ĐẤU</button>
+            <button class="btn-create-room" onclick="handleCreateRoom()">🚀 KHỞI TẠO PHÒNG ĐẤU</button>
             <div class="error-toast" id="createError"></div>
         </div>
+
+    </div>
 
     <!-- MODAL AUTHENTICATION (ADMIN / MC LOGIN) -->
     <div class="modal-overlay" id="authModal">
         <div class="modal-card">
-            <h3 class="modal-title" id="authModalTitle">⚙️ XÁC THỰC QUẢN TRỊ</h3>
-            <p class="modal-desc" id="authModalDesc">Vui lòng nhập mật khẩu quản lý của phòng.</p>
+            <div class="modal-title" id="authModalTitle">🔒 XÁC THỰC QUẢN TRỊ</div>
+            <div class="modal-desc" id="authModalDesc">Vui lòng nhập mật khẩu quản lý của phòng.</div>
             
             <div class="password-wrapper" style="margin-bottom: 8px;">
-                <input type="password" id="authModalPass" class="form-input" placeholder="Nhập mật khẩu bạn đã đặt..." onkeypress="if(event.key==='Enter') confirmAuth()">
-                <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('authModalPass', this)" title="Hiện/Ẩn mật khẩu"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+                <input type="password" id="authModalPass" class="form-input" style="text-align: center; font-size: 16px; padding: 12px 14px;" placeholder="Nhập mật khẩu bạn đã đặt..." onkeydown="if(event.key==='Enter') confirmAuth()">
+                <button type="button" class="btn-toggle-eye" onclick="togglePasswordVisibility('authModalPass', this)" title="Hiện/Ẩn mật khẩu">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </button>
             </div>
-            <div class="error-toast" id="authModalError">Mật khẩu không chính xác!</div>
-            
-            <div style="background:rgba(255,255,255,0.05); border:1px dashed rgba(255,255,255,0.2); border-radius:12px; padding:10px 14px; margin-top:12px; font-size:12px; color:#dcdde1; line-height:1.5; text-align:left;">
+
+            <div class="error-toast" id="authModalError" style="margin-bottom: 12px;">Mật khẩu không chính xác!</div>
+
+            <div style="font-size: 11.5px; color: #a4b0be; margin-bottom: 15px; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 8px; text-align: left; line-height: 1.4;">
                 💡 <b>Mật khẩu là gì?</b> Nhập đúng mật khẩu Quản trị hoặc MC do người <b>Tạo Phòng</b> đã đặt lúc khởi tạo phòng này.
             </div>
 
-            <button class="btn-modal" id="btnModalSubmit" style="background:var(--primary-gradient); color:#000; margin-top:14px;" onclick="confirmAuth()">XÁC NHẬN ĐĂNG NHẬP ➔</button>
+            <button class="btn-modal" id="btnModalConfirm" style="background: var(--primary-gradient); color: #05020c;" onclick="confirmAuth()">XÁC NHẬN ĐĂNG NHẬP ➔</button>
+            <button class="btn-modal" style="background: transparent; color: #a4b0be; margin-top: 5px; font-size: 13px;" onclick="closeAuthModal()">Hủy bỏ</button>
             
-            <div style="margin-top:14px; font-size:12.5px; color:#a4b0be;">
-                Chưa có phòng riêng? <a href="#" onclick="closeAuthModal(); switchTab('create'); return false;" style="color:#ffd700; font-weight:bold; text-decoration:underline;">Tạo phòng mới & tự đặt mật khẩu tại đây</a>
+            <div style="margin-top: 15px; font-size: 12px; color: #747d8c; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
+                Chưa có phòng riêng? <a href="javascript:void(0)" onclick="closeAuthModal(); switchTab('create')" style="color: #ffd700; text-decoration: none; font-weight: bold;">Tạo phòng mới & tự đặt mật khẩu tại đây</a>
             </div>
-            
-            <button class="btn-modal" style="background:transparent; color:#aaa; margin-top:4px;" onclick="closeAuthModal()">✕ Đóng</button>
         </div>
     </div>
 
-    <!-- MODAL SUCCESSFUL ROOM CREATION WITH DETAILS & COPY BUTTON -->
+    <!-- MODAL POPUP THÔNG BÁO TẠO PHÒNG THÀNH CÔNG -->
     <div class="modal-overlay" id="createdSuccessModal">
         <div class="modal-card" style="max-width: 480px; text-align: left;">
-            <h3 class="modal-title" style="color: #00d2d3; text-align: center;">🎉 TẠO PHÒNG THÀNH CÔNG!</h3>
-            <p class="modal-desc" style="text-align: center; margin-bottom: 15px;">Dưới đây là thông tin đăng nhập của phòng thi vừa tạo:</p>
-            
-            <div style="background: rgba(0,0,0,0.5); border: 1.5px solid var(--card-border); border-radius: 14px; padding: 15px; font-size: 14px; line-height: 1.8;">
-                <div>🏷️ <b>Tên phòng:</b> <span id="succRoomName" style="color:#fff;"></span></div>
-                <div>🔑 <b>Mã PIN 6 số:</b> <span id="succRoomPin" style="color:#ffd700; font-size:18px; font-weight:900; letter-spacing:2px;"></span></div>
-                <div>⚙️ <b>Mật khẩu Admin:</b> <span id="succAdminPass" style="color:#ff6b81; font-weight:bold;"></span></div>
-                <div>🎙️ <b>Mật khẩu MC:</b> <span id="succMcPass" style="color:#00d2d3; font-weight:bold;"></span></div>
+            <div style="text-align: center; margin-bottom: 16px;">
+                <div style="font-size: 40px; margin-bottom: 6px;">🎉</div>
+                <h3 style="color: #00d2d3; font-size: 20px; font-weight: 800;">TẠO PHÒNG ĐẤU THÀNH CÔNG!</h3>
+                <p style="color: #a4b0be; font-size: 13px; margin-top: 4px;">Hãy lưu lại và gửi thông tin này cho Thí Sinh & MC</p>
             </div>
 
-            <button class="btn-modal" onclick="copyRoomDetails()" style="background: rgba(255,255,255,0.1); border: 1px solid #fff; color: #fff; margin-top: 14px;">
-                📋 Sao Chép Thông Tin Phòng (Để gửi Zalo / Ekip)
-            </button>
-            <button class="btn-modal" onclick="goToCreatedRoomAdmin()" style="background: var(--gold-gradient); color: #000; margin-top: 8px;">
-                🚀 Vào Ngay Bảng Điều Khiển Admin ➔
-            </button>
+            <div style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 14px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; justify-content: space-between; font-size: 13.5px;">
+                    <span style="color: #a4b0be;">Tên phòng:</span>
+                    <b style="color: #fff;" id="succRoomName">-</b>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 16px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px;">
+                    <span style="color: #ffd700; font-weight: 700;">Mã PIN 6 số:</span>
+                    <b style="color: #ffd700; font-family: monospace; font-size: 20px; letter-spacing: 2px;" id="succRoomPin">000000</b>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 13.5px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px;">
+                    <span style="color: #ff6b81; font-weight: 600;">Mật khẩu Admin:</span>
+                    <b style="color: #ff6b81; font-family: monospace;" id="succAdminPass">admin123</b>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 13.5px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px;">
+                    <span style="color: #00d2d3; font-weight: 600;">Mật khẩu MC:</span>
+                    <b style="color: #00d2d3; font-family: monospace;" id="succMcPass">mc123</b>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-modal" style="background: rgba(0, 210, 211, 0.2); border: 1px solid #00d2d3; color: #00d2d3; margin-top: 0;" onclick="copyRoomDetails()">📋 Sao Chép</button>
+                <button class="btn-modal" style="background: var(--gold-gradient); color: #05020c; margin-top: 0;" onclick="goToCreatedRoomAdmin()">VÀO PHÒNG ADMIN ➔</button>
+            </div>
         </div>
     </div>
 
     <script>
         let currentTargetRole = '';
-
         let uploadedQuestionBank = null;
+
+        const SVG_EYE_OPEN = '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+        const SVG_EYE_CLOSED = '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+
+        function togglePasswordVisibility(inputId, btn) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.innerHTML = SVG_EYE_CLOSED;
+                btn.title = 'Ẩn mật khẩu';
+            } else {
+                input.type = 'password';
+                btn.innerHTML = SVG_EYE_OPEN;
+                btn.title = 'Hiện mật khẩu';
+            }
+        }
 
         function updateIdleSliderLabel(val) {
             const minutes = parseInt(val, 10);
@@ -569,7 +753,6 @@
             }
 
             if (headerRowIdx === -1) {
-                // Fallback: Kiểm tra xem có phải dạng bảng tuần tự (Mức điểm, STT, Câu hỏi, Đáp án, Video)
                 let altHeaderIdx = -1;
                 for (let i = 0; i < jsonData.length; i++) {
                     let rowStr = (jsonData[i] || []).map(x => String(x).toLowerCase().trim()).join(" ");
@@ -619,14 +802,8 @@
                     if (q) {
                         result[pts].push({
                             stt: stt || String(result[pts].length + 1),
-                            q: q.replace(/
-
-/g, '
-'),
-                            a: a.replace(/
-
-/g, '
-'),
+                            q: q.replace(/\r\n/g, '\n'),
+                            a: a.replace(/\r\n/g, '\n'),
                             vid: vid
                         });
                     }
@@ -750,24 +927,6 @@
             container.innerHTML = html;
         }
 
-        const SVG_EYE_OPEN = '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
-        const SVG_EYE_CLOSED = '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
-
-        function togglePasswordVisibility(inputId, btn) {
-            const input = document.getElementById(inputId);
-            if (!input) return;
-            if (input.type === 'password') {
-                input.type = 'text';
-                btn.innerHTML = SVG_EYE_CLOSED;
-                btn.title = 'Ẩn mật khẩu';
-            } else {
-                input.type = 'password';
-                btn.innerHTML = SVG_EYE_OPEN;
-                btn.title = 'Hiện mật khẩu';
-            }
-        }
-        }
-
         function switchTab(tab) {
             document.getElementById('tab-btn-join').classList.toggle('active', tab === 'join');
             document.getElementById('tab-btn-create').classList.toggle('active', tab === 'create');
@@ -779,7 +938,6 @@
         }
 
         function generateRandomPin() {
-            // PIN nằm trong 000000 - 999999 có padStart
             const pin = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
             document.getElementById('createPinInput').value = pin;
             const mcPass = 'mc' + pin.slice(0, 4);
@@ -789,9 +947,7 @@
         }
 
         function getCleanPin() {
-            let val = document.getElementById('joinPinInput').value.trim().replace(/\D/g, '');
-            if (!val) return '';
-            return val.padStart(6, '0');
+            return (document.getElementById('joinPinInput').value || '').trim().replace(/\D/g, '');
         }
 
         async function joinAsRole(role) {
@@ -800,32 +956,26 @@
             joinErr.style.display = 'none';
 
             if (!pin || pin.length !== 6) {
-                joinErr.innerText = '⚠️ Vui lòng nhập đúng mã PIN gồm 6 chữ số (000000 - 999999)!';
+                joinErr.innerText = '⚠️ Vui lòng nhập mã PIN phòng gồm đúng 6 chữ số!';
                 joinErr.style.display = 'block';
+                document.getElementById('joinPinInput').focus();
                 return;
             }
 
             currentTargetRole = role;
 
             if (role === 'admin' || role === 'mc') {
-                document.getElementById('authModalTitle').innerText = (role === 'admin') ? '⚙️ XÁC THỰC QUẢN TRỊ VIÊN' : '🎙️ XÁC THỰC MC';
-                document.getElementById('authModalDesc').innerText = 'Nhập mật khẩu ' + (role === 'admin' ? 'Admin' : 'MC') + ' của phòng PIN: ' + pin;
-                document.getElementById('authModalPass').placeholder = 'Nhập mật khẩu bạn đã đặt...';
+                document.getElementById('authModalTitle').innerText = role === 'admin' ? '🔒 XÁC THỰC QUẢN TRỊ VIÊN' : '🎙️ XÁC THỰC MC DẪN CHƯƠNG TRÌNH';
+                document.getElementById('authModalDesc').innerText = role === 'admin' ? 'Nhập mật khẩu Admin do người tạo phòng cung cấp.' : 'Nhập mật khẩu MC do người tạo phòng cung cấp.';
                 document.getElementById('authModalPass').value = '';
                 document.getElementById('authModalError').style.display = 'none';
                 document.getElementById('authModal').classList.add('active');
-                document.getElementById('authModalPass').focus();
+                setTimeout(() => document.getElementById('authModalPass').focus(), 150);
             } else {
-                // Kiểm tra phòng có tồn tại không trước khi chuyển trang
                 try {
-                    const res = await fetch('/api/room/verify_contestant', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ pin })
-                    });
-                    const data = await res.json();
-                    if (!data.success) {
-                        joinErr.innerText = data.message || '❌ Phòng thi đấu với mã PIN này không tồn tại!';
+                    const res = await fetch(`/api/room/status?pin=${encodeURIComponent(pin)}`);
+                    if (res.status === 404) {
+                        joinErr.innerText = '❌ Phòng thi đấu với mã PIN này không tồn tại hoặc đã hết hạn!';
                         joinErr.style.display = 'block';
                         return;
                     }
