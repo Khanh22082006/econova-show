@@ -65,7 +65,7 @@ class RoomManager {
         return pin;
     }
 
-    createRoom({ pin, name, password, mcPassword, theme, questions, teamCount, teams }) {
+    createRoom({ pin, name, password, mcPassword, theme, questions, teamCount, teams, idleTimeoutMinutes, questionSelectionMode, questionsPerTeam, turnOrderRule, buzzerDelayMs, antiCheat, language }) {
         let cleanPin = (pin || "").toString().trim().replace(/\D/g, '');
         if (cleanPin.length > 0 && cleanPin.length <= 6) {
             cleanPin = cleanPin.padStart(6, '0');
@@ -118,6 +118,18 @@ class RoomManager {
         initialGameState.settings = initialGameState.settings || {};
         initialGameState.settings.teamCount = count;
         initialGameState.settings.theme = theme || "v3";
+        initialGameState.settings.questionSelectionMode = questionSelectionMode || "mode1";
+        initialGameState.settings.questionsPerTeam = parseInt(questionsPerTeam, 10) || 3;
+        initialGameState.settings.turnOrderRule = turnOrderRule || "mode_asc";
+        initialGameState.settings.buzzerDelayMs = parseInt(buzzerDelayMs, 10) || 500;
+        initialGameState.settings.antiCheat = (antiCheat === true || antiCheat === "1" || antiCheat === 1);
+        initialGameState.settings.language = language || "vi";
+        initialGameState.settings.questionSelectionMode = questionSelectionMode || "mode1";
+        initialGameState.settings.questionsPerTeam = parseInt(questionsPerTeam, 10) || 3;
+        initialGameState.settings.turnOrderRule = turnOrderRule || "mode_asc";
+        initialGameState.settings.buzzerDelayMs = parseInt(buzzerDelayMs, 10) || 500;
+        initialGameState.settings.antiCheat = (antiCheat === true || antiCheat === "1" || antiCheat === 1);
+        initialGameState.settings.language = language || "vi";
 
         const roomData = {
             pin: cleanPin,
@@ -125,6 +137,7 @@ class RoomManager {
             password: password || "123456",
             mcPassword: mcPassword || "mc123",
             theme: theme || "v3",
+            idleTimeoutMs: (parseInt(idleTimeoutMinutes, 10) || 180) * 60 * 1000,
             createdAt: Date.now(),
             lastActive: Date.now(),
             gameState: initialGameState,

@@ -285,3 +285,21 @@ app.on('window-all-closed', function () {
         app.quit();
     }
 });
+
+
+ipcMain.handle('save-match-history', async (event, historyData) => {
+    try {
+        const historyDir = path.join(app.getPath('userData'), 'matches_history');
+        if (!fs.existsSync(historyDir)) fs.mkdirSync(historyDir, { recursive: true });
+        const sanitizedPin = (historyData.pin || 'match').replace(/[^a-zA-Z0-9_-]/g, '');
+        const dateStr = new Date().toISOString().slice(0, 10);
+        const fileName = `match_${sanitizedPin}_${dateStr}_${Date.now()}.json`;
+        const filePath = path.join(historyDir, fileName);
+        fs.writeFileSync(filePath, JSON.stringify(historyData, null, 2), 'utf-8');
+        console.log('[Electron] Đã lưu lịch sử trận đấu vào:', filePath);
+        return { success: true, filePath };
+    } catch(e) {
+        console.error('[Electron] Lỗi lưu lịch sử:', e);
+        return { success: false, error: e.message };
+    }
+});

@@ -6,5 +6,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     sendMediaPickerResult: (sourceId) => ipcRenderer.send('media-picker-result', sourceId),
     setAntiCheat: (enabled) => ipcRenderer.send('set-anti-cheat', enabled),
     forceQuit: () => ipcRenderer.send('force-quit'),
-    onForceReportCheat: (callback) => ipcRenderer.on('force-report-cheat', (event, reason) => callback(reason))
+    onForceReportCheat: (callback) => ipcRenderer.on('force-report-cheat', (event, reason) => callback(reason)),
+    saveMatchHistory: (data) => ipcRenderer.invoke('save-match-history', data)
 });

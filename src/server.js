@@ -307,8 +307,9 @@ setInterval(() => {
         }
 
         // Không có ai → kiểm tra thời gian không hoạt động
+        const roomTimeout = room.idleTimeoutMs || ROOM_IDLE_TIMEOUT_MS;
         const idleMs = now - (room.lastActive || room.createdAt || now);
-        if (idleMs >= ROOM_IDLE_TIMEOUT_MS) {
+        if (idleMs >= roomTimeout) {
             toDelete.push(pin);
         }
     });
@@ -342,8 +343,8 @@ app.post('/api/room/delete', (req, res) => {
 
 app.post('/api/room/create', (req, res) => {
     try {
-        const { name, pin, password, mcPassword, theme, questions, teamCount, teams } = req.body || {};
-        const newRoom = roomManager.createRoom({ name, pin, password, mcPassword, theme, questions, teamCount, teams });
+        const { name, pin, password, mcPassword, theme, questions, teamCount, teams, idleTimeoutMinutes, questionSelectionMode, questionsPerTeam, turnOrderRule, buzzerDelayMs, antiCheat, language } = req.body || {};
+        const newRoom = roomManager.createRoom({ name, pin, password, mcPassword, theme, questions, teamCount, teams, idleTimeoutMinutes, questionSelectionMode, questionsPerTeam, turnOrderRule, buzzerDelayMs, antiCheat, language });
         if (newRoom.error) {
             return res.status(400).json({ success: false, message: newRoom.message });
         }

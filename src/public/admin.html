@@ -6,10 +6,266 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@600;700;800&family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=Inter:wght@400;600;700&family=Kanit:wght@600;700;800&family=Montserrat:wght@600;700;800;900&family=Orbitron:wght@400;700;900&family=Oswald:wght@600;700&family=Roboto:wght@500;700;900&family=Russo+One&family=Teko:wght@600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
-    <script src="import_excel.js" defer></script>
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="/lang.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer>
+        // =============================================
+        // MATCH HISTORY EXPORT & STORAGE
+        // =============================================
+        function exportMatchHistory() {
+            if (!currentState) {
+                alert('Chưa có dữ liệu trận đấu!');
+                return;
+            }
+            const state = currentState;
+            const teamsSorted = [...(state.teams || [])].sort((a, b) => (b.score || 0) - (a.score || 0));
+            
+            const matchData = {
+                title: state.settings?.matchName || 'Trận Đấu Econova Show',
+                pin: state.roomPIN || currentRoomPin || 'DEFAULT',
+                exportedAt: new Date().toLocaleString('vi-VN'),
+                timestamp: Date.now(),
+                settings: state.settings || {},
+                standings: teamsSorted.map((t, idx) => ({
+                    rank: idx + 1,
+                    id: t.id,
+                    name: t.name,
+                    school: t.school || '',
+                    score: t.score
+                })),
+                scoreLog: state.scoreLog || [],
+                teamQuestionHistory: state.teamQuestionHistory || {},
+                playedQuestions: state.playedQuestions || {}
+            };
+
+            // 1. Lưu vào localStorage
+            try {
+                const historyKey = 'econova_history_' + matchData.pin;
+                localStorage.setItem(historyKey, JSON.stringify(matchData));
+                let allHistory = JSON.parse(localStorage.getItem('econova_all_matches') || '[]');
+                allHistory = allHistory.filter(m => m.pin !== matchData.pin);
+                allHistory.unshift({ pin: matchData.pin, title: matchData.title, time: matchData.exportedAt, topScore: teamsSorted[0]?.score || 0 });
+                if (allHistory.length > 50) allHistory.pop();
+                localStorage.setItem('econova_all_matches', JSON.stringify(allHistory));
+            } catch(e) {}
+
+            // 2. Gửi lưu file nếu trên Electron Desktop App
+            if (window.electronAPI && window.electronAPI.saveMatchHistory) {
+                window.electronAPI.saveMatchHistory(matchData).then(res => {
+                    if (res && res.success) {
+                        console.log('Saved match history to disk:', res.filePath);
+                    }
+                }).catch(() => {});
+            }
+
+            // 3. Tạo file JSON tải về
+            const jsonBlob = new Blob([JSON.stringify(matchData, null, 2)], { type: 'application/json' });
+            const jsonUrl = URL.createObjectURL(jsonBlob);
+            const a = document.createElement('a');
+            a.href = jsonUrl;
+            a.download = `Econova_BaoCao_TranDau_${matchData.pin}_${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(jsonUrl);
+
+            alert('✅ Đã xuất và lưu trữ toàn bộ lịch sử trận đấu thành công!');
+        }
+
+    </script>
+    <script src="import_excel.js" defer>
+        // =============================================
+        // MATCH HISTORY EXPORT & STORAGE
+        // =============================================
+        function exportMatchHistory() {
+            if (!currentState) {
+                alert('Chưa có dữ liệu trận đấu!');
+                return;
+            }
+            const state = currentState;
+            const teamsSorted = [...(state.teams || [])].sort((a, b) => (b.score || 0) - (a.score || 0));
+            
+            const matchData = {
+                title: state.settings?.matchName || 'Trận Đấu Econova Show',
+                pin: state.roomPIN || currentRoomPin || 'DEFAULT',
+                exportedAt: new Date().toLocaleString('vi-VN'),
+                timestamp: Date.now(),
+                settings: state.settings || {},
+                standings: teamsSorted.map((t, idx) => ({
+                    rank: idx + 1,
+                    id: t.id,
+                    name: t.name,
+                    school: t.school || '',
+                    score: t.score
+                })),
+                scoreLog: state.scoreLog || [],
+                teamQuestionHistory: state.teamQuestionHistory || {},
+                playedQuestions: state.playedQuestions || {}
+            };
+
+            // 1. Lưu vào localStorage
+            try {
+                const historyKey = 'econova_history_' + matchData.pin;
+                localStorage.setItem(historyKey, JSON.stringify(matchData));
+                let allHistory = JSON.parse(localStorage.getItem('econova_all_matches') || '[]');
+                allHistory = allHistory.filter(m => m.pin !== matchData.pin);
+                allHistory.unshift({ pin: matchData.pin, title: matchData.title, time: matchData.exportedAt, topScore: teamsSorted[0]?.score || 0 });
+                if (allHistory.length > 50) allHistory.pop();
+                localStorage.setItem('econova_all_matches', JSON.stringify(allHistory));
+            } catch(e) {}
+
+            // 2. Gửi lưu file nếu trên Electron Desktop App
+            if (window.electronAPI && window.electronAPI.saveMatchHistory) {
+                window.electronAPI.saveMatchHistory(matchData).then(res => {
+                    if (res && res.success) {
+                        console.log('Saved match history to disk:', res.filePath);
+                    }
+                }).catch(() => {});
+            }
+
+            // 3. Tạo file JSON tải về
+            const jsonBlob = new Blob([JSON.stringify(matchData, null, 2)], { type: 'application/json' });
+            const jsonUrl = URL.createObjectURL(jsonBlob);
+            const a = document.createElement('a');
+            a.href = jsonUrl;
+            a.download = `Econova_BaoCao_TranDau_${matchData.pin}_${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(jsonUrl);
+
+            alert('✅ Đã xuất và lưu trữ toàn bộ lịch sử trận đấu thành công!');
+        }
+
+    </script>
+    <script src="/socket.io/socket.io.js">
+        // =============================================
+        // MATCH HISTORY EXPORT & STORAGE
+        // =============================================
+        function exportMatchHistory() {
+            if (!currentState) {
+                alert('Chưa có dữ liệu trận đấu!');
+                return;
+            }
+            const state = currentState;
+            const teamsSorted = [...(state.teams || [])].sort((a, b) => (b.score || 0) - (a.score || 0));
+            
+            const matchData = {
+                title: state.settings?.matchName || 'Trận Đấu Econova Show',
+                pin: state.roomPIN || currentRoomPin || 'DEFAULT',
+                exportedAt: new Date().toLocaleString('vi-VN'),
+                timestamp: Date.now(),
+                settings: state.settings || {},
+                standings: teamsSorted.map((t, idx) => ({
+                    rank: idx + 1,
+                    id: t.id,
+                    name: t.name,
+                    school: t.school || '',
+                    score: t.score
+                })),
+                scoreLog: state.scoreLog || [],
+                teamQuestionHistory: state.teamQuestionHistory || {},
+                playedQuestions: state.playedQuestions || {}
+            };
+
+            // 1. Lưu vào localStorage
+            try {
+                const historyKey = 'econova_history_' + matchData.pin;
+                localStorage.setItem(historyKey, JSON.stringify(matchData));
+                let allHistory = JSON.parse(localStorage.getItem('econova_all_matches') || '[]');
+                allHistory = allHistory.filter(m => m.pin !== matchData.pin);
+                allHistory.unshift({ pin: matchData.pin, title: matchData.title, time: matchData.exportedAt, topScore: teamsSorted[0]?.score || 0 });
+                if (allHistory.length > 50) allHistory.pop();
+                localStorage.setItem('econova_all_matches', JSON.stringify(allHistory));
+            } catch(e) {}
+
+            // 2. Gửi lưu file nếu trên Electron Desktop App
+            if (window.electronAPI && window.electronAPI.saveMatchHistory) {
+                window.electronAPI.saveMatchHistory(matchData).then(res => {
+                    if (res && res.success) {
+                        console.log('Saved match history to disk:', res.filePath);
+                    }
+                }).catch(() => {});
+            }
+
+            // 3. Tạo file JSON tải về
+            const jsonBlob = new Blob([JSON.stringify(matchData, null, 2)], { type: 'application/json' });
+            const jsonUrl = URL.createObjectURL(jsonBlob);
+            const a = document.createElement('a');
+            a.href = jsonUrl;
+            a.download = `Econova_BaoCao_TranDau_${matchData.pin}_${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(jsonUrl);
+
+            alert('✅ Đã xuất và lưu trữ toàn bộ lịch sử trận đấu thành công!');
+        }
+
+    </script>
+    <script src="/lang.js">
+        // =============================================
+        // MATCH HISTORY EXPORT & STORAGE
+        // =============================================
+        function exportMatchHistory() {
+            if (!currentState) {
+                alert('Chưa có dữ liệu trận đấu!');
+                return;
+            }
+            const state = currentState;
+            const teamsSorted = [...(state.teams || [])].sort((a, b) => (b.score || 0) - (a.score || 0));
+            
+            const matchData = {
+                title: state.settings?.matchName || 'Trận Đấu Econova Show',
+                pin: state.roomPIN || currentRoomPin || 'DEFAULT',
+                exportedAt: new Date().toLocaleString('vi-VN'),
+                timestamp: Date.now(),
+                settings: state.settings || {},
+                standings: teamsSorted.map((t, idx) => ({
+                    rank: idx + 1,
+                    id: t.id,
+                    name: t.name,
+                    school: t.school || '',
+                    score: t.score
+                })),
+                scoreLog: state.scoreLog || [],
+                teamQuestionHistory: state.teamQuestionHistory || {},
+                playedQuestions: state.playedQuestions || {}
+            };
+
+            // 1. Lưu vào localStorage
+            try {
+                const historyKey = 'econova_history_' + matchData.pin;
+                localStorage.setItem(historyKey, JSON.stringify(matchData));
+                let allHistory = JSON.parse(localStorage.getItem('econova_all_matches') || '[]');
+                allHistory = allHistory.filter(m => m.pin !== matchData.pin);
+                allHistory.unshift({ pin: matchData.pin, title: matchData.title, time: matchData.exportedAt, topScore: teamsSorted[0]?.score || 0 });
+                if (allHistory.length > 50) allHistory.pop();
+                localStorage.setItem('econova_all_matches', JSON.stringify(allHistory));
+            } catch(e) {}
+
+            // 2. Gửi lưu file nếu trên Electron Desktop App
+            if (window.electronAPI && window.electronAPI.saveMatchHistory) {
+                window.electronAPI.saveMatchHistory(matchData).then(res => {
+                    if (res && res.success) {
+                        console.log('Saved match history to disk:', res.filePath);
+                    }
+                }).catch(() => {});
+            }
+
+            // 3. Tạo file JSON tải về
+            const jsonBlob = new Blob([JSON.stringify(matchData, null, 2)], { type: 'application/json' });
+            const jsonUrl = URL.createObjectURL(jsonBlob);
+            const a = document.createElement('a');
+            a.href = jsonUrl;
+            a.download = `Econova_BaoCao_TranDau_${matchData.pin}_${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(jsonUrl);
+
+            alert('✅ Đã xuất và lưu trữ toàn bộ lịch sử trận đấu thành công!');
+        }
+
+    </script>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         let authParam = urlParams.get('auth');
@@ -27,6 +283,70 @@
         if (!sessionStorage.getItem('adminAuth')) {
             window.location.href = './index.html';
         }
+    
+        // =============================================
+        // MATCH HISTORY EXPORT & STORAGE
+        // =============================================
+        function exportMatchHistory() {
+            if (!currentState) {
+                alert('Chưa có dữ liệu trận đấu!');
+                return;
+            }
+            const state = currentState;
+            const teamsSorted = [...(state.teams || [])].sort((a, b) => (b.score || 0) - (a.score || 0));
+            
+            const matchData = {
+                title: state.settings?.matchName || 'Trận Đấu Econova Show',
+                pin: state.roomPIN || currentRoomPin || 'DEFAULT',
+                exportedAt: new Date().toLocaleString('vi-VN'),
+                timestamp: Date.now(),
+                settings: state.settings || {},
+                standings: teamsSorted.map((t, idx) => ({
+                    rank: idx + 1,
+                    id: t.id,
+                    name: t.name,
+                    school: t.school || '',
+                    score: t.score
+                })),
+                scoreLog: state.scoreLog || [],
+                teamQuestionHistory: state.teamQuestionHistory || {},
+                playedQuestions: state.playedQuestions || {}
+            };
+
+            // 1. Lưu vào localStorage
+            try {
+                const historyKey = 'econova_history_' + matchData.pin;
+                localStorage.setItem(historyKey, JSON.stringify(matchData));
+                let allHistory = JSON.parse(localStorage.getItem('econova_all_matches') || '[]');
+                allHistory = allHistory.filter(m => m.pin !== matchData.pin);
+                allHistory.unshift({ pin: matchData.pin, title: matchData.title, time: matchData.exportedAt, topScore: teamsSorted[0]?.score || 0 });
+                if (allHistory.length > 50) allHistory.pop();
+                localStorage.setItem('econova_all_matches', JSON.stringify(allHistory));
+            } catch(e) {}
+
+            // 2. Gửi lưu file nếu trên Electron Desktop App
+            if (window.electronAPI && window.electronAPI.saveMatchHistory) {
+                window.electronAPI.saveMatchHistory(matchData).then(res => {
+                    if (res && res.success) {
+                        console.log('Saved match history to disk:', res.filePath);
+                    }
+                }).catch(() => {});
+            }
+
+            // 3. Tạo file JSON tải về
+            const jsonBlob = new Blob([JSON.stringify(matchData, null, 2)], { type: 'application/json' });
+            const jsonUrl = URL.createObjectURL(jsonBlob);
+            const a = document.createElement('a');
+            a.href = jsonUrl;
+            a.download = `Econova_BaoCao_TranDau_${matchData.pin}_${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(jsonUrl);
+
+            alert('✅ Đã xuất và lưu trữ toàn bộ lịch sử trận đấu thành công!');
+        }
+
     </script>
     <style>
         * { box-sizing: border-box; }
@@ -451,7 +771,71 @@
                                     });
                                 }
                             })();
-                        </script>
+                        
+        // =============================================
+        // MATCH HISTORY EXPORT & STORAGE
+        // =============================================
+        function exportMatchHistory() {
+            if (!currentState) {
+                alert('Chưa có dữ liệu trận đấu!');
+                return;
+            }
+            const state = currentState;
+            const teamsSorted = [...(state.teams || [])].sort((a, b) => (b.score || 0) - (a.score || 0));
+            
+            const matchData = {
+                title: state.settings?.matchName || 'Trận Đấu Econova Show',
+                pin: state.roomPIN || currentRoomPin || 'DEFAULT',
+                exportedAt: new Date().toLocaleString('vi-VN'),
+                timestamp: Date.now(),
+                settings: state.settings || {},
+                standings: teamsSorted.map((t, idx) => ({
+                    rank: idx + 1,
+                    id: t.id,
+                    name: t.name,
+                    school: t.school || '',
+                    score: t.score
+                })),
+                scoreLog: state.scoreLog || [],
+                teamQuestionHistory: state.teamQuestionHistory || {},
+                playedQuestions: state.playedQuestions || {}
+            };
+
+            // 1. Lưu vào localStorage
+            try {
+                const historyKey = 'econova_history_' + matchData.pin;
+                localStorage.setItem(historyKey, JSON.stringify(matchData));
+                let allHistory = JSON.parse(localStorage.getItem('econova_all_matches') || '[]');
+                allHistory = allHistory.filter(m => m.pin !== matchData.pin);
+                allHistory.unshift({ pin: matchData.pin, title: matchData.title, time: matchData.exportedAt, topScore: teamsSorted[0]?.score || 0 });
+                if (allHistory.length > 50) allHistory.pop();
+                localStorage.setItem('econova_all_matches', JSON.stringify(allHistory));
+            } catch(e) {}
+
+            // 2. Gửi lưu file nếu trên Electron Desktop App
+            if (window.electronAPI && window.electronAPI.saveMatchHistory) {
+                window.electronAPI.saveMatchHistory(matchData).then(res => {
+                    if (res && res.success) {
+                        console.log('Saved match history to disk:', res.filePath);
+                    }
+                }).catch(() => {});
+            }
+
+            // 3. Tạo file JSON tải về
+            const jsonBlob = new Blob([JSON.stringify(matchData, null, 2)], { type: 'application/json' });
+            const jsonUrl = URL.createObjectURL(jsonBlob);
+            const a = document.createElement('a');
+            a.href = jsonUrl;
+            a.download = `Econova_BaoCao_TranDau_${matchData.pin}_${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(jsonUrl);
+
+            alert('✅ Đã xuất và lưu trữ toàn bộ lịch sử trận đấu thành công!');
+        }
+
+    </script>
                         <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
                             <button class="btn-purple" style="width:auto; padding: 8px 16px; font-size: 14px;" onclick="playVideo()" data-i18n="adm_play">▶️ PHÁT VIDEO</button>
                             <button class="btn-red" style="width:auto; padding: 8px 16px; font-size: 14px;" onclick="closeVideo()" data-i18n="adm_close">❌ ĐÓNG VIDEO</button>
@@ -509,7 +893,7 @@
         <div class="panel">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <h2 data-i18n="adm_sec5">5. Bảng điểm & Chỉnh thủ công</h2>
-                <button class="btn-red" style="width: auto; padding: 10px 20px;" onclick="resetGame()" data-i18n="adm_reset">🔄 RESET GAME</button>
+                <div style="display: flex; gap: 8px;"><button class="btn-primary" style="width: auto; padding: 10px 16px; background: #00d2d3; color: #000; font-weight: bold;" onclick="exportMatchHistory()">📥 XUẤT LỊCH SỬ TRẬN ĐẤU</button><button class="btn-red" style="width: auto; padding: 10px 20px;" onclick="resetGame()" data-i18n="adm_reset">🔄 RESET GAME</button></div>
             </div>
             <div class="grid" id="team-container"></div>
             <div style="margin-top: 20px; border-top: 1px solid #576574; padding-top: 15px;">
@@ -3951,6 +4335,70 @@
                 window.electronAPI.sendMediaPickerResult(null);
             }
         }
+    
+        // =============================================
+        // MATCH HISTORY EXPORT & STORAGE
+        // =============================================
+        function exportMatchHistory() {
+            if (!currentState) {
+                alert('Chưa có dữ liệu trận đấu!');
+                return;
+            }
+            const state = currentState;
+            const teamsSorted = [...(state.teams || [])].sort((a, b) => (b.score || 0) - (a.score || 0));
+            
+            const matchData = {
+                title: state.settings?.matchName || 'Trận Đấu Econova Show',
+                pin: state.roomPIN || currentRoomPin || 'DEFAULT',
+                exportedAt: new Date().toLocaleString('vi-VN'),
+                timestamp: Date.now(),
+                settings: state.settings || {},
+                standings: teamsSorted.map((t, idx) => ({
+                    rank: idx + 1,
+                    id: t.id,
+                    name: t.name,
+                    school: t.school || '',
+                    score: t.score
+                })),
+                scoreLog: state.scoreLog || [],
+                teamQuestionHistory: state.teamQuestionHistory || {},
+                playedQuestions: state.playedQuestions || {}
+            };
+
+            // 1. Lưu vào localStorage
+            try {
+                const historyKey = 'econova_history_' + matchData.pin;
+                localStorage.setItem(historyKey, JSON.stringify(matchData));
+                let allHistory = JSON.parse(localStorage.getItem('econova_all_matches') || '[]');
+                allHistory = allHistory.filter(m => m.pin !== matchData.pin);
+                allHistory.unshift({ pin: matchData.pin, title: matchData.title, time: matchData.exportedAt, topScore: teamsSorted[0]?.score || 0 });
+                if (allHistory.length > 50) allHistory.pop();
+                localStorage.setItem('econova_all_matches', JSON.stringify(allHistory));
+            } catch(e) {}
+
+            // 2. Gửi lưu file nếu trên Electron Desktop App
+            if (window.electronAPI && window.electronAPI.saveMatchHistory) {
+                window.electronAPI.saveMatchHistory(matchData).then(res => {
+                    if (res && res.success) {
+                        console.log('Saved match history to disk:', res.filePath);
+                    }
+                }).catch(() => {});
+            }
+
+            // 3. Tạo file JSON tải về
+            const jsonBlob = new Blob([JSON.stringify(matchData, null, 2)], { type: 'application/json' });
+            const jsonUrl = URL.createObjectURL(jsonBlob);
+            const a = document.createElement('a');
+            a.href = jsonUrl;
+            a.download = `Econova_BaoCao_TranDau_${matchData.pin}_${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(jsonUrl);
+
+            alert('✅ Đã xuất và lưu trữ toàn bộ lịch sử trận đấu thành công!');
+        }
+
     </script>
     
     <!-- Custom Modal UI -->
@@ -4074,6 +4522,70 @@
                 }
             }
         }
+    
+        // =============================================
+        // MATCH HISTORY EXPORT & STORAGE
+        // =============================================
+        function exportMatchHistory() {
+            if (!currentState) {
+                alert('Chưa có dữ liệu trận đấu!');
+                return;
+            }
+            const state = currentState;
+            const teamsSorted = [...(state.teams || [])].sort((a, b) => (b.score || 0) - (a.score || 0));
+            
+            const matchData = {
+                title: state.settings?.matchName || 'Trận Đấu Econova Show',
+                pin: state.roomPIN || currentRoomPin || 'DEFAULT',
+                exportedAt: new Date().toLocaleString('vi-VN'),
+                timestamp: Date.now(),
+                settings: state.settings || {},
+                standings: teamsSorted.map((t, idx) => ({
+                    rank: idx + 1,
+                    id: t.id,
+                    name: t.name,
+                    school: t.school || '',
+                    score: t.score
+                })),
+                scoreLog: state.scoreLog || [],
+                teamQuestionHistory: state.teamQuestionHistory || {},
+                playedQuestions: state.playedQuestions || {}
+            };
+
+            // 1. Lưu vào localStorage
+            try {
+                const historyKey = 'econova_history_' + matchData.pin;
+                localStorage.setItem(historyKey, JSON.stringify(matchData));
+                let allHistory = JSON.parse(localStorage.getItem('econova_all_matches') || '[]');
+                allHistory = allHistory.filter(m => m.pin !== matchData.pin);
+                allHistory.unshift({ pin: matchData.pin, title: matchData.title, time: matchData.exportedAt, topScore: teamsSorted[0]?.score || 0 });
+                if (allHistory.length > 50) allHistory.pop();
+                localStorage.setItem('econova_all_matches', JSON.stringify(allHistory));
+            } catch(e) {}
+
+            // 2. Gửi lưu file nếu trên Electron Desktop App
+            if (window.electronAPI && window.electronAPI.saveMatchHistory) {
+                window.electronAPI.saveMatchHistory(matchData).then(res => {
+                    if (res && res.success) {
+                        console.log('Saved match history to disk:', res.filePath);
+                    }
+                }).catch(() => {});
+            }
+
+            // 3. Tạo file JSON tải về
+            const jsonBlob = new Blob([JSON.stringify(matchData, null, 2)], { type: 'application/json' });
+            const jsonUrl = URL.createObjectURL(jsonBlob);
+            const a = document.createElement('a');
+            a.href = jsonUrl;
+            a.download = `Econova_BaoCao_TranDau_${matchData.pin}_${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(jsonUrl);
+
+            alert('✅ Đã xuất và lưu trữ toàn bộ lịch sử trận đấu thành công!');
+        }
+
     </script>
     <script>
         // EMERGENCY DEBUG: FORCE HIDE ANY BROKEN OVERLAY
@@ -4098,6 +4610,70 @@
                 }
             }
         }, 1000);
+    
+        // =============================================
+        // MATCH HISTORY EXPORT & STORAGE
+        // =============================================
+        function exportMatchHistory() {
+            if (!currentState) {
+                alert('Chưa có dữ liệu trận đấu!');
+                return;
+            }
+            const state = currentState;
+            const teamsSorted = [...(state.teams || [])].sort((a, b) => (b.score || 0) - (a.score || 0));
+            
+            const matchData = {
+                title: state.settings?.matchName || 'Trận Đấu Econova Show',
+                pin: state.roomPIN || currentRoomPin || 'DEFAULT',
+                exportedAt: new Date().toLocaleString('vi-VN'),
+                timestamp: Date.now(),
+                settings: state.settings || {},
+                standings: teamsSorted.map((t, idx) => ({
+                    rank: idx + 1,
+                    id: t.id,
+                    name: t.name,
+                    school: t.school || '',
+                    score: t.score
+                })),
+                scoreLog: state.scoreLog || [],
+                teamQuestionHistory: state.teamQuestionHistory || {},
+                playedQuestions: state.playedQuestions || {}
+            };
+
+            // 1. Lưu vào localStorage
+            try {
+                const historyKey = 'econova_history_' + matchData.pin;
+                localStorage.setItem(historyKey, JSON.stringify(matchData));
+                let allHistory = JSON.parse(localStorage.getItem('econova_all_matches') || '[]');
+                allHistory = allHistory.filter(m => m.pin !== matchData.pin);
+                allHistory.unshift({ pin: matchData.pin, title: matchData.title, time: matchData.exportedAt, topScore: teamsSorted[0]?.score || 0 });
+                if (allHistory.length > 50) allHistory.pop();
+                localStorage.setItem('econova_all_matches', JSON.stringify(allHistory));
+            } catch(e) {}
+
+            // 2. Gửi lưu file nếu trên Electron Desktop App
+            if (window.electronAPI && window.electronAPI.saveMatchHistory) {
+                window.electronAPI.saveMatchHistory(matchData).then(res => {
+                    if (res && res.success) {
+                        console.log('Saved match history to disk:', res.filePath);
+                    }
+                }).catch(() => {});
+            }
+
+            // 3. Tạo file JSON tải về
+            const jsonBlob = new Blob([JSON.stringify(matchData, null, 2)], { type: 'application/json' });
+            const jsonUrl = URL.createObjectURL(jsonBlob);
+            const a = document.createElement('a');
+            a.href = jsonUrl;
+            a.download = `Econova_BaoCao_TranDau_${matchData.pin}_${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(jsonUrl);
+
+            alert('✅ Đã xuất và lưu trữ toàn bộ lịch sử trận đấu thành công!');
+        }
+
     </script>
 
     <!-- Modal sửa câu hỏi -->
