@@ -1088,6 +1088,11 @@ if (fs.existsSync(STATE_FILE) && process.env.ECONOVA_WATCH_STATE === '1') {
 // QUẢN LÝ TIMER CHUÔNG NGOÀI GAMESTATE (TRÁNH LỖI CIRCULAR SOCKET.IO)
 // =============================================
 const roomBuzzerTimeouts = new Map();
+function computeBuzzSignature(token, challenge, teamId) {
+    if (!token || !challenge || teamId == null) return null;
+    return require('crypto').createHash('sha256').update(String(token) + String(challenge) + String(teamId)).digest('hex');
+}
+
 const roomBuzzerDelayTimers = new Map();
 
 function setRoomBuzzerTimeout(pin, timer) {
@@ -2170,11 +2175,13 @@ state.activeBankSlot = slotId;
         state.isBuzzerLocked = false;
         state.buzzerUnlockTime = Date.now();
         state.buzzToken = require('crypto').randomUUID();
+        state.buzzChallenge = require('crypto').randomBytes(8).toString('hex');
         state.buzzTimes = {};
 
         const buzzerPayload = {
             duration: duration,
             buzzToken: state.buzzToken,
+            buzzChallenge: state.buzzChallenge,
             mainTeamId: (state.currentQuestion && state.currentQuestion.mainTeamId) || null,
             unlockTime: state.buzzerUnlockTime,
             pin: roomPin
