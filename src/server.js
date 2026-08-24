@@ -2012,11 +2012,13 @@ try {
                 return;
             }
 
-            let mainTeamId = pkg.mainTeamId || (state.currentQuestion ? state.currentQuestion.mainTeamId : null);
-            if (mainTeamId !== null) {
-                if (!state.turnStats) state.turnStats = {};
-                if (!state.turnStats[mainTeamId]) state.turnStats[mainTeamId] = 0;
-                state.turnStats[mainTeamId]++;
+            if (pkg.currentIndex >= 0) {
+                let mainTeamId = pkg.mainTeamId || (state.currentQuestion ? state.currentQuestion.mainTeamId : null);
+                if (mainTeamId !== null) {
+                    if (!state.turnStats) state.turnStats = {};
+                    if (!state.turnStats[mainTeamId]) state.turnStats[mainTeamId] = 0;
+                    state.turnStats[mainTeamId]++;
+                }
             }
 
             pkg.currentIndex++;
