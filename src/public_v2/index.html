@@ -155,10 +155,45 @@
         /* ROLE TILES GRID */
         .role-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            grid-template-columns: repeat(5, 1fr);
             gap: 14px;
             width: 100%;
             margin-top: 6px;
+        }
+
+        @media (max-width: 960px) {
+            .role-grid {
+                grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            }
+        }
+
+        .btn-admin-rejoin {
+            background: rgba(255, 71, 87, 0.08);
+            border: 1px solid rgba(255, 71, 87, 0.3);
+            color: #ff6b81;
+            padding: 8px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .btn-admin-rejoin:hover {
+            background: rgba(255, 71, 87, 0.18);
+            border-color: #ff4757;
+            color: #ffffff;
+            box-shadow: 0 0 18px rgba(255, 71, 87, 0.35);
+            transform: translateY(-2px);
+        }
+
+        .btn-admin-rejoin:active {
+            transform: translateY(0);
         }
 
         .role-card {
@@ -405,7 +440,7 @@
                 <span style="font-size: 12px; color: #a4b0be;">(Nhập mã PIN do Ban Tổ Chức / Người tạo phòng cung cấp)</span>
             </div>
 
-            <!-- ROLES TILES -->
+            <!-- 5 MAIN ROLES IN 1 ROW -->
             <div class="role-grid">
                 <div class="role-card" onclick="joinAsRole('contestant')">
                     <div class="role-icon">📱</div>
@@ -436,12 +471,15 @@
                     <div class="role-title">Màn MC</div>
                     <div class="role-desc">Kịch bản, câu hỏi đang mở, đáp án và gợi ý dẫn chương trình.</div>
                 </div>
+            </div>
 
-                <div class="role-card admin" onclick="joinAsRole('admin')">
-                    <div class="role-icon">⚙️</div>
-                    <div class="role-title" style="color: #ff6b81;">Quản Trị Viên (Host)</div>
-                    <div class="role-desc">Bảng điều khiển toàn diện: điểm số, âm thanh, gói câu và đồng hồ.</div>
-                </div>
+            <!-- COMPACT ADMIN RE-ENTRY BUTTON -->
+            <div style="width: 100%; display: flex; justify-content: center; margin-top: 14px;">
+                <button type="button" class="btn-admin-rejoin" onclick="joinAsRole('admin')">
+                    <span style="font-size: 15px;">⚙️</span>
+                    <span>Vào Lại Phòng Với Tư Cách <b>Quản Trị Viên (Host)</b></span>
+                    <span style="font-size: 11.5px; opacity: 0.75; margin-left: 2px;">(Khi lỡ bị out phòng)</span>
+                </button>
             </div>
 
             <!-- OBS TRANSPARENCY NOTICE -->
