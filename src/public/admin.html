@@ -276,16 +276,13 @@
                         <strong style="color: #ff6b81; font-size: 15px; display: block; margin-bottom: 8px;">⚠️ Phát hiện <span id="localVideoCountText"></span> Video đang sử dụng đường dẫn Local (Ổ đĩa máy tính)!</strong>
                         <div style="color: #dfe4ea; font-size: 13px; margin-bottom: 12px; line-height: 1.5;">
                             <ul style="margin: 0; padding-left: 20px;">
-                                <li>Hệ thống hỗ trợ <b>tự động quét sâu vào tất cả thư mục con</b> và <b>lưu nhiều thư mục khác nhau</b>.</li>
-                                <li>Vui lòng cấp quyền bằng cách <b>bấm nút bên dưới để chọn thư mục chứa video</b> (hoặc thư mục cha chứa các thư mục con).</li>
-                                <li><b style="color: #00d2d3;">💡 BẠN CÓ BIẾT:</b> Thao tác chọn hộp thoại này chỉ cần làm <b>1 lần duy nhất</b>! Mọi bộ đề sẵn có hay tải mới sau này đều được <b>tự động quét và tải lên ngầm 100%</b>.</li>
+                                <li>Vì lý do <b>bảo mật của trình duyệt web</b>, trang web không thể tự động chép file từ máy tính của bạn nếu không được cấp quyền.</li>
+                                <li>Vui lòng cấp quyền bằng cách <b>bấm nút bên dưới để mở hộp thoại và chọn thư mục</b> chứa các video này để hệ thống đồng bộ lên Cloud.</li>
+                                <li><b style="color: #00d2d3;">💡 BẠN CÓ BIẾT:</b> Thao tác chọn hộp thoại này chỉ cần làm <b>1 lần duy nhất</b> trên mỗi máy tính! Những lần tải lại sau, hệ thống sẽ tự động khôi phục ngầm không cần hỏi lại.</li>
                             </ul>
                         </div>
                         <input type="file" id="localVideoFolderInput" webkitdirectory directory multiple style="display:none;" onchange="handleSyncLocalVideosFolder(event)">
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-                            <button class="btn-red" onclick="grantVideoDirectoryPermission()" style="padding: 10px 15px; font-size: 14px; font-weight: bold; background: #ff4757; color: white; border: none; border-radius: 6px; cursor: pointer; box-shadow: 0 0 15px rgba(255,71,87,0.4);">📁 CẤP QUYỀN / THÊM THƯ MỤC VIDEO</button>
-                        </div>
-                        <div id="grantedFoldersList" style="margin-top: 10px; font-size: 13px; color: #48dbfb; font-weight: 500;"></div>
+                        <button class="btn-red" onclick="grantVideoDirectoryPermission()" style="padding: 10px 15px; font-size: 14px; font-weight: bold; background: #ff4757; color: white; border: none; border-radius: 6px; cursor: pointer; box-shadow: 0 0 15px rgba(255,71,87,0.4);">📁 CẤP QUYỀN THƯ MỤC VIDEO (CHỌN 1 LẦN DUY NHẤT)</button>
                         <div id="localVideoSyncStatus" style="margin-top: 10px; font-size: 13px; font-weight: bold; color: #feca57;"></div>
                     </div>
                 </div>
@@ -919,24 +916,9 @@
                 if (localCount > 0) {
                     countText.innerText = localCount;
                     alertBox.style.display = 'block';
-                    updateGrantedFoldersUI();
-                    // Auto-sync in background if we already have permissions
-                    autoSyncLocalVideosWithHandles();
                 } else {
                     alertBox.style.display = 'none';
                 }
-            }
-        }
-
-        async function updateGrantedFoldersUI() {
-            const container = document.getElementById('grantedFoldersList');
-            if (!container) return;
-            const handles = await getAllSavedDirectoryHandles();
-            if (handles.length > 0) {
-                const names = handles.map(h => `<b>${h.name}</b>`).join(', ');
-                container.innerHTML = `📂 <i>Thư mục đã cấp quyền:</i> ${names} (Tự động quét cả thư mục con)`;
-            } else {
-                container.innerHTML = '';
             }
         }
 
@@ -947,12 +929,14 @@
             const statusEl = document.getElementById('localVideoSyncStatus');
             const isLocal = (url) => url && !url.startsWith('/videos/') && !url.startsWith('http') && !url.startsWith('/');
             
+            // Collect all local path basenames we need
             let neededNames = new Set();
             ['10', '20', '40'].forEach(pts => {
                 if (questionBank[pts]) {
                     questionBank[pts].forEach(q => {
                         if (isLocal(q.vid)) {
-                            let baseName = q.vid.split(/[\/]/).pop().toLowerCase();
+                            // Extract basename (e.g. from C:\Videos\cau1.mp4 -> cau1.mp4)
+                            let baseName = q.vid.split(/[\/\\]/).pop().toLowerCase();
                             neededNames.add(baseName);
                         }
                     });
@@ -995,7 +979,7 @@
                             if (questionBank[pts]) {
                                 questionBank[pts].forEach(q => {
                                     if (isLocal(q.vid)) {
-                                        let qBaseName = q.vid.split(/[\/]/).pop().toLowerCase();
+                                        let qBaseName = q.vid.split(/[\/\\]/).pop().toLowerCase();
                                         if (qBaseName === baseName) q.vid = data.url;
                                     }
                                 });
@@ -1013,15 +997,759 @@
             event.target.value = '';
         }
 
+        function saveQuestionBankToLocalStorage(displayName, slotId) {
+            try {
+                localStorage.setItem('econova_questionBank', JSON.stringify(questionBank));
+                localStorage.setItem('econova_questionBankName', displayName || '');
+                localStorage.setItem('econova_activeBankSlot', slotId || '');
+            } catch (e) {
+                console.error("Lỗi lưu questionBank vào localStorage:", e);
+            }
+        }
+
+        function restoreQuestionBankFromLocalStorage() {
+            try {
+                const savedBank = localStorage.getItem('econova_questionBank');
+                if (savedBank) {
+                    questionBank = JSON.parse(savedBank);
+                    const displayName = localStorage.getItem('econova_questionBankName') || 'Đã khôi phục';
+                    const slotId = localStorage.getItem('econova_activeBankSlot') || '';
+                    
+                    document.getElementById('excelStatus').innerHTML =
+                        `<span style="color:#48dbfb">${t("adm_load_ok", currentGlobalLang).replace("{name}", displayName).replace("{10}", questionBank[10]?.length||0).replace("{20}", questionBank[20]?.length||0).replace("{40}", questionBank[40]?.length||0)}</span>`;
+                    
+                    updateQuestionDropdown();
+                    updateMaxQuestions();
+                    validateQuestionsPerTeam();
+                    
+                    socket.emit('setQuestionCount', { 
+                        "10": questionBank[10] ? questionBank[10].length : 0, 
+                        "20": questionBank[20] ? questionBank[20].length : 0, 
+                        "40": questionBank[40] ? questionBank[40].length : 0 
+                    });
+                    
+                    if (slotId && slotId !== 'excel') {
+                        socket.emit('setActiveBankSlot', slotId);
+                    }
+                    
+                    checkLocalVideosNeeded();
+                    
+                    const savedSelected = localStorage.getItem('econova_adminSelectedQuestions');
+                    if (savedSelected) {
+                        adminSelectedQuestions = JSON.parse(savedSelected);
+                    }
+                }
+            } catch (e) {
+                console.error("Lỗi khôi phục questionBank từ localStorage:", e);
+            }
+        }
+
+        window.onload = () => { 
+            loadSlots(); 
+            restoreQuestionBankFromLocalStorage();
+            const savedTab = localStorage.getItem('adminActiveTab') || 'round1'; 
+            switchTab(savedTab); 
+        }
+
+        // TÊN ĐỘI
+        function saveTeamNames() {
+            if (!currentState || !currentState.teams) return;
+            const data = [];
+            currentState.teams.forEach(t => {
+                let nInp = document.getElementById(`teamName${t.id}`);
+                let sInp = document.getElementById(`teamSchool${t.id}`);
+                data.push({ name: nInp ? nInp.value : t.name, school: sInp ? sInp.value : t.school });
+            });
+            socket.emit('setTeamNames', data);
+        }
+
+        // EXCEL IMPORT
+        function loadExcel() {
+            const file = document.getElementById('excelFile').files[0];
+            if (!file) { alert(t("adm_err_excel", currentGlobalLang)); return; }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+                    questionBank = { 10: [], 20: [], 40: [] };
+
+                    // Dữ liệu từ dòng 4 (index 3) trong Excel
+                    for (let i = 3; i < json.length; i++) {
+                        let row = json[i];
+                        if (!row) continue;
+                        let stt = i - 2;
+
+                        if (row[2] && String(row[2]).trim())
+                            questionBank[10].push({ stt, q: String(row[2]), a: row[3] ? String(row[3]) : "", vid: row[4] ? String(row[4]) : "" });
+                        if (row[6] && String(row[6]).trim())
+                            questionBank[20].push({ stt, q: String(row[6]), a: row[7] ? String(row[7]) : "", vid: row[8] ? String(row[8]) : "" });
+                        if (row[10] && String(row[10]).trim())
+                            questionBank[40].push({ stt, q: String(row[10]), a: row[11] ? String(row[11]) : "", vid: row[12] ? String(row[12]) : "" });
+                    }
+
+                    document.getElementById('excelStatus').innerHTML =
+                        `<span style="color:#10ac84">${t("adm_excel_ok", currentGlobalLang).replace("{10}", questionBank[10].length).replace("{20}", questionBank[20].length).replace("{40}", questionBank[40].length)}</span>`;
+                    updateQuestionDropdown();
+                    updateMaxQuestions();
+                    validateQuestionsPerTeam();
+                    socket.emit('setQuestionCount', { "10": questionBank[10].length, "20": questionBank[20].length, "40": questionBank[40].length });
+                    saveQuestionBankToLocalStorage(file.name, 'excel');
+                    checkLocalVideosNeeded();
+                } catch (err) {
+                    alert(t("adm_excel_err", currentGlobalLang) + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+            document.getElementById('excelFile').value = '';
+        }
+
+        // QUESTION BANK SAVE/LOAD
+        function saveToSlot() {
+            const slotId = document.getElementById('saveSlot').value;
+            const name = document.getElementById('saveName').value || `${t("adm_save_name_prefix", currentGlobalLang)}${slotId}`;
+            const total = questionBank[10].length + questionBank[20].length + questionBank[40].length;
+            if (total === 0) { alert(t("adm_save_empty", currentGlobalLang)); return; }
+
+            fetch(`/api/questions/${slotId}`, { headers: { 'x-admin-pin': sessionStorage.getItem('adminAuth') || '', 'x-room-pin': sessionStorage.getItem('currentRoomPin') || new URLSearchParams(window.location.search).get('pin') || '' },
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Admin-Pin': sessionStorage.getItem('adminAuth')
+                },
+                body: JSON.stringify({ name, questions: questionBank })
+            })
+            .then(r => r.json())
+            .then(d => { 
+                alert(t("adm_save_ok", currentGlobalLang).replace("{slotId}", slotId)); 
+                saveQuestionBankToLocalStorage(name, slotId);
+                loadSlots(); 
+            })
+            .catch(e => alert(t("adm_save_err", currentGlobalLang) + e.message));
+        }
+
+        function loadFromSlot(slotId) {
+            fetch(`/api/questions/${slotId}`, { headers: { 'x-admin-pin': sessionStorage.getItem('adminAuth') || '', 'x-room-pin': sessionStorage.getItem('currentRoomPin') || new URLSearchParams(window.location.search).get('pin') || '' } })
+            .then(r => { if (!r.ok) throw new Error(t("adm_load_empty", currentGlobalLang)); return r.json(); })
+            .then(data => {
+                questionBank = data.questions || { 10: [], 20: [], 40: [] };
+                let displayName = data.name;
+                if (/^(Đề|Set)\s\d$/.test(displayName)) {
+                    var language = document.getElementById('settingLanguage') ? document.getElementById('settingLanguage').value : 'vi';
+                    displayName = t('adm_save_name_prefix', language) + slotId;
+                }
+                document.getElementById('excelStatus').innerHTML =
+                    `<span style="color:#48dbfb">${t("adm_load_ok", currentGlobalLang).replace("{name}", displayName).replace("{10}", questionBank[10]?.length||0).replace("{20}", questionBank[20]?.length||0).replace("{40}", questionBank[40]?.length||0)}</span>`;
+                updateQuestionDropdown();
+                updateMaxQuestions();
+                validateQuestionsPerTeam();
+                socket.emit('setQuestionCount', { "10": questionBank[10] ? questionBank[10].length : 0, "20": questionBank[20] ? questionBank[20].length : 0, "40": questionBank[40] ? questionBank[40].length : 0 });
+                socket.emit('setActiveBankSlot', slotId);
+                saveQuestionBankToLocalStorage(displayName, slotId);
+                checkLocalVideosNeeded();
+            })
+            .catch(e => alert(t("adm_load_err", currentGlobalLang) + e.message));
+        }
+
+        function loadSlots() {
+            fetch('/api/questions', { headers: { 'x-admin-pin': sessionStorage.getItem('adminAuth') || '', 'x-room-pin': sessionStorage.getItem('currentRoomPin') || new URLSearchParams(window.location.search).get('pin') || '' } })
+            .then(r => r.json())
+            .then(sets => {
+                const grid = document.getElementById('slotGrid');
+                grid.innerHTML = '';
+                sets.forEach(s => {
+                    let displayName = s.name;
+                    let i18nAttr = '';
+                    if (/^(Đề|Set)\s\d$/.test(displayName)) {
+                        i18nAttr = `data-i18n="adm_bank_slot_${s.id}"`;
+                        var language = document.getElementById('settingLanguage') ? document.getElementById('settingLanguage').value : 'vi';
+                        displayName = t('adm_save_name_prefix', language) + s.id;
+                    }
+                    grid.innerHTML += `
+                        <div class="slot-card ${s.hasData ? 'has-data' : ''}">
+                            <h4 ${i18nAttr}>${displayName}</h4>
+                            <small>${s.hasData ? t('adm_slot_txt', currentGlobalLang).replace('{10}', s.count10).replace('{20}', s.count20).replace('{40}', s.count40) : t('adm_slot_empty', currentGlobalLang)}</small><br>
+                            <button class="btn-green" style="margin-top:8px; padding: 5px; font-size: 12px; ${s.hasData ? '' : 'opacity:0.3; pointer-events:none;'}" 
+                                    onclick="loadFromSlot(${s.id})">${t("adm_slot_btn", currentGlobalLang)}</button>
+                        </div>
+                    `;
+                });
+            });
+        }
+
+        // QUESTION SELECTION
+        let adminSelectedQuestions = []; // Array of {points, idx}
+        let adminMode3Points = []; // Array of points, length up to qPerTeam
+
+        function renderQuestionSelectionUI() {
+            const container = document.getElementById('qSelectionContainer');
+            if (!container) return;
+            
+            const mode = (currentState && currentState.settings && currentState.settings.questionSelectionMode) || 1;
+            const qPerTeam = (currentState && currentState.settings && currentState.settings.questionsPerTeam) || 3;
+            
+            let html = '';
+            
+            // Build the visual grid
+            const buildGridHTML = () => {
+                let gridHtml = '';
+                const ptsTypes = [10, 20, 40];
+                
+                gridHtml = '<div style="display: flex; gap: 10px; margin-top: 10px; text-align: center;">';
+                ptsTypes.forEach(pts => {
+                    gridHtml += '<div style="flex: 1; border: 1px solid #34495e; border-radius: 5px; background: #2c3e50; padding: 5px;">' +
+                        '<div style="font-weight: bold; margin-bottom: 5px; color: ' + (pts==10?'#10ac84':(pts==20?'#feca57':'#ee5253')) + '">' + pts + ' ĐIỂM</div>' +
+                        '<div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 5px;">';
+                        
+                    let countInBank = 0;
+                    if (typeof questionBank !== 'undefined' && questionBank[pts]) {
+                        countInBank = questionBank[pts].length;
+                    }
+                    
+                    // Mode 1: cells for each question in the bank
+                    for (let i = 0; i < countInBank; i++) {
+                        let played = currentState && currentState.playedQuestions && currentState.playedQuestions[pts] && currentState.playedQuestions[pts].includes(i);
+                        let isSelected = adminSelectedQuestions.find(q => q.points == pts && q.idx == i);
+                        
+                        let bgColor = '#34495e';
+                        let border = '1px solid rgba(255,255,255,0.1)';
+                        let cursor = 'pointer';
+                        let opacity = 1;
+                        
+                        if (played) {
+                            opacity = 0.3;
+                            cursor = 'not-allowed';
+                        } else if (isSelected) {
+                            bgColor = pts==10?'#10ac84':(pts==20?'#feca57':'#ee5253');
+                            border = '1px solid #fff';
+                        }
+                        
+                        gridHtml += '<div onclick="' + (played ? '' : 'toggleAdminGridSelection(' + pts + ', ' + i + ', ' + mode + ')') + '" style="flex: 0 0 calc(33.333% - 4px); box-sizing: border-box; background: ' + bgColor + '; border: ' + border + '; opacity: ' + opacity + '; cursor: ' + cursor + '; padding: 8px 0; border-radius: 3px; font-size: 12px; font-weight: bold; color: #fff;">Câu ' + (i+1) + '</div>';
+                    }
+                    
+                    gridHtml += '</div></div>';
+                });
+                gridHtml += '</div>';
+                return gridHtml;
+            };
+
+            if (mode == 1) {
+                html += '<div style="color: #a4b0be; font-style: italic; margin-bottom: 5px;">Quản trị viên chọn duy nhất 1 câu hỏi từ lưới dưới đây để lên màn hình:</div>';
+                if (currentState && currentState.pendingPackage && currentState.pendingPackage.mode === 1 && adminSelectedQuestions.length === 0) {
+                    if (currentState.pendingPackage.idx !== -1) {
+                        adminSelectedQuestions = [{ points: currentState.pendingPackage.points, idx: currentState.pendingPackage.idx }];
+                    }
+                }
+                html += buildGridHTML();
+            } else if (mode == 2) {
+                html += '<div style="color: #a4b0be; font-style: italic; margin-bottom: 5px;">Quản trị viên chọn ' + qPerTeam + ' câu hỏi từ lưới dưới đây để tạo thành gói:</div>';
+                let hasRealSelection2 = adminSelectedQuestions.some(q => q && q.points !== null);
+                if (!hasRealSelection2) {
+                    if (currentState && currentState.pendingPackage && currentState.pendingPackage.mode === 2) {
+                        let pQ = currentState.pendingPackage.questions || currentState.pendingPackage.package;
+                        if (pQ && pQ.length > 0) {
+                            adminSelectedQuestions = pQ.map((q, i) => ({ points: q.points, idx: q.idx, slotIndex: i }));
+                        }
+                    } else if (currentState && currentState.lockedPackage && currentState.lockedPackage.mode === 2) {
+                        let lQ = currentState.lockedPackage.questions || [];
+                        if (lQ && lQ.length > 0) {
+                            adminSelectedQuestions = lQ.map((q, i) => ({ points: q.points, idx: q.idx, slotIndex: i }));
+                        }
+                    }
+                }
+                while (adminSelectedQuestions.length < qPerTeam) {
+                    adminSelectedQuestions.push({ points: null, idx: -1, slotIndex: adminSelectedQuestions.length });
+                }
+                
+                let selectedTextArr = [];
+                for (let i = 0; i < adminSelectedQuestions.length; i++) {
+                    let q = adminSelectedQuestions[i];
+                    if (q.points !== null && q.idx !== -1) {
+                        selectedTextArr.push(`Câu ${i+1}: ${q.points}đ (Câu ${q.idx+1})`);
+                    } else {
+                        selectedTextArr.push(`Câu ${i+1}: Chưa chọn`);
+                    }
+                }
+                if (selectedTextArr.length > 0) {
+                    html += '<div style="color: #feca57; font-weight: bold; margin-bottom: 10px;">Đã chọn: ' + selectedTextArr.join(' | ') + '</div>';
+                } else {
+                    html += '<div style="color: #feca57; font-weight: bold; margin-bottom: 10px;">Chưa chọn câu nào.</div>';
+                }
+                
+                html += buildGridHTML();
+            } else if (mode == 3) {
+                html += '<div style="color: #a4b0be; font-style: italic; margin-bottom: 5px;">Mode 3 - Chọn điểm cho từng câu (server sẽ random chọn câu tương ứng):</div>';
+                
+                // Restore from pending package or locked package if needed
+                let hasRealSelection3 = adminSelectedQuestions.some(q => q && q.points !== null);
+                if (!hasRealSelection3) {
+                    if (currentState && currentState.pendingPackage && currentState.pendingPackage.mode === 3) {
+                        let pQ = currentState.pendingPackage.questions || currentState.pendingPackage.package;
+                        if (pQ && pQ.length > 0) adminSelectedQuestions = pQ.map((q, i) => ({ points: q.points, idx: -1, slotIndex: i }));
+                    } else if (currentState && currentState.lockedPackage && currentState.lockedPackage.mode === 3) {
+                        let lQ = currentState.lockedPackage.questions || [];
+                        if (lQ && lQ.length > 0) adminSelectedQuestions = lQ.map((q, i) => ({ points: q.points, idx: -1, slotIndex: i }));
+                    }
+                }
+                
+                // Ensure adminSelectedQuestions has qPerTeam slots
+                while (adminSelectedQuestions.length < qPerTeam) {
+                    adminSelectedQuestions.push({ points: null, idx: -1, slotIndex: adminSelectedQuestions.length });
+                }
+                
+                html += '<div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">';
+                for (let slotIdx = 0; slotIdx < qPerTeam; slotIdx++) {
+                    let slot = adminSelectedQuestions[slotIdx] || { points: null, idx: -1 };
+                    let selectedPts = slot.points;
+                    html += '<div style="display:flex; align-items:center; gap:8px; background:#1e2a3a; border-radius:8px; padding:8px 12px;">';
+                    html += '<div style="color:#fff; font-weight:bold; min-width:60px;">Câu ' + (slotIdx + 1) + ':</div>';
+                    [10, 20, 40].forEach(pts => {
+                        let isSelected = (selectedPts == pts);
+                        let btnColor = pts == 10 ? '#10ac84' : (pts == 20 ? '#feca57' : '#ee5253');
+                        let btnBg = isSelected ? btnColor : '#34495e';
+                        let btnBorder = isSelected ? '2px solid #fff' : '2px solid rgba(255,255,255,0.1)';
+                        let btnTextColor = '#fff';
+                        html += '<button onclick="toggleMode3SlotPoints(' + slotIdx + ', ' + pts + ')" style="background:' + btnBg + '; border:' + btnBorder + '; color:' + btnTextColor + '; padding:6px 14px; border-radius:6px; font-size:14px; font-weight:bold; cursor:pointer; transition:all 0.2s; min-width:50px;">' + pts + '</button>';
+                    });
+                    if (selectedPts) {
+                        html += '<span style="color:#feca57; font-size:13px; margin-left:4px;">✓ ' + selectedPts + 'đ</span>';
+                    }
+                    html += '</div>';
+                }
+                html += '</div>';
+            }
+            container.innerHTML = html;
+            
+            const actions = document.getElementById('qSelectionActions');
+            if (actions) {
+                let pkgCount = 0;
+                let totalPkgQ = 3;
+                if (currentState && currentState.lockedPackage) {
+                    totalPkgQ = (currentState.lockedPackage.questions && currentState.lockedPackage.questions.length) || 3;
+                    if (currentState.lockedPackage.currentIndex >= 0 && currentState.currentQuestion && currentState.currentQuestion.active && !currentState.currentQuestion.isHidden) {
+                        pkgCount = currentState.lockedPackage.currentIndex + 1;
+                    } else {
+                        pkgCount = 0;
+                    }
+                }
+
+                actions.innerHTML = `
+                    <div style="display: flex; gap: 10px; width: 100%; margin-bottom: 5px;">
+                        <button class="btn-orange" id="btnToggleHopeStar2" style="flex: 1;" onclick="toggleHopeStar()" data-i18n="adm_hopestar">⭐ BẬT NS HY VỌNG</button>
+                        <button class="btn-purple" style="flex: 1;" onclick="socket.emit('playSound', 'on_stage')">🎤 LÊN SÂN KHẤU</button>
+                        <button class="btn-green" id="btnShowOverlayGrid" style="flex: 1;" onclick="socket.emit('showOverlayGrid')" data-i18n="adm_grid_show">🟢 MỞ GÓI ĐIỂM</button>
+                        <button class="btn-secondary" id="btnHideOverlayGrid" style="flex: 1; display: none; background: #576574;" onclick="socket.emit('hideOverlayGrid')" data-i18n="adm_grid_hide">🔴 ĐÓNG GÓI ĐIỂM</button>
+                    </div>
+                    <div style="display: flex; gap: 10px; width: 100%;">
+                        ${mode == 1 ? `
+                            <button class="btn-blue" style="flex: 1;" id="btnOpenQ" onclick="setQuestion()" data-i18n="adm_open_q">🚀 MỞ CÂU HỎI</button>
+                        ` : `
+                            <button class="btn-primary" style="flex: 1.5; background: ${currentState && currentState.lockedPackage ? '#2ecc71' : '#9b59b6'}; font-weight: bold;" onclick="nextQuestionInPackage()">🚀 ${currentState && currentState.lockedPackage ? ('MỞ CÂU TIẾP THEO (' + pkgCount + '/' + totalPkgQ + ')') : 'CHUYỂN CÂU'}</button>
+                            <button class="btn-danger" style="flex: 1; background: #e74c3c; color: white; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer;" onclick="cancelLockedPackage()">HUỶ GÓI</button>
+                            <button class="btn-orange" style="flex: 1.2; background: ${currentState && currentState.lockedPackage ? '#7f8c8d' : '#e67e22'}; font-weight: bold;" onclick="${currentState && currentState.lockedPackage ? '' : 'lockPackage()'}" ${currentState && currentState.lockedPackage ? 'disabled' : ''}>${currentState && currentState.lockedPackage ? '🔒 ĐÃ CHỐT GÓI' : 'CHỐT GÓI CÂU HỎI'}</button>
+                        `}
+                    </div>
+                `;
+            }
+        }
+
+        let mode1ClickTimeout = null;
+        let isMode1Locked = false;
+
+        function toggleAdminGridSelection(pts, idx, mode) {
+            if (isMode1Locked) return;
+            
+            if (currentState && !currentState.isGridVisibleOnOverlay) {
+                showAlert('Bạn chưa "MỞ GÓI ĐIỂM" trên màn hình Overlay! Vui lòng bấm "MỞ GÓI ĐIỂM" trước khi chọn câu hỏi.');
+                return;
+            }
+            const qPerTeam = (currentState && currentState.settings && currentState.settings.questionsPerTeam) || 3;
+            
+            if (mode === 1) {
+                adminSelectedQuestions = [{ points: pts, idx: idx }];
+                // Emit syncPendingPackage so screen highlights selected question in grid
+                socket.emit('syncPendingPackage', {
+                    mode: 1,
+                    points: pts,
+                    idx: idx,
+                    playSound: true
+                });
+                
+                isMode1Locked = false;
+                renderQuestionSelectionUI();
+                
+                return; // Admin must manually press "MỞ CÂU HỎI" button to open the question
+            } else if (mode === 2) {
+                let existingIdx = adminSelectedQuestions.findIndex(q => q.points == pts && q.idx == idx);
+                if (existingIdx >= 0) {
+                    adminSelectedQuestions[existingIdx] = { points: null, idx: -1, slotIndex: existingIdx };
+                } else {
+                    let emptyIdx = adminSelectedQuestions.findIndex(q => q.points === null || q.idx === -1);
+                    if (emptyIdx >= 0) {
+                        adminSelectedQuestions[emptyIdx] = { points: pts, idx: idx, slotIndex: emptyIdx };
+                    } else {
+                        showAlert('Đã chọn đủ số lượng câu hỏi trong gói (' + qPerTeam + ' câu). Hãy bỏ chọn ô khác để đổi.');
+                        return;
+                    }
+                }
+                syncPendingPackage(true);
+            }
+            renderQuestionSelectionUI();
+        }
+
+
+        function toggleMode3SlotPoints(slotIdx, pts) {
+            if (!currentState || !currentState.isGridVisibleOnOverlay) {
+                showAlert('Bạn chưa "MỞ GÓI ĐIỂM" trên màn hình Overlay! Vui lòng bấm "MỞ GÓI ĐIỂM" trước khi chọn điểm.');
+                return;
+            }
+            const qPerTeam = (currentState && currentState.settings && currentState.settings.questionsPerTeam) || 3;
+            // Ensure array is long enough
+            while (adminSelectedQuestions.length <= slotIdx) {
+                adminSelectedQuestions.push({ points: null, idx: -1, slotIndex: adminSelectedQuestions.length });
+            }
+            // Toggle: if same pts already selected, deselect; otherwise set
+            if (adminSelectedQuestions[slotIdx].points == pts) {
+                adminSelectedQuestions[slotIdx] = { points: null, idx: -1, slotIndex: slotIdx };
+            } else {
+                adminSelectedQuestions[slotIdx] = { points: pts, idx: -1, slotIndex: slotIdx };
+            }
+            syncPendingPackage(true);
+            renderQuestionSelectionUI();
+        }
+
+        function changeSettingQuestionSelectionMode() {
+            let select = document.getElementById('settingQuestionSelectionMode');
+            if (!select) return;
+            let val = parseInt(select.value);
+            
+            // Xoá các câu đã chọn ở Mode cũ
+            adminSelectedQuestions = [];
+            adminMode3Points = [];
+            socket.emit('syncPendingPackage', { mode: val, package: [], playSound: false });
+            
+            socket.emit('updateSettings', { questionSelectionMode: val });
+        }
+
+        function applyModeSettings() {
+            let mode2Rows = parseInt(document.getElementById('settingMode2Rows')?.value || 3);
+            socket.emit('updateSettings', { mode2Rows });
+        }
+
+        function changeQuestionsPerTeam() {
+            validateQuestionsPerTeam();
+            let input = document.getElementById('settingQuestionsPerTeam');
+            if (input) {
+                let val = parseInt(input.value);
+                socket.emit('updateSettings', { questionsPerTeam: val });
+            }
+        }
+
+        function updateQuestionDropdown() {
+            if (typeof renderQuestionSelectionUI === 'function') {
+                renderQuestionSelectionUI();
+            }
+        }
+
+        function updateQuestionDropdownMode2(i) {
+            if (typeof renderQuestionSelectionUI === 'function') {
+                renderQuestionSelectionUI();
+            }
+        }
+
+        function syncPendingPackage(playSound = true) {
+            if (!currentState || !currentState.settings) return;
+            const mode = currentState.settings.questionSelectionMode || 1;
+            if (mode === 1) return;
+            
+            let packageData = [];
+            if (mode == 2) {
+                packageData = adminSelectedQuestions.map(q => ({ points: q.points, idx: q.idx }));
+            } else if (mode == 3) {
+                packageData = adminSelectedQuestions.map(q => ({ points: q.points, idx: -1 }));
+            }
+            
+            socket.emit('syncPendingPackage', { mode: mode, package: packageData, playSound: playSound });
+        }
+
+        function lockPackage() {
+            const teamSelect = document.getElementById('mainTeam');
+            let teamId = teamSelect ? parseInt(teamSelect.value, 10) : -1;
+            if (isNaN(teamId) || teamId <= 0) {
+                if (currentState && currentState.turnOrder && currentState.turnOrder.length > 0) {
+                    teamId = currentState.turnOrder[0];
+                } else if (currentState && currentState.teams && currentState.teams.length > 0) {
+                    teamId = currentState.teams[0].id;
+                } else {
+                    teamId = 1;
+                }
+                if (teamSelect) teamSelect.value = teamId;
+            }
+            
+            const mode = (currentState && currentState.settings) ? (parseInt(currentState.settings.questionSelectionMode, 10) || 1) : 1;
+            const qPerTeam = (currentState && currentState.settings) ? (parseInt(currentState.settings.questionsPerTeam, 10) || 3) : 3;
+            
+            let packageData = [];
+            
+            if (mode == 2 || mode == 3) {
+                let filledCount = 0;
+                if (mode == 2) {
+                    filledCount = adminSelectedQuestions.filter(q => q && q.points !== null && q.idx !== -1).length;
+                } else {
+                    filledCount = adminSelectedQuestions.filter(q => q && q.points !== null).length;
+                }
+                
+                if (filledCount !== qPerTeam) {
+                    showAlert('Vui lòng chọn đủ ' + qPerTeam + ' câu hỏi/điểm!');
+                    return;
+                }
+                
+                if (mode == 2) {
+                    packageData = adminSelectedQuestions.map(q => ({ points: q.points, idx: q.idx }));
+                } else if (mode == 3) {
+                    packageData = adminSelectedQuestions.map(q => ({ points: q.points, idx: -1 }));
+                }
+            }
+            
+            const statusInd = document.getElementById('statusIndicator');
+            if (statusInd) {
+                statusInd.innerText = '🔒 ĐÃ CHỐT GÓI CÂU HỎI — BẤM "CHUYỂN CÂU" ĐỂ MỞ';
+                statusInd.style.background = '#e67e22';
+            }
+            
+            socket.emit('lockPackage', { mainTeamId: teamId, mode: mode, package: packageData });
+        }
+
+        function cancelLockedPackage() {
+            socket.emit('nextQuestionInPackage', { cancel: true }); // We'll add cancel logic later if needed, but for now we'll just reload page or add custom socket event. Actually, just send a new socket event.
+            socket.emit('updateSettings', {}); // trigger update to clear lockedPackage (Need server logic for this)
+        }
+
+        function nextQuestionInPackage() {
+            if (!currentState.lockedPackage) return;
+            let pkg = currentState.lockedPackage;
+            let targetIndex = pkg.currentIndex + 1;
+            if (targetIndex < pkg.questions.length) {
+                let qData = pkg.questions[targetIndex];
+                let text = "", answer = "", vid = "";
+                let newIdx = qData.idx;
+                if (pkg.mode === 3 && newIdx === -1) {
+                    let pts = qData.points;
+                    let availableIndices = [];
+                    if (questionBank[pts]) {
+                        for (let i = 0; i < questionBank[pts].length; i++) {
+                            if (!currentState.playedQuestions[pts] || !currentState.playedQuestions[pts].includes(i)) {
+                                let alreadyAssigned = false;
+                                for(let j=0; j<pkg.questions.length; j++) {
+                                    if(pkg.questions[j].idx === i) { alreadyAssigned = true; break; }
+                                }
+                                if(!alreadyAssigned) availableIndices.push(i);
+                            }
+                        }
+                    }
+                    if (availableIndices.length > 0) {
+                        newIdx = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+                        qData.idx = newIdx; // local update
+                    } else {
+                        newIdx = 0; qData.idx = 0;
+                    }
+                }
+                
+                if (newIdx >= 0 && questionBank[qData.points] && questionBank[qData.points][newIdx]) {
+                    text = questionBank[qData.points][newIdx].q || "";
+                    answer = questionBank[qData.points][newIdx].a || "";
+                    vid = questionBank[qData.points][newIdx].vid || "";
+                }
+                
+                currentVideoUrl = vid;
+                socket.emit('nextQuestionInPackage', { text: text, answer: answer, vid: vid, idx: newIdx, revealOnly: false });
+            } else {
+                finishTurn();
+            }
+        }
+
+        // GAME CONTROL
+        function toggleHopeStar() {
+            const teamId = parseInt(document.getElementById('mainTeam').value);
+            socket.emit('toggleHopeStar', teamId);
+            var language = document.getElementById('settingLanguage').value || 'vi';
+            document.getElementById('statusIndicator').innerText = t('adm_q_selected', language) + t('adm_star_added', language);
+            document.getElementById('statusIndicator').style.background = "#f39c12";
+        }
+
+        function claimTurnForMainTeam() {
+            socket.emit('claimTurnForMainTeam');
+        }
+
+        function undoScore(logId) {
+            if (confirm("Bạn có chắc chắn muốn hoàn tác thay đổi này? Điểm của đội sẽ được cộng/trừ ngược lại.")) {
+                socket.emit('undoScore', logId);
+            }
+        }
+
+        let editingBankCategory = 10;
+        
+        function openBankEditModal() {
+            if (typeof questionBank === 'undefined' || !questionBank[10]) {
+                alert("Chưa có dữ liệu ngân hàng đề!");
+                return;
+            }
+            document.getElementById('bankEditModal').style.display = 'flex';
+            renderBankEditList(10);
+        }
+        
+        function renderBankEditList(category) {
+            editingBankCategory = category;
+            const container = document.getElementById('bankEditList');
+            if (!questionBank[category] || questionBank[category].length === 0) {
+                container.innerHTML = '<div style="color:#a4b0be; padding: 10px;">Không có câu hỏi nào.</div>';
+                return;
+            }
+            
+            let html = '';
+            questionBank[category].forEach((item, idx) => {
+                html += `
+                    <div style="background: #2d3436; padding: 10px; margin-bottom: 10px; border-radius: 5px; border-left: 3px solid #10ac84;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <strong style="color: #00d2d3;">Câu ${idx + 1} (${category} Điểm)</strong>
+                            <button class="btn-orange" style="padding: 2px 8px; font-size: 11px; width: auto;" onclick="saveBankItem(${category}, ${idx})">Lưu câu này</button>
+                        </div>
+                        <input type="text" id="bankEdit_q_${category}_${idx}" value="${item.q ? item.q.replace(/"/g, '&quot;') : ''}" placeholder="Nội dung câu hỏi" style="width: 100%; margin-bottom: 5px; padding: 5px;">
+                        <input type="text" id="bankEdit_a_${category}_${idx}" value="${item.a ? item.a.replace(/"/g, '&quot;') : ''}" placeholder="Đáp án" style="width: 100%; margin-bottom: 5px; padding: 5px;">
+                        <input type="text" id="bankEdit_v_${category}_${idx}" value="${item.vid ? item.vid.replace(/"/g, '&quot;') : ''}" placeholder="Link Video (nếu có)" style="width: 100%; padding: 5px;">
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function saveBankItem(category, idx) {
+            let qText = document.getElementById(`bankEdit_q_${category}_${idx}`).value;
+            let aText = document.getElementById(`bankEdit_a_${category}_${idx}`).value;
+            let vText = document.getElementById(`bankEdit_v_${category}_${idx}`).value;
+            
+            questionBank[category][idx].q = qText;
+            questionBank[category][idx].a = aText;
+            questionBank[category][idx].vid = vText;
+            
+            try {
+                localStorage.setItem('econova_questionBank', JSON.stringify(questionBank));
+            } catch (e) {
+                console.error("Lỗi cập nhật questionBank vào localStorage:", e);
+            }
+            
+            alert(`Đã lưu Câu ${idx + 1} (${category} Điểm) vào bộ nhớ tạm.\nVui lòng bấm 'Lưu Ngân Hàng Hiện Tại' ở phần Cài đặt để lưu vĩnh viễn!`);
+            
+            if (typeof updateQuestionDropdown === 'function') updateQuestionDropdown();
+        }
+
+        function openEditQuestionModal() {
+            if (!currentState || !currentState.currentQuestion || !currentState.currentQuestion.active) return;
+            document.getElementById('editQText').value = currentState.currentQuestion.text || '';
+            document.getElementById('editAText').value = currentState.currentQuestion.answer || '';
+            document.getElementById('editQuestionModal').style.display = 'flex';
+        }
+
+        function saveEditedQuestion() {
+            let qText = document.getElementById('editQText').value;
+            let aText = document.getElementById('editAText').value;
+            socket.emit('editCurrentQuestion', { text: qText, answer: aText });
+            document.getElementById('editQuestionModal').style.display = 'none';
+        }
+
+        function setQuestion() {
+            try {
+                const teamId = parseInt(document.getElementById('mainTeam').value);
+                const mode = (currentState && currentState.settings && currentState.settings.questionSelectionMode) || 1;
+                if (mode !== 1) return; // Only mode 1
+                
+                if (adminSelectedQuestions.length === 0) {
+                    showAlert('Vui lòng chọn một câu hỏi trên lưới trước khi lên sân khấu!');
+                    return;
+                }
+                
+                const points = adminSelectedQuestions[0].points;
+                const idx = adminSelectedQuestions[0].idx;
+                
+                let text = "", answer = "", vid = "";
+                if (idx >= 0 && questionBank[points] && questionBank[points][idx]) {
+                    text = questionBank[points][idx].q || "";
+                    answer = questionBank[points][idx].a || "";
+                    vid = questionBank[points][idx].vid || "";
+                }
+                
+                currentVideoUrl = vid;
+                
+                socket.emit('setQuestion', { mainTeamId: teamId, points, text, answer, vid, idx });
+                
+                const vidSection = document.getElementById('adminVideoSection');
+                const vInput = document.getElementById('adminVideoUrlInput');
+                if (vidSection) {
+                    vidSection.style.display = 'block';
+                    if (vInput) vInput.value = vid || '';
+                }
+            } catch (err) {
+                alert(t("adm_err_q", currentGlobalLang) + err.message);
+                console.error(err);
+            }
+        }
+
+        function switchTab(tabId) {
+            document.getElementById('tab-main').style.display = tabId === 'main' ? 'block' : 'none';
+            document.getElementById('tab-settings').style.display = tabId === 'settings' ? 'block' : 'none';
+            document.getElementById('tab-round1').style.display = tabId === 'round1' ? 'block' : 'none';
+
+            document.getElementById('btnTabMain').className = tabId === 'main' ? 'btn-primary' : 'btn-secondary';
+            document.getElementById('btnTabSettings').className = tabId === 'settings' ? 'btn-primary' : 'btn-secondary';
+            document.getElementById('btnTabRound1').className = tabId === 'round1' ? 'btn-primary' : 'btn-secondary';
+
+            localStorage.setItem('adminActiveTab', tabId);
+
+            if (tabId === 'round1') {
+                socket.emit('change-round', 1);
+            } else if (tabId === 'main') {
+                socket.emit('change-round', 2);
+            }
+        }
+
+        function startCountdown(secs) { socket.emit('startCountdown', secs); }
+        
         // ============================================================
-        // INDEXEDDB VIDEO CACHE & MULTI-DIRECTORY RECURSIVE ACCESS
+        // TOAST NOTIFICATIONS (Non-blocking UI Feedback)
+        // ============================================================
+        function showAdminToast(msg, type = 'info', duration = 4000) {
+            const container = document.getElementById('adminToastContainer');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = `admin-toast ${type}`;
+            const iconMap = {
+                success: '✅',
+                warning: '⚠️',
+                error: '❌',
+                info: '💡'
+            };
+            toast.innerHTML = `<span style="font-size:18px;">${iconMap[type] || '💡'}</span> <span>${msg}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
+        // ============================================================
+        // INDEXEDDB VIDEO CACHE & FILE SYSTEM ACCESS API
         // ============================================================
         const VIDEO_DB_NAME = 'EconovaVideoCache_v1';
         const VIDEO_STORE_NAME = 'videos';
-        window.activeVideoDirHandles = [];
+        window.activeVideoDirHandle = null;
 
         function openVideoDB() {
-            return new Promise((resolve) => {
+            return new Promise((resolve, reject) => {
                 if (!window.indexedDB) return resolve(null);
                 const req = indexedDB.open(VIDEO_DB_NAME, 1);
                 req.onupgradeneeded = (e) => {
@@ -1042,101 +1770,70 @@
                 if (!db) return;
                 const tx = db.transaction(VIDEO_STORE_NAME, 'readwrite');
                 const store = tx.objectStore(VIDEO_STORE_NAME);
-                
-                const existingReq = store.get('saved_directory_handles_list');
-                existingReq.onsuccess = () => {
-                    let list = (existingReq.result && existingReq.result.handles) || [];
-                    list = list.filter(item => item.name !== dirHandle.name);
-                    list.push({ handle: dirHandle, name: dirHandle.name, addedAt: Date.now() });
-                    store.put({ key: 'saved_directory_handles_list', handles: list });
-                };
+                store.put({ key: 'saved_directory_handle', handle: dirHandle, name: dirHandle.name, savedAt: Date.now() });
             } catch(e) {
                 console.warn('Lỗi lưu directory handle:', e);
             }
         }
 
-        async function getAllSavedDirectoryHandles() {
-            if (window.activeVideoDirHandles && window.activeVideoDirHandles.length > 0) {
-                return window.activeVideoDirHandles;
-            }
+        async function getSavedDirectoryHandle() {
+            if (window.activeVideoDirHandle) return window.activeVideoDirHandle;
             try {
                 const db = await openVideoDB();
-                if (!db) return [];
-                const list = await new Promise((resolve) => {
+                if (!db) return null;
+                const handle = await new Promise((resolve) => {
                     const tx = db.transaction(VIDEO_STORE_NAME, 'readonly');
                     const store = tx.objectStore(VIDEO_STORE_NAME);
-                    const req = store.get('saved_directory_handles_list');
-                    req.onsuccess = () => {
-                        const raw = (req.result && req.result.handles) || [];
-                        resolve(raw.map(item => item.handle).filter(Boolean));
-                    };
-                    req.onerror = () => resolve([]);
+                    const req = store.get('saved_directory_handle');
+                    req.onsuccess = () => resolve(req.result ? req.result.handle : null);
+                    req.onerror = () => resolve(null);
                 });
-                
-                let verified = [];
-                for (const h of list) {
-                    try {
-                        const opts = { mode: 'read' };
-                        if ((await h.queryPermission(opts)) === 'granted') {
-                            verified.push(h);
-                        }
-                    } catch(err) {}
+                if (handle) {
+                    // Check / request permission
+                    const opts = { mode: 'read' };
+                    if (await handle.queryPermission(opts) === 'granted') {
+                        window.activeVideoDirHandle = handle;
+                        return handle;
+                    }
                 }
-                window.activeVideoDirHandles = verified;
-                return verified;
-            } catch(e) {
-                return [];
-            }
+            } catch(e) {}
+            return null;
         }
 
-        // Deep Recursive Directory Search (supports subfolders up to depth 5)
-        async function searchDirectoryRecursive(dirHandle, targetClean, maxDepth = 5) {
-            if (!dirHandle || !targetClean || maxDepth < 0) return null;
+        async function getFileFromDirectoryHandle(dirHandle, targetFileName) {
+            if (!dirHandle || !targetFileName) return null;
+            const targetClean = targetFileName.toLowerCase().trim();
             try {
                 const opts = { mode: 'read' };
-                if ((await dirHandle.queryPermission(opts)) !== 'granted') {
+                if (await dirHandle.queryPermission(opts) !== 'granted') {
                     const status = await dirHandle.requestPermission(opts);
                     if (status !== 'granted') return null;
                 }
-
-                // 1. Direct getFileHandle match
+                
+                // 1. Direct match
                 try {
-                    const fh = await dirHandle.getFileHandle(targetClean);
+                    const fh = await dirHandle.getFileHandle(targetFileName);
                     if (fh) return await fh.getFile();
                 } catch(e) {}
 
-                // 2. Iterate all entries in current directory
-                const subDirs = [];
+                // 2. Iterate directory items
                 for await (const entry of dirHandle.values()) {
                     if (entry.kind === 'file') {
                         if (entry.name.toLowerCase() === targetClean) {
                             return await entry.getFile();
                         }
                     } else if (entry.kind === 'directory') {
-                        subDirs.push(entry);
+                        try {
+                            for await (const subEntry of entry.values()) {
+                                if (subEntry.kind === 'file' && subEntry.name.toLowerCase() === targetClean) {
+                                    return await subEntry.getFile();
+                                }
+                            }
+                        } catch(err) {}
                     }
                 }
-
-                // 3. Recurse into all subfolders
-                for (const subDir of subDirs) {
-                    const found = await searchDirectoryRecursive(subDir, targetClean, maxDepth - 1);
-                    if (found) return found;
-                }
             } catch(e) {
-                console.warn('Lỗi quét thư mục:', dirHandle.name, e);
-            }
-            return null;
-        }
-
-        async function searchAllSavedDirectoryHandles(targetFileName) {
-            if (!targetFileName) return null;
-            const targetClean = targetFileName.toLowerCase().trim();
-            const handles = await getAllSavedDirectoryHandles();
-            for (const handle of handles) {
-                try {
-                    const file = await searchDirectoryRecursive(handle, targetClean);
-                    if (file) return file;
-                } catch(e) {}
+                console.warn('Lỗi tìm file trong directory handle:', e);
             }
             return null;
         }
@@ -1144,59 +1841,46 @@
         async function grantVideoDirectoryPermission() {
             if (window.showDirectoryPicker) {
                 try {
-                    const dirHandle = await window.showDirectoryPicker({ id: 'econova_video_dir_' + Date.now(), mode: 'read' });
+                    const dirHandle = await window.showDirectoryPicker({ id: 'econova_video_dir', mode: 'read' });
                     if (dirHandle) {
-                        if (!window.activeVideoDirHandles) window.activeVideoDirHandles = [];
-                        window.activeVideoDirHandles = window.activeVideoDirHandles.filter(h => h.name !== dirHandle.name);
-                        window.activeVideoDirHandles.push(dirHandle);
+                        window.activeVideoDirHandle = dirHandle;
                         await saveVideoDirectoryHandle(dirHandle);
-                        showAdminToast(`📁 Đã cấp quyền thư mục "${dirHandle.name}". Đang tự động quét & tải lên video...`, 'success', 4000);
-                        updateGrantedFoldersUI();
-                        autoSyncLocalVideosWithHandles();
+                        showAdminToast(`📁 Đã cấp quyền thư mục "${dirHandle.name}". Đang tự động đồng bộ video...`, 'success', 4000);
+                        syncVideosFromDirectoryHandle(dirHandle);
                         return;
                     }
                 } catch(e) {
                     if (e.name === 'AbortError') return;
-                    console.warn('showDirectoryPicker fallback:', e);
+                    console.warn('showDirectoryPicker không khả dụng hoặc bị từ chối, fallback sang file input:', e);
                 }
             }
             document.getElementById('localVideoFolderInput').click();
         }
 
-        let isAutoSyncingVideos = false;
-        async function autoSyncLocalVideosWithHandles() {
-            if (isAutoSyncingVideos || !questionBank) return;
+        async function syncVideosFromDirectoryHandle(dirHandle) {
+            if (!dirHandle) return;
+            const statusEl = document.getElementById('localVideoSyncStatus');
             const isLocal = (url) => url && !url.startsWith('/videos/') && !url.startsWith('http') && !url.startsWith('/');
             
-            let neededMap = new Map();
+            let neededNames = new Set();
             ['10', '20', '40'].forEach(pts => {
                 if (questionBank[pts]) {
-                    questionBank[pts].forEach((q, idx) => {
+                    questionBank[pts].forEach(q => {
                         if (isLocal(q.vid)) {
-                            let baseName = q.vid.split(/[\/]/).pop();
-                            if (baseName) {
-                                let lower = baseName.toLowerCase();
-                                if (!neededMap.has(lower)) neededMap.set(lower, { baseName, items: [] });
-                                neededMap.get(lower).items.push({ pts, idx, q });
-                            }
+                            let baseName = q.vid.split(/[\\/]/).pop();
+                            if (baseName) neededNames.add(baseName);
                         }
                     });
                 }
             });
-
-            if (neededMap.size === 0) return;
-
-            const handles = await getAllSavedDirectoryHandles();
-            if (handles.length === 0) return;
-
-            isAutoSyncingVideos = true;
-            const statusEl = document.getElementById('localVideoSyncStatus');
-            if (statusEl) statusEl.innerHTML = `<span>⏳ Đang tự động quét ${neededMap.size} video từ các thư mục đã cấp quyền...</span>`;
-
+            
+            if (neededNames.size === 0) return;
+            if (statusEl) statusEl.innerHTML = `<span>⏳ Đang quét và tải lên video từ thư mục "${dirHandle.name}"...</span>`;
+            
             let successCount = 0;
-            for (const [lowerName, data] of neededMap) {
+            for (const name of neededNames) {
                 try {
-                    let file = await searchAllSavedDirectoryHandles(data.baseName);
+                    const file = await getFileFromDirectoryHandle(dirHandle, name);
                     if (file) {
                         await saveVideoToCache(file.name, file);
                         const res = await fetch('/api/video/upload_raw?filename=' + encodeURIComponent(file.name), {
@@ -1204,31 +1888,32 @@
                             headers: { 'Content-Type': file.type || 'video/mp4' },
                             body: file
                         });
-                        const resData = await res.json();
-                        if (resData.success) {
+                        const data = await res.json();
+                        if (data.success) {
                             successCount++;
-                            await saveVideoToCache(resData.url.split('/').pop(), file);
-                            data.items.forEach(({ pts, idx }) => {
-                                if (questionBank[pts] && questionBank[pts][idx]) {
-                                    questionBank[pts][idx].vid = resData.url;
+                            await saveVideoToCache(data.url.split('/').pop(), file);
+                            const baseNameLower = file.name.toLowerCase();
+                            ['10', '20', '40'].forEach(pts => {
+                                if (questionBank[pts]) {
+                                    questionBank[pts].forEach(q => {
+                                        if (isLocal(q.vid)) {
+                                            let qBaseName = q.vid.split(/[\\/]/).pop().toLowerCase();
+                                            if (qBaseName === baseNameLower) q.vid = data.url;
+                                        }
+                                    });
                                 }
                             });
                         }
                     }
                 } catch(err) {
-                    console.warn('Lỗi tự động đồng bộ video ngầm:', data.baseName, err);
+                    console.warn('Lỗi đồng bộ file:', name, err);
                 }
             }
-
-            isAutoSyncingVideos = false;
-
-            if (successCount > 0) {
-                saveQuestionBankToLocalStorage(localStorage.getItem('econova_questionBankName'), localStorage.getItem('econova_activeBankSlot'));
-                showAdminToast(`🎬 Đã tự động nạp & sẵn sàng ${successCount}/${neededMap.size} video!`, 'success', 4000);
-                checkLocalVideosNeeded();
-            } else if (statusEl) {
-                statusEl.innerHTML = `<span style="color:#feca57">⚠️ Đã quét các thư mục đã cấp quyền nhưng chưa tìm thấy các video còn lại. Bạn có thể bấm "Thêm thư mục video" để cấp thêm.</span>`;
-            }
+            
+            if (statusEl) statusEl.innerHTML = `<span style="color:#10ac84">✅ Đã cấp quyền & đồng bộ thành công ${successCount}/${neededNames.size} video!</span>`;
+            showAdminToast(`✅ Đã đồng bộ thành công ${successCount} video từ thư mục!`, 'success', 3500);
+            saveQuestionBankToLocalStorage(localStorage.getItem('econova_questionBankName'), localStorage.getItem('econova_activeBankSlot'));
+            checkLocalVideosNeeded();
         }
 
         async function saveVideoToCache(keyName, fileBlob) {
@@ -1240,7 +1925,7 @@
                 const store = tx.objectStore(VIDEO_STORE_NAME);
                 
                 const cleanKey = keyName.toLowerCase().replace(/[^a-z0-9]/g, '');
-                const rawName = keyName.split('/').pop().split('\').pop();
+                const rawName = keyName.split('/').pop().split('\\').pop();
                 
                 const record = {
                     key: cleanKey,
@@ -1263,7 +1948,7 @@
                 const tx = db.transaction(VIDEO_STORE_NAME, 'readonly');
                 const store = tx.objectStore(VIDEO_STORE_NAME);
                 
-                const rawName = keyName.split('/').pop().split('\').pop().split('?')[0];
+                const rawName = keyName.split('/').pop().split('\\').pop().split('?')[0];
                 const cleanKey = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
 
                 return new Promise((resolve) => {
@@ -1299,22 +1984,24 @@
                         checkOk = check.ok;
                     }
                     if (!checkOk) {
-                        const baseName = url.split(/[\/]/).pop().split('?')[0];
+                        const baseName = url.split(/[\\/]/).pop().split('?')[0];
                         
                         // 1. Check IndexedDB Cache first
                         let videoBlob = await getVideoFromCache(baseName);
                         
-                        // 2. If not in cache, search all saved directory handles recursively
+                        // 2. If not in cache, check Saved Directory Handle
                         if (!videoBlob) {
-                            if (vInput) vInput.value = `⏳ Đang quét tìm "${baseName}" trong các thư mục đã cấp quyền...`;
-                            const foundFile = await searchAllSavedDirectoryHandles(baseName);
-                            if (foundFile) {
-                                videoBlob = foundFile;
-                                await saveVideoToCache(baseName, foundFile);
+                            const dirHandle = await getSavedDirectoryHandle();
+                            if (dirHandle) {
+                                if (vInput) vInput.value = `⏳ Đang tự động đọc "${baseName}" từ thư mục đã cấp quyền...`;
+                                videoBlob = await getFileFromDirectoryHandle(dirHandle, baseName);
+                                if (videoBlob) {
+                                    await saveVideoToCache(baseName, videoBlob);
+                                }
                             }
                         }
 
-                        // 3. If found from cache or directories, upload & play seamlessly
+                        // 3. If found from cache or directory handle, upload & play seamlessly
                         if (videoBlob) {
                             if (vInput) vInput.value = `⏳ Đang tự động ${isLocalUrl ? 'tải lên' : 'khôi phục'} video ${baseName}...`;
                             const res = await fetch('/api/video/upload_raw?filename=' + encodeURIComponent(baseName), {
@@ -1339,7 +2026,7 @@
                         if (isLocalUrl) {
                             try {
                                 await navigator.clipboard.writeText(url);
-                                showAdminToast(`📋 Đã copy đường dẫn. Hãy chọn file "${baseName}" (hoặc bấm "Cấp quyền thư mục" để tự động)`, 'info', 5000);
+                                showAdminToast(`📋 Đã copy đường dẫn. Hãy chọn file "${baseName}" (hoặc dùng "Cấp quyền thư mục" để tự động)`, 'info', 5000);
                             } catch(err) {
                                 showAdminToast(`📁 Vui lòng chọn file video "${baseName}"`, 'warning', 4000);
                             }
