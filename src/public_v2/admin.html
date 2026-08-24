@@ -1451,7 +1451,8 @@
                 }
                 
                 currentVideoUrl = vid;
-                socket.emit('nextQuestionInPackage', { text: text, answer: answer, vid: vid, idx: newIdx, revealOnly: false });
+                let isHopeStar = (currentState && currentState.currentQuestion && currentState.currentQuestion.isHopeStar) ? true : false;
+                socket.emit('nextQuestionInPackage', { text: text, answer: answer, vid: vid, idx: newIdx, revealOnly: false, isHopeStar: isHopeStar });
             } else {
                 finishTurn();
             }

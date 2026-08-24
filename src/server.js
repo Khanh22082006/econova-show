@@ -2004,6 +2004,9 @@ try {
                     if (pkg.questions[pkg.currentIndex]) {
                         state.currentQuestion.points = pkg.questions[pkg.currentIndex].points;
                     }
+                    if (data.isHopeStar !== undefined) {
+                        state.currentQuestion.isHopeStar = Boolean(data.isHopeStar);
+                    }
                 }
                 broadcastState(socket);
                 return;
@@ -2029,12 +2032,14 @@ try {
                     qVid = state.questionBank[qData.points][qData.idx].vid || "";
                 }
 
+                let hopeStarActive = (data.isHopeStar !== undefined) ? Boolean(data.isHopeStar) : ((state.currentQuestion && state.currentQuestion.isHopeStar) ? true : false);
+
                 state.currentQuestion = {
                     active: true,
                     resolved: false,
                     points: qData.points || 0,
                     mainTeamId: pkg.mainTeamId || 1,
-                    isHopeStar: false,
+                    isHopeStar: hopeStarActive,
                     deductedFromMain: false,
                     text: qText,
                     answer: qAns,
