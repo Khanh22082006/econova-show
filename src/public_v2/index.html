@@ -11,6 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=Montserrat:wght@600;700;800;900&display=swap" rel="stylesheet">
     
     <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
             --primary: #00d2d3;
@@ -390,9 +391,12 @@
 
                     <!-- Nạp sẵn file đề thi -->
                     <div class="form-row">
-                        <label class="form-label">NẠP SẴN ĐỀ THI (.JSON) - TÙY CHỌN</label>
-                        <input type="file" id="createQuestionFileInput" accept=".json" class="form-input" style="padding: 5px 10px;" onchange="handleQuestionFileUpload(event)">
-                        <div class="input-hint" id="createQuestionFileHint" style="font-size: 11px; margin-top: 2px;">💡 Tải file JSON ngân hàng đề thi nếu muốn nạp trước.</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label class="form-label" style="margin-bottom: 0;">NẠP ĐỀ THI (.XLSX / .JSON) - TÙY CHỌN</label>
+                            <button type="button" onclick="downloadExcelTemplate()" style="background: rgba(46, 204, 113, 0.15); border: 1px solid #2ecc71; color: #2ecc71; font-size: 11px; font-weight: bold; border-radius: 6px; padding: 2px 8px; cursor: pointer;" title="Tải file mẫu Excel chuẩn để điền câu hỏi">📥 Tải File Mẫu Excel</button>
+                        </div>
+                        <input type="file" id="createQuestionFileInput" accept=".xlsx, .xls, .json" class="form-input" style="padding: 5px 10px;" onchange="handleQuestionFileUpload(event)">
+                        <div class="input-hint" id="createQuestionFileHint" style="font-size: 11px; margin-top: 2px; color: #a4b0be;">💡 Hỗ trợ nạp trực tiếp file Excel (.xlsx) theo mẫu chuẩn hoặc file .json.</div>
                     </div>
 
                     <!-- Danh sách thí sinh -->
@@ -476,29 +480,175 @@
             if (badge) badge.innerText = text;
         }
 
+        // =============================================
+        // EXCEL / JSON TEMPLATE & PARSER ENGINE
+        // =============================================
+        function downloadExcelTemplate() {
+            if (typeof XLSX === 'undefined') {
+                alert('Thư viện Excel đang tải, vui lòng thử lại sau 2 giây!');
+                return;
+            }
+            const wb = XLSX.utils.book_new();
+            const wsData = [
+                ["", "GÓI 10 ĐIỂM", "", "", "", "GÓI 20 ĐIỂM", "", "", "", "GÓI 40 ĐIỂM", "", "", ""],
+                ["", "STT", "CÂU HỎI", "ĐÁP ÁN & GIẢI THÍCH", "LINK VIDEO", "STT", "CÂU HỎI", "ĐÁP ÁN & GIẢI THÍCH", "LINK VIDEO", "STT", "CÂU HỎI", "ĐÁP ÁN & GIẢI THÍCH", "LINK VIDEO"],
+                ["", 1, "Thủ đô của Việt Nam là thành phố nào?", "Hà Nội", "", 1, "Tổng thống đầu tiên của Hợp chúng quốc Hoa Kỳ là ai?", "George Washington", "", 1, "Trong kinh tế học, GDP là viết tắt của cụm từ tiếng Anh nào?", "Gross Domestic Product", ""],
+                ["", 2, "Hành tinh nào gần Mặt Trời nhất trong Hệ Mặt Trời?", "Sao Thủy (Mercury)", "", 2, "Hiệp định Thương mại Tự do Việt Nam - EU viết tắt là gì?", "EVFTA", "", 2, "Tác phẩm 'Tuyên ngôn Độc lập' của Việt Nam được Chủ tịch Hồ Chí Minh đọc vào năm nào?", "1945", ""]
+            ];
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            
+            // Set column widths
+            ws['!cols'] = [
+                { wch: 4 },
+                { wch: 6 }, { wch: 45 }, { wch: 35 }, { wch: 15 },
+                { wch: 6 }, { wch: 45 }, { wch: 35 }, { wch: 15 },
+                { wch: 6 }, { wch: 45 }, { wch: 35 }, { wch: 15 }
+            ];
+
+            XLSX.utils.book_append_sheet(wb, ws, "De_Thi_Mau");
+            XLSX.writeFile(wb, "Econova_Mau_De_Thi_Chuan.xlsx");
+        }
+
+        function parseExcelToQuestionBank(jsonData) {
+            const result = { 10: [], 20: [], 40: [] };
+            let headerRowIdx = -1;
+            for (let i = 0; i < jsonData.length; i++) {
+                let rowStr = (jsonData[i] || []).map(x => String(x).toLowerCase().trim()).join(" ");
+                if (rowStr.includes("stt") && (rowStr.includes("câu hỏi") || rowStr.includes("cau hoi"))) {
+                    headerRowIdx = i;
+                    break;
+                }
+            }
+
+            if (headerRowIdx === -1) {
+                // Fallback: Kiểm tra xem có phải dạng bảng tuần tự (Mức điểm, STT, Câu hỏi, Đáp án, Video)
+                let altHeaderIdx = -1;
+                for (let i = 0; i < jsonData.length; i++) {
+                    let rowStr = (jsonData[i] || []).map(x => String(x).toLowerCase().trim()).join(" ");
+                    if (rowStr.includes("điểm") || rowStr.includes("diem") || rowStr.includes("points")) {
+                        altHeaderIdx = i;
+                        break;
+                    }
+                }
+
+                if (altHeaderIdx !== -1) {
+                    for (let i = altHeaderIdx + 1; i < jsonData.length; i++) {
+                        let row = jsonData[i] || [];
+                        let pts = parseInt(row[0], 10);
+                        if (![10, 20, 40].includes(pts)) continue;
+                        let stt = String(row[1] || result[pts].length + 1).trim();
+                        let q = String(row[2] || "").trim();
+                        let a = String(row[3] || "").trim();
+                        let vid = String(row[4] || "").trim();
+                        if (q) {
+                            result[pts].push({ stt: stt, q: q, a: a, vid: vid });
+                        }
+                    }
+                    return result;
+                }
+                throw new Error("Không tìm thấy dòng tiêu đề hợp lệ (cần có STT, CÂU HỎI, ĐÁP ÁN & GIẢI THÍCH)!");
+            }
+
+            const offsets = { 10: 1, 20: 5, 40: 9 };
+            let blankCount = 0;
+
+            for (let i = headerRowIdx + 1; i < jsonData.length; i++) {
+                let row = jsonData[i] || [];
+                if (row.length === 0 || row.join("").trim() === "") {
+                    blankCount++;
+                    if (blankCount >= 4) break;
+                    continue;
+                }
+                blankCount = 0;
+
+                for (const pts of [10, 20, 40]) {
+                    let base = offsets[pts];
+                    let stt = String(row[base] || "").trim();
+                    let q = String(row[base + 1] || "").trim();
+                    let a = String(row[base + 2] || "").trim();
+                    let vid = String(row[base + 3] || "").trim();
+
+                    if (q) {
+                        result[pts].push({
+                            stt: stt || String(result[pts].length + 1),
+                            q: q.replace(/
+/g, '
+'),
+                            a: a.replace(/
+/g, '
+'),
+                            vid: vid
+                        });
+                    }
+                }
+            }
+            return result;
+        }
+
         function handleQuestionFileUpload(e) {
             const file = e.target.files[0];
             const hint = document.getElementById('createQuestionFileHint');
             if (!file) {
                 uploadedQuestionBank = null;
-                if (hint) hint.innerText = '💡 Tải file ngân hàng câu hỏi JSON nếu muốn nạp đề ngay.';
+                if (hint) {
+                    hint.innerText = '💡 Hỗ trợ nạp trực tiếp file Excel (.xlsx) theo mẫu chuẩn hoặc file .json.';
+                    hint.style.color = '#a4b0be';
+                }
                 return;
             }
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                try {
-                    const parsed = JSON.parse(event.target.result);
-                    uploadedQuestionBank = parsed;
-                    if (hint) {
-                        hint.innerText = `✅ Đã nạp file đề: ${file.name}`;
-                        hint.style.color = '#2ecc71';
+
+            const fileName = file.name.toLowerCase();
+
+            if (fileName.endsWith('.json')) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const parsed = JSON.parse(event.target.result);
+                        uploadedQuestionBank = parsed;
+                        const c10 = (parsed['10'] || []).length;
+                        const c20 = (parsed['20'] || []).length;
+                        const c40 = (parsed['40'] || []).length;
+                        const total = c10 + c20 + c40;
+                        if (hint) {
+                            hint.innerText = `✅ Đã nạp JSON (${file.name}): ${total} câu (10đ: ${c10}, 20đ: ${c20}, 40đ: ${c40})`;
+                            hint.style.color = '#2ecc71';
+                        }
+                    } catch(err) {
+                        alert('Lỗi đọc file JSON: ' + err.message);
+                        uploadedQuestionBank = null;
+                        if (hint) { hint.innerText = '❌ File JSON không đúng định dạng!'; hint.style.color = '#ff4757'; }
                     }
-                } catch(err) {
-                    alert('Lỗi đọc file JSON câu hỏi: ' + err.message);
-                    uploadedQuestionBank = null;
-                }
-            };
-            reader.readAsText(file);
+                };
+                reader.readAsText(file);
+            } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const data = new Uint8Array(event.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+                        const bank = parseExcelToQuestionBank(json);
+                        uploadedQuestionBank = bank;
+                        const c10 = bank[10].length;
+                        const c20 = bank[20].length;
+                        const c40 = bank[40].length;
+                        const total = c10 + c20 + c40;
+                        if (hint) {
+                            hint.innerText = `✅ Đã nạp Excel (${file.name}): ${total} câu (10đ: ${c10}, 20đ: ${c20}, 40đ: ${c40})`;
+                            hint.style.color = '#2ecc71';
+                        }
+                    } catch(err) {
+                        alert('Lỗi đọc file Excel: ' + err.message);
+                        uploadedQuestionBank = null;
+                        if (hint) { hint.innerText = '❌ File Excel không đúng khung mẫu!'; hint.style.color = '#ff4757'; }
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                alert('Vui lòng chọn file định dạng .xlsx, .xls hoặc .json!');
+                uploadedQuestionBank = null;
+            }
         }
 
         let lastCreatedRoom = null;
